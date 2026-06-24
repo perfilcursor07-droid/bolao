@@ -168,6 +168,14 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
   });
 
   const qrCode = order.qr_codes?.[0];
+  const qrText = qrCode?.text || null;
+
+  if (!qrText) {
+    console.error('[createPaymentWithPlacar] QR Code text VAZIO! order.qr_codes:', JSON.stringify(order.qr_codes));
+  } else {
+    console.log('[createPaymentWithPlacar] QR Code gerado com sucesso, tamanho:', qrText.length);
+  }
+
   const [result] = await pool.query(
     `INSERT INTO payments (user_id, game_id, reference_id, pagbank_order_id, amount_cents, qr_code_text, prediction_data, qr_expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -177,7 +185,7 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
       referenceId,
       order.id,
       totalCents,
-      qrCode?.text || null,
+      qrText,
       predictionJson,
       qrCode?.expiration_date || null,
     ]

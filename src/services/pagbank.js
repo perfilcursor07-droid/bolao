@@ -92,14 +92,36 @@ async function createPixOrder({ referenceId, customer, amountCents, description 
     qr_codes: [
       {
         amount: { value: amountCents },
+        expiration_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
     ],
     notification_urls: [webhookUrl],
   };
 
   try {
+    console.log('[PagBank createPixOrder] Request:', JSON.stringify(body, null, 2));
     const response = await axios.post(`${BASE_URL}/orders`, body, { headers: getHeaders() });
-    return response.data;
+    console.log('[PagBank createPixOrder] Response:', JSON.stringify(response.data, null, 2));
+
+    const order = response.data;
+
+    // Se qr_codes[0].text não veio na resposta inicial, buscar via GET
+    if (order.qr_codes && order.qr_codes[0] && !order.qr_codes[0].text) {
+      console.log('[PagBank] QR code text não retornado na criação, tentando buscar via GET...');
+      try {
+        // Aguardar um momento para o QR code ser gerado
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const orderDetail = await axios.get(`${BASE_URL}/orders/${order.id}`, { headers: getHeaders() });
+        console.log('[PagBank] GET order response:', JSON.stringify(orderDetail.data, null, 2));
+        if (orderDetail.data.qr_codes && orderDetail.data.qr_codes[0] && orderDetail.data.qr_codes[0].text) {
+          order.qr_codes = orderDetail.data.qr_codes;
+        }
+      } catch (retryErr) {
+        console.error('[PagBank] Erro ao buscar QR code via GET:', retryErr.message);
+      }
+    }
+
+    return order;
   } catch (err) {
     logPagBankError('createPixOrder', err);
     throw err;
