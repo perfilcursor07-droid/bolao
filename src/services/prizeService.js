@@ -144,11 +144,11 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
   const predictionJson = JSON.stringify({ placares });
   const placarText = placares.map((p) => `${p.home}x${p.away}`).join(', ');
   const referenceId = `BOL_${gameId}_${userId}_${Date.now()}`;
-  const { createPixOrder } = require('./pagbank');
+  const { createPixOrder, buildPagBankCustomer } = require('./pagbank');
 
   const order = await createPixOrder({
     referenceId,
-    customer: { name: user.name, email: user.email, cpf: user.cpf },
+    customer: buildPagBankCustomer(user),
     amountCents: totalCents,
     description: `Bolão: ${game.title} (${placares.length} aposta${placares.length > 1 ? 's' : ''}: ${placarText})`,
   });
