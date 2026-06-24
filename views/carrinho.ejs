@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-carrinho">
+  <%- include('partials/header') %>
+
+  <div class="container home-container carrinho-page">
+    <a href="/" class="back-link">← Ver mais jogos</a>
+
+    <div class="carrinho-header">
+      <h1>🛒 Meu carrinho</h1>
+      <% if (cart.length > 0) { %>
+        <span class="carrinho-header-count"><%= cartCount %> palpite<%= cartCount !== 1 ? 's' : '' %></span>
+      <% } %>
+    </div>
+
+    <% if (added) { %>
+      <div class="alert alert-success">Palpite adicionado ao carrinho!</div>
+    <% } %>
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <% if (cart.length === 0) { %>
+      <div class="empty-state carrinho-empty">
+        <div class="empty-icon">🛒</div>
+        <p>Seu carrinho está vazio</p>
+        <small>Escolha placares nos jogos abertos e adicione aqui antes de pagar.</small>
+        <a href="/" class="btn btn-gold" style="margin-top:1rem;">Ver jogos abertos</a>
+      </div>
+    <% } else { %>
+      <div class="carrinho-items">
+        <% cart.forEach(function(item) { %>
+          <article class="carrinho-item card">
+            <div class="carrinho-item-head">
+              <div>
+                <strong class="carrinho-item-match">
+                  <%= teamPt(item.home_team) %> × <%= teamPt(item.away_team) %>
+                </strong>
+                <span class="carrinho-item-fee"><%= formatCents(item.entry_fee_cents) %>/placar</span>
+              </div>
+              <form method="POST" action="/carrinho/remove-game" class="carrinho-remove-form">
+                <input type="hidden" name="game_id" value="<%= item.gameId %>">
+                <button type="submit" class="carrinho-remove-btn" title="Remover bolão">✕</button>
+              </form>
+            </div>
+
+            <ul class="carrinho-placares">
+              <% item.placares.forEach(function(p, idx) { %>
+                <li class="carrinho-placar-row">
+                  <span class="carrinho-placar-score"><%= p.home %> × <%= p.away %></span>
+                  <span class="carrinho-placar-price"><%= formatCents(item.entry_fee_cents) %></span>
+                  <form method="POST" action="/carrinho/remove-placar" class="carrinho-remove-form">
+                    <input type="hidden" name="game_id" value="<%= item.gameId %>">
+                    <input type="hidden" name="placar_index" value="<%= idx %>">
+                    <button type="submit" class="carrinho-remove-btn-sm">✕</button>
+                  </form>
+                </li>
+              <% }); %>
+            </ul>
+
+            <a href="/games/<%= item.gameId %>/placar" class="carrinho-add-more">+ Adicionar mais placares neste jogo</a>
+          </article>
+        <% }); %>
+      </div>
+
+      <div class="carrinho-footer card">
+        <div class="carrinho-total-row">
+          <span>Total</span>
+          <strong class="carrinho-total-value"><%= formatCents(cartTotal) %></strong>
+        </div>
+        <p class="carrinho-footer-hint">
+          <%= cart.length %> bolão<%= cart.length !== 1 ? 'ões' : '' %> · <%= cartCount %> palpite<%= cartCount !== 1 ? 's' : '' %>
+        </p>
+
+        <div class="carrinho-footer-actions">
+          <a href="/" class="btn btn-outline btn-block">+ Apostar em mais bolões</a>
+          <form method="POST" action="/carrinho/finalizar">
+            <button type="submit" class="btn btn-gold btn-block btn-xl" id="btn-checkout">
+              Finalizar e pagar via PIX
+            </button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    const btnCheckout = document.getElementById('btn-checkout');
+    if (btnCheckout) {
+      btnCheckout.closest('form').onsubmit = function () {
+        btnCheckout.disabled = true;
+        btnCheckout.textContent = '⏳ Gerando PIX...';
+      };
+    }
+  </script>
+</body>
+</html>

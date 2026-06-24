@@ -76,7 +76,7 @@
               <label class="copa-match-item copa-match-selectable" data-stage="<%= stage %>">
                 <% if (m.status === 'SCHEDULED' || m.status === 'TIMED') { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
-                    value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: m.date, api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
+                    value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
                   <input type="checkbox" disabled style="opacity:0.3;">
                 <% } %>
@@ -93,7 +93,7 @@
                     <strong><%= teamPt(m.awayTeam) %></strong>
                   </div>
                   <div class="copa-match-meta">
-                    <time><%= new Date(m.date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+                    <time><%= gameDateBR(m.date) %></time>
                     <span class="copa-match-status <%= m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : '' %>">
                       <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' ? '🔴 AO VIVO' : m.status === 'FINISHED' ? 'Finalizado' : m.status %>
                     </span>

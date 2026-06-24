@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-carrinho-pagamento">
+  <%- include('partials/header') %>
+
+  <div class="container home-container carrinho-pagamento-page">
+    <div class="carrinho-pagamento-head">
+      <h1>💳 Pagar apostas</h1>
+      <p>Pague cada PIX abaixo para confirmar suas apostas</p>
+      <div class="carrinho-pagamento-total">
+        Total: <strong><%= formatCents(totalCents) %></strong>
+        · <%= payments.length %> PIX
+      </div>
+    </div>
+
+    <div class="carrinho-pix-list">
+      <% payments.forEach(function(payment, index) { %>
+        <% const predRaw = payment.prediction_data ? (typeof payment.prediction_data === 'string' ? JSON.parse(payment.prediction_data) : payment.prediction_data) : null; %>
+        <% const placares = predRaw && predRaw.placares ? predRaw.placares : []; %>
+
+        <article class="card carrinho-pix-card" data-payment-id="<%= payment.id %>" data-game-id="<%= payment.game_id %>">
+          <div class="carrinho-pix-card-head">
+            <span class="carrinho-pix-num">PIX <%= index + 1 %>/<%= payments.length %></span>
+            <span class="payment-status payment-pending carrinho-pix-status" id="status-<%= payment.id %>">
+              <span class="pulse"></span> Aguardando
+            </span>
+          </div>
+
+          <p class="carrinho-pix-match">
+            <%= teamPt(payment.home_team) %> × <%= teamPt(payment.away_team) %>
+          </p>
+
+          <div class="placar-chips" style="margin-bottom:0.75rem;">
+            <% placares.forEach(function(p) { %>
+              <span class="placar-chip"><%= p.home %> × <%= p.away %></span>
+            <% }); %>
+          </div>
+
+          <div class="carrinho-pix-amount"><%= formatCents(payment.amount_cents) %></div>
+
+          <% if (payment.qrImage) { %>
+            <div class="qr-code-wrap carrinho-pix-qr">
+              <div class="qr-code">
+                <img src="<%= payment.qrImage %>" alt="QR Code PIX">
+              </div>
+            </div>
+          <% } else { %>
+            <div class="alert alert-error" style="font-size:0.85rem;">QR indisponível — tente gerar novamente no carrinho.</div>
+          <% } %>
+
+          <% if (payment.qr_code_text) { %>
+            <button type="button" class="btn btn-outline btn-block btn-sm btn-copy-pix-item"
+              data-pix="<%= payment.qr_code_text %>"
+              onclick="copyPixItem(this)">
+              Copiar código PIX
+            </button>
+          <% } %>
+        </article>
+      <% }); %>
+    </div>
+
+    <div class="carrinho-pagamento-footer">
+      <a href="/" class="btn btn-outline btn-block">Voltar aos jogos</a>
+      <a href="/my-bets" class="btn btn-ghost btn-block">Minhas apostas</a>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    const paymentIds = [<%= payments.map(p => p.id).join(',') %>];
+    let allPaid = false;
+
+    function copyPixItem(btn) {
+      navigator.clipboard.writeText(btn.dataset.pix).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copiado!';
+        setTimeout(() => { btn.textContent = orig; }, 2500);
+      });
+    }
+
+    function checkAllStatus() {
+      if (allPaid) return;
+
+      Promise.all(
+        paymentIds.map(id =>
+          fetch('/payment/' + id + '/status').then(r => r.json()).then(d => ({ id, status: d.status }))
+        )
+      ).then(results => {
+        let paidCount = 0;
+        results.forEach(({ id, status }) => {
+          if (status === 'paid') {
+            paidCount++;
+            const el = document.getElementById('status-' + id);
+            if (el) {
+              el.className = 'payment-status payment-paid carrinho-pix-status';
+              el.innerHTML = '✅ Pago';
+            }
+          }
+        });
+
+        if (paidCount === paymentIds.length) {
+          allPaid = true;
+          setTimeout(() => { window.location.href = '/my-bets?success=1'; }, 1500);
+        }
+      });
+    }
+
+    setInterval(checkAllStatus, 4000);
+    checkAllStatus();
+  </script>
+</body>
+</html>

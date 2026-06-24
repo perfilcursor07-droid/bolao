@@ -20,7 +20,7 @@
       </span>
 
       <h1 class="game-title"><%= game.title %></h1>
-      <time class="game-date"><%= new Date(game.game_date).toLocaleString('pt-BR') %></time>
+      <time class="game-date"><%= gameDateBR(game.game_date, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></time>
 
       <div class="match-row match-row-lg">
         <div class="match-team">
@@ -54,11 +54,18 @@
 
       <% if (game.status === 'open' && user) { %>
         <div class="game-detail-actions">
-          <!-- Botão principal: fazer nova aposta -->
+          <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+            <a href="/carrinho" class="btn btn-outline btn-block" style="margin-bottom:0.5rem;">
+              🛒 Carrinho (<%= cartCount %> palpite<%= cartCount !== 1 ? 's' : '' %>)
+            </a>
+          <% } %>
           <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block btn-xl">
-            🎯 Fazer aposta
+            🎯 Escolher placar
           </a>
-          <p class="action-hint">Cada placar = <%= formatCents(game.entry_fee_cents) %> · Você pode apostar em vários placares</p>
+          <a href="/" class="btn btn-outline btn-block btn-sm" style="margin-top:0.5rem;">
+            + Apostar em outros bolões
+          </a>
+          <p class="action-hint">Adicione palpites ao carrinho e pague tudo junto, ou pague agora neste jogo</p>
 
           <!-- Pagamentos pendentes -->
           <% if (userStatus.pendingPayments && userStatus.pendingPayments.length > 0) { %>

@@ -4,6 +4,7 @@ const { requireAdmin } = require('../middleware/auth');
 const { getWorldCupMatches } = require('../services/footballApi');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
+const { deleteGamesByIds } = require('../services/gameDelete');
 
 const router = express.Router();
 
@@ -60,9 +61,35 @@ router.get('/partidas', requireAdmin, async (req, res) => {
        FROM games g JOIN users u ON u.id = g.created_by
        ORDER BY g.game_date DESC`
     );
-    res.render('admin/partidas', { title: 'Partidas', games, user: req.session.user, activePage: 'partidas' });
+    res.render('admin/partidas', {
+      title: 'Partidas',
+      games,
+      user: req.session.user,
+      activePage: 'partidas',
+      deleted: req.query.deleted ? parseInt(req.query.deleted, 10) : null,
+      error: req.query.error || null,
+    });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/partidas/delete', requireAdmin, async (req, res) => {
+  try {
+    let ids = req.body.game_ids;
+    if (!ids) ids = [];
+    if (!Array.isArray(ids)) ids = [ids];
+    ids = [...new Set(ids.map((id) => parseInt(id, 10)).filter((id) => id > 0))];
+
+    if (ids.length === 0) {
+      return res.redirect('/admin/partidas?error=' + encodeURIComponent('Nenhuma partida selecionada'));
+    }
+
+    const deleted = await deleteGamesByIds(ids);
+    res.redirect(`/admin/partidas?deleted=${deleted}`);
+  } catch (err) {
+    console.error('Erro ao remover partidas:', err);
+    res.redirect('/admin/partidas?error=' + encodeURIComponent(err.message));
   }
 });
 

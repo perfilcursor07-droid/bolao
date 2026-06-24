@@ -19,36 +19,127 @@
       </div>
     </div>
 
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr><th>Partida</th><th>Data</th><th>Apostas</th><th>Prêmio</th><th>Status</th><th>Ações</th></tr>
-        </thead>
-        <tbody>
-          <% games.forEach(game => { %>
-            <tr>
-              <td>
-                <strong><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %></strong>
-                <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
-              </td>
-              <td><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></td>
-              <td><%= game.total_bets %></td>
-              <td class="prize-amount"><%= formatCents(game.prize_pool_cents) %></td>
-              <td><span class="card-badge <%= game.status %>"><%= game.status %></span></td>
-              <td class="admin-actions-cell">
-                <a href="/admin/games/<%= game.id %>" class="btn btn-outline btn-sm">Ver</a>
-                <a href="/admin/games/<%= game.id %>/edit" class="btn btn-outline btn-sm">Editar</a>
-                <form method="POST" action="/admin/games/<%= game.id %>/featured" style="display:inline;">
-                  <button type="submit" class="btn btn-sm <%= game.featured ? 'btn-danger' : 'btn-gold' %>"><%= game.featured ? '★' : '☆' %></button>
-                </form>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
+    <% if (typeof deleted === 'number' && deleted > 0) { %>
+      <div class="alert alert-success" style="margin-bottom:1rem;">
+        <%= deleted %> partida<%= deleted !== 1 ? 's' : '' %> removida<%= deleted !== 1 ? 's' : '' %> com sucesso.
+      </div>
+    <% } %>
+    <% if (error) { %>
+      <div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div>
+    <% } %>
+
+    <% if (games.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">⚽</div>
+        <p>Nenhuma partida cadastrada</p>
+        <a href="/admin/games/new" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Nova partida</a>
+      </div>
+    <% } else { %>
+      <form method="POST" action="/admin/partidas/delete" id="delete-form">
+        <div class="copa-toolbar">
+          <div class="copa-toolbar-left">
+            <label class="copa-select-all">
+              <input type="checkbox" id="select-all"> Selecionar tudo
+            </label>
+            <span class="copa-selected-count" id="selected-count">0 selecionados</span>
+          </div>
+          <div class="copa-toolbar-right">
+            <button type="submit" class="btn btn-danger btn-sm" id="btn-delete-bulk" disabled>
+              Remover selecionadas
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px;"></th>
+                <th>Partida</th>
+                <th>Data</th>
+                <th>Apostas</th>
+                <th>Prêmio</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% games.forEach(game => { %>
+                <tr>
+                  <td>
+                    <input type="checkbox" name="game_ids[]" value="<%= game.id %>" class="partidas-check">
+                  </td>
+                  <td>
+                    <strong><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %></strong>
+                    <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
+                  </td>
+                  <td><%= gameDateBR(game.game_date) %></td>
+                  <td><%= game.total_bets %></td>
+                  <td class="prize-amount"><%= formatCents(game.prize_pool_cents) %></td>
+                  <td><span class="card-badge <%= game.status %>"><%= game.status %></span></td>
+                  <td class="admin-actions-cell">
+                    <a href="/admin/games/<%= game.id %>" class="btn btn-outline btn-sm">Ver</a>
+                    <a href="/admin/games/<%= game.id %>/edit" class="btn btn-outline btn-sm">Editar</a>
+                    <button type="submit" formaction="/admin/games/<%= game.id %>/featured" formmethod="POST" class="btn btn-sm <%= game.featured ? 'btn-danger' : 'btn-gold' %>"><%= game.featured ? '★' : '☆' %></button>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </form>
+    <% } %>
 
   </main>
 </div>
+
+  <script>
+    const checks = document.querySelectorAll('.partidas-check');
+    const selectAll = document.getElementById('select-all');
+    const countEl = document.getElementById('selected-count');
+    const btnDelete = document.getElementById('btn-delete-bulk');
+    const deleteForm = document.getElementById('delete-form');
+
+    function updateCount() {
+      const n = document.querySelectorAll('.partidas-check:checked').length;
+      if (countEl) countEl.textContent = n + ' selecionado' + (n !== 1 ? 's' : '');
+      if (btnDelete) {
+        btnDelete.disabled = n === 0;
+        btnDelete.textContent = n === 0
+          ? 'Remover selecionadas'
+          : 'Remover ' + n + ' partida' + (n > 1 ? 's' : '');
+      }
+      if (selectAll && checks.length) {
+        selectAll.checked = n === checks.length;
+        selectAll.indeterminate = n > 0 && n < checks.length;
+      }
+    }
+
+    if (selectAll) {
+      selectAll.onchange = () => {
+        checks.forEach((c) => { c.checked = selectAll.checked; });
+        updateCount();
+      };
+    }
+
+    checks.forEach((c) => { c.onchange = updateCount; });
+
+    if (deleteForm) {
+      deleteForm.onsubmit = (e) => {
+        if (!e.submitter || e.submitter.id !== 'btn-delete-bulk') return;
+        const n = document.querySelectorAll('.partidas-check:checked').length;
+        if (n === 0) {
+          e.preventDefault();
+          return;
+        }
+        const msg = n === 1
+          ? 'Remover 1 partida? Apostas e pagamentos vinculados também serão excluídos.'
+          : 'Remover ' + n + ' partidas? Apostas e pagamentos vinculados também serão excluídos.';
+        if (!confirm(msg)) e.preventDefault();
+      };
+    }
+
+    updateCount();
+  </script>
 </body>
 </html>

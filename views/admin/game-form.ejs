@@ -54,7 +54,7 @@
           <div class="form-group">
             <label for="game_date">Data e Hora do Jogo</label>
             <input type="datetime-local" id="game_date" name="game_date" class="form-control" required
-              value="<%= game ? new Date(game.game_date).toISOString().slice(0, 16) : '' %>">
+              value="<%= game ? toDatetimeLocalBR(game.game_date) : '' %>">
           </div>
           <div class="form-group">
             <label for="entry_fee">Valor da Aposta (R$)</label>

@@ -3,27 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= title %> | Bolão Online</title>
+  <title><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %> | Bolão</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="page-participar">
   <%- include('partials/header') %>
 
-  <div class="container home-container">
-    <a href="/" class="back-link">← Voltar</a>
+  <div class="container participar-page">
+    <a href="/" class="back-link">← Voltar aos jogos</a>
 
-    <div class="card participar-card">
-      <div class="participar-header">
-        <h1>⚽ Entrar no bolão</h1>
-        <div class="participar-match">
-          <strong><%= teamPt(game.home_team) %></strong>
-          <span>×</span>
-          <strong><%= teamPt(game.away_team) %></strong>
-        </div>
-        <div class="participar-fee">Entrada: <strong><%= formatCents(game.entry_fee_cents) %></strong> por placar</div>
+    <!-- Jogo em destaque -->
+    <section class="participar-hero" aria-label="Jogo do bolão">
+      <span class="participar-hero-badge">⚽ Bolão aberto</span>
+      <p class="participar-hero-kicker">Você está apostando em</p>
+      <div class="participar-hero-match">
+        <span class="participar-hero-team"><%= teamPt(game.home_team) %></span>
+        <span class="participar-hero-vs">×</span>
+        <span class="participar-hero-team"><%= teamPt(game.away_team) %></span>
       </div>
+      <time class="participar-hero-date">
+        <%= gameDateBR(game.game_date, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+      </time>
+      <div class="participar-hero-meta">
+        <span class="participar-hero-fee"><%= formatCents(game.entry_fee_cents) %><small>/placar</small></span>
+        <% if (game.prize_pool_cents > 0) { %>
+          <span class="participar-hero-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+        <% } %>
+      </div>
+    </section>
+
+    <!-- Formulário -->
+    <div class="card participar-card">
+      <h2 class="participar-form-title">Seus dados</h2>
+      <p class="participar-form-sub">Preencha para escolher o placar e pagar via PIX</p>
 
       <% if (error) { %>
         <div class="alert alert-error"><%= error %></div>
@@ -31,7 +45,7 @@
 
       <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
         <div class="form-group">
-          <label for="phone">WhatsApp / Telefone</label>
+          <label for="phone">WhatsApp</label>
           <input type="tel" id="phone" name="phone" class="form-control" required
             placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>">
           <small class="form-hint" id="phone-hint" style="display:none; color:var(--accent);">✓ Cadastro encontrado!</small>
@@ -42,30 +56,24 @@
             placeholder="Seu nome" value="<%= typeof form !== 'undefined' && form ? form.name : '' %>">
         </div>
         <div class="form-group">
-          <label for="cpf">Chave PIX (para receber prêmio)</label>
+          <label for="cpf">Chave PIX <small>(para receber prêmio)</small></label>
           <input type="text" id="cpf" name="cpf" class="form-control" required
-            placeholder="CPF, telefone, e-mail ou chave aleatória"
+            placeholder="CPF, telefone ou e-mail"
             value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>">
-          <small class="form-hint">Usada somente para enviar prêmios</small>
         </div>
 
-        <div class="form-group" style="margin-top:1rem;">
-          <label class="checkbox-label" style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" id="accept-rules" required style="margin-top:3px; min-width:18px; min-height:18px;">
-            <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
-              Concordo com as <a href="/regras" target="_blank" style="color:var(--gold);">regras do bolão</a>.
-              Entendo que há uma taxa de <strong>15%</strong> sobre o prêmio total e que
-              <strong>85%</strong> é distribuído entre os ganhadores.
-            </span>
-          </label>
-        </div>
+        <label class="participar-check">
+          <input type="checkbox" id="accept-rules" required>
+          <span>
+            Concordo com as <a href="/regras" target="_blank">regras</a>.
+            Taxa de 15% — prêmio: 85% aos ganhadores.
+          </span>
+        </label>
 
         <button type="submit" class="btn btn-gold btn-block btn-xl" id="btn-submit" disabled>
-          Continuar →
+          Escolher placar →
         </button>
       </form>
-
-      <div class="participar-divider"><span>ou</span></div>
 
       <p class="participar-alt">
         Já tem conta? <a href="/login">Entrar</a> · <a href="/register">Criar conta</a>
@@ -73,22 +81,40 @@
     </div>
 
     <!-- Compartilhar -->
-    <div class="card share-card">
-      <h3 class="share-title">📤 Compartilhar este bolão</h3>
-      <p class="share-desc">Envie o link para os amigos participarem:</p>
-
-      <div class="share-link-box">
-        <input type="text" class="share-link-input" id="share-link" readonly value="" />
-        <button type="button" class="btn btn-accent btn-sm" id="btn-copy-link">Copiar</button>
+    <section class="participar-share" aria-label="Compartilhar bolão">
+      <div class="participar-share-head">
+        <span class="participar-share-icon">📣</span>
+        <div>
+          <strong>Convide seus amigos</strong>
+          <p>Mais gente = prêmio maior</p>
+        </div>
       </div>
 
-      <div class="share-qr" id="share-qr"></div>
+      <button type="button" class="btn-share-whatsapp" id="btn-share-whatsapp">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Compartilhar no WhatsApp
+      </button>
 
-      <div class="share-buttons">
-        <a id="btn-whatsapp" href="#" target="_blank" class="share-btn share-btn-whatsapp">WhatsApp</a>
-        <a id="btn-telegram" href="#" target="_blank" class="share-btn share-btn-telegram">Telegram</a>
+      <div class="participar-share-actions">
+        <button type="button" class="btn-share-secondary" id="btn-copy-link">
+          <span id="btn-copy-label">🔗 Copiar link</span>
+        </button>
+        <a id="btn-telegram" href="#" target="_blank" rel="noopener" class="btn-share-secondary btn-share-telegram">
+          Telegram
+        </a>
       </div>
-    </div>
+
+      <button type="button" class="btn-share-qrcode" id="btn-share-qr">
+        📱 Gerar QR Code do link
+      </button>
+
+      <div class="participar-share-qr-panel" id="share-qr-panel" hidden>
+        <div class="participar-share-qr" id="share-qr"></div>
+        <p class="participar-share-qr-hint">Outro celular escaneia e entra direto neste bolão</p>
+      </div>
+
+      <input type="text" class="participar-share-url" id="share-link" readonly value="" tabindex="-1" aria-hidden="true" />
+    </section>
   </div>
 
   <%- include('partials/footer') %>
@@ -96,28 +122,56 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script>
     const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
-    const shareText = 'Participe do bolão: <%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %> — <%= formatCents(game.entry_fee_cents) %> por placar!';
+    const shareText = '⚽ Bolão: <%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %>\n💰 <%= formatCents(game.entry_fee_cents) %> por placar\n👉 Entre e aposte:';
 
     document.getElementById('share-link').value = gameUrl;
-    document.getElementById('btn-copy-link').onclick = function() {
+
+    function openWhatsApp() {
+      window.open('https://wa.me/?text=' + encodeURIComponent(shareText + '\n' + gameUrl), '_blank');
+    }
+
+    document.getElementById('btn-share-whatsapp').onclick = function () {
+      if (navigator.share) {
+        navigator.share({ title: 'Bolão Online', text: shareText, url: gameUrl }).catch(openWhatsApp);
+      } else {
+        openWhatsApp();
+      }
+    };
+
+    document.getElementById('btn-copy-link').onclick = function () {
       navigator.clipboard.writeText(gameUrl).then(() => {
-        this.textContent = '✓ Copiado!';
-        setTimeout(() => { this.textContent = 'Copiar'; }, 2000);
+        const label = document.getElementById('btn-copy-label');
+        label.textContent = '✓ Link copiado!';
+        setTimeout(() => { label.textContent = '🔗 Copiar link'; }, 2500);
       });
     };
-    document.getElementById('btn-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(shareText + '\n' + gameUrl);
-    document.getElementById('btn-telegram').href = 'https://t.me/share/url?url=' + encodeURIComponent(gameUrl) + '&text=' + encodeURIComponent(shareText);
 
-    try {
-      var qr = qrcode(0, 'M');
-      qr.addData(gameUrl);
-      qr.make();
-      document.getElementById('share-qr').innerHTML = qr.createSvgTag(4, 0);
-    } catch(e) {}
+    document.getElementById('btn-telegram').href =
+      'https://t.me/share/url?url=' + encodeURIComponent(gameUrl) + '&text=' + encodeURIComponent(shareText);
 
-    // Phone mask
+    let qrGenerated = false;
+    document.getElementById('btn-share-qr').onclick = function () {
+      const panel = document.getElementById('share-qr-panel');
+      const isHidden = panel.hidden;
+
+      if (!qrGenerated) {
+        try {
+          const qr = qrcode(0, 'M');
+          qr.addData(gameUrl);
+          qr.make();
+          document.getElementById('share-qr').innerHTML = qr.createSvgTag(3, 8);
+          qrGenerated = true;
+        } catch (e) {
+          console.error('QR error:', e);
+        }
+      }
+
+      panel.hidden = !isHidden;
+      this.textContent = isHidden ? '✕ Ocultar QR Code' : '📱 Gerar QR Code do link';
+    };
+
     const phoneInput = document.getElementById('phone');
-    phoneInput.addEventListener('input', function(e) {
+    phoneInput.addEventListener('input', function (e) {
       let v = e.target.value.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
       if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
@@ -126,9 +180,8 @@
       e.target.value = v;
     });
 
-    // Auto-preencher pelo telefone
     let lookupTimeout;
-    phoneInput.addEventListener('input', function() {
+    phoneInput.addEventListener('input', function () {
       clearTimeout(lookupTimeout);
       const digits = this.value.replace(/\D/g, '');
       if (digits.length >= 10) {
@@ -138,31 +191,27 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: digits })
           })
-          .then(r => r.json())
-          .then(data => {
-            if (data.found) {
-              const nameEl = document.getElementById('name');
-              const cpfEl = document.getElementById('cpf');
-              const hint = document.getElementById('phone-hint');
-              if (!nameEl.value) nameEl.value = data.name;
-              if (!cpfEl.value && data.cpf) cpfEl.value = data.cpf;
-              hint.style.display = 'block';
-            } else {
-              document.getElementById('phone-hint').style.display = 'none';
-            }
-          })
-          .catch(() => {});
+            .then(r => r.json())
+            .then(data => {
+              if (data.found) {
+                const nameEl = document.getElementById('name');
+                const cpfEl = document.getElementById('cpf');
+                if (!nameEl.value) nameEl.value = data.name;
+                if (!cpfEl.value && data.cpf) cpfEl.value = data.cpf;
+                document.getElementById('phone-hint').style.display = 'block';
+              } else {
+                document.getElementById('phone-hint').style.display = 'none';
+              }
+            })
+            .catch(() => {});
         }, 500);
       } else {
         document.getElementById('phone-hint').style.display = 'none';
       }
     });
 
-    // Checkbox habilita botão
-    const checkbox = document.getElementById('accept-rules');
-    const btnSubmit = document.getElementById('btn-submit');
-    checkbox.addEventListener('change', function() {
-      btnSubmit.disabled = !this.checked;
+    document.getElementById('accept-rules').addEventListener('change', function () {
+      document.getElementById('btn-submit').disabled = !this.checked;
     });
   </script>
 </body>

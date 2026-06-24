@@ -31,7 +31,7 @@
         <article class="featured-card">
           <div class="featured-card-top">
             <span class="featured-badge">⭐ DESTAQUE</span>
-            <time class="featured-date"><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+            <time class="featured-date"><%= gameDateBR(game.game_date) %></time>
           </div>
           <div class="featured-teams">
             <span><%= teamPt(game.home_team) %></span>
@@ -85,7 +85,7 @@
                 <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
               </div>
               <div class="game-row-meta">
-                <time><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+                <time><%= gameDateBR(game.game_date) %></time>
                 <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
                 <span><%= formatCents(game.entry_fee_cents) %></span>
               </div>
@@ -99,7 +99,7 @@
                   <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-sm">Apostar</a>
                 <% } %>
               <% } else { %>
-                <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Entrar</a>
+                <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Participar</a>
               <% } %>
             </div>
           </article>

@@ -79,7 +79,7 @@ router.get('/games/:id/participar', async (req, res) => {
     const game = games[0];
 
     if (req.session.user) {
-      return res.redirect(`/games/${game.id}`);
+      return res.redirect(`/games/${game.id}/placar`);
     }
 
     res.render('participar', { title: 'Participar', game, error: null, user: null });
@@ -120,7 +120,7 @@ router.post('/games/:id/participar', async (req, res) => {
 
     setSessionUser(req, result);
 
-    res.redirect(`/games/${game.id}`);
+    res.redirect(`/games/${game.id}/placar?novo=1`);
   } catch (err) {
     console.error('Erro participar:', err.message);
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
@@ -183,7 +183,15 @@ router.get('/games/:id/placar', requireAuth, async (req, res) => {
       game,
       user: req.session.user,
       userStatus,
-      error: req.query.error === 'payment' ? 'Não foi possível gerar o PIX. Tente novamente em alguns instantes.' : null,
+      novo: req.query.novo === '1',
+      added: req.query.added === '1',
+      error: req.query.error === 'payment'
+        ? 'Não foi possível gerar o PIX. Tente novamente em alguns instantes.'
+        : req.query.error === 'empty'
+          ? 'Adicione pelo menos um palpite.'
+          : req.query.error === 'cart'
+            ? 'Erro ao adicionar ao carrinho.'
+            : null,
     });
   } catch (err) {
     res.redirect('/');

@@ -26,7 +26,7 @@
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
         <div style="text-align: center;">
           <div style="font-size: 0.7rem; color: var(--text-muted);">DATA</div>
-          <div style="font-weight: 600;"><%= new Date(game.game_date).toLocaleString('pt-BR') %></div>
+          <div style="font-weight: 600;"><%= gameDateBR(game.game_date, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></div>
         </div>
         <div style="text-align: center;">
           <div style="font-size: 0.7rem; color: var(--text-muted);">APOSTAS</div>

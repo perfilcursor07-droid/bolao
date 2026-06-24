@@ -7,6 +7,12 @@
   <div class="navbar-center" id="navbar-nav">
     <% if (typeof user !== 'undefined' && user) { %>
       <a href="/" class="nav-pill">Jogos</a>
+      <a href="/carrinho" class="nav-pill nav-pill-cart">
+        Carrinho
+        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+          <span class="nav-cart-badge"><%= cartCount %></span>
+        <% } %>
+      </a>
       <a href="/my-bets" class="nav-pill">Apostas</a>
       <a href="/my-payments" class="nav-pill">Pagamentos</a>
       <a href="/regras" class="nav-pill">Regras</a>
@@ -43,6 +49,9 @@
       <span><%= user.name %></span>
     </div>
     <a href="/" class="nav-mobile-link">🏟️ Jogos</a>
+    <a href="/carrinho" class="nav-mobile-link">
+      🛒 Carrinho<% if (typeof cartCount !== 'undefined' && cartCount > 0) { %> (<%= cartCount %>)<% } %>
+    </a>
     <a href="/my-bets" class="nav-mobile-link">🎯 Minhas Apostas</a>
     <a href="/my-payments" class="nav-mobile-link">💳 Pagamentos</a>
     <a href="/regras" class="nav-mobile-link">📋 Regras</a>

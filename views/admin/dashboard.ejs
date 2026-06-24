@@ -72,7 +72,7 @@
             <a href="/admin/games/<%= g.id %>" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem; background:var(--bg-card); border:1px solid rgba(245,158,11,0.3); border-radius:8px; text-decoration:none; color:inherit;">
               <div>
                 <strong style="font-size:0.85rem;"><%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %></strong>
-                <div style="font-size:0.7rem; color:var(--text-muted);"><%= new Date(g.game_date).toLocaleDateString('pt-BR') %></div>
+                <div style="font-size:0.7rem; color:var(--text-muted);"><%= gameDateBR(g.game_date, { day: '2-digit', month: 'short', year: 'numeric' }) %></div>
               </div>
               <div style="text-align:right;">
                 <div style="font-size:0.85rem; font-weight:700; color:var(--gold);"><%= g.total_bets %> apostas</div>
@@ -116,7 +116,7 @@
           <a href="/admin/games/<%= g.id %>" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; text-decoration:none; color:inherit;">
             <div>
               <strong style="font-size:0.8rem;"><%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %></strong>
-              <div style="font-size:0.7rem; color:var(--text-muted);"><%= new Date(g.game_date).toLocaleDateString('pt-BR') %> · <%= g.status %></div>
+              <div style="font-size:0.7rem; color:var(--text-muted);"><%= gameDateBR(g.game_date, { day: '2-digit', month: 'short', year: 'numeric' }) %> · <%= g.status %></div>
             </div>
             <div style="text-align:right;">
               <span style="font-size:0.8rem;"><%= g.total_bets %> apostas</span>

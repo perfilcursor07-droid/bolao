@@ -12,6 +12,15 @@
   <%- include('partials/header') %>
 
   <div class="container home-container placar-page">
+    <a href="/carrinho" class="placar-cart-link" id="placar-cart-link" style="<%= typeof cartCount !== 'undefined' && cartCount > 0 ? '' : 'display:none' %>">
+      🛒 Carrinho <span class="placar-cart-badge"><%= typeof cartCount !== 'undefined' ? cartCount : 0 %></span>
+    </a>
+
+    <% if (typeof novo !== 'undefined' && novo) { %>
+      <div class="alert alert-success placar-welcome">
+        Cadastro feito! Escolha seu(s) placar(es) abaixo. Você pode apostar em mais bolões antes de pagar.
+      </div>
+    <% } %>
 
     <div id="client-error" class="alert alert-error" style="display:none;"></div>
     <% if (error) { %>
@@ -95,15 +104,15 @@
         <span id="sticky-count">0</span>
         <strong id="sticky-total">R$ 0,00</strong>
       </div>
-      <button type="submit" class="btn btn-gold btn-pay" id="btn-pay" disabled>
-        Pagar via PIX
-      </button>
+      <div class="placar-sticky-actions">
+        <button type="submit" formaction="/games/<%= game.id %>/cart/add" formmethod="POST" class="btn btn-outline btn-cart" id="btn-cart" disabled>
+          + Carrinho
+        </button>
+        <button type="submit" class="btn btn-gold btn-pay" id="btn-pay" disabled>
+          Pagar PIX
+        </button>
+      </div>
     </form>
-
-    <!-- Toast -->
-    <div class="placar-toast" id="placar-toast">
-      <span id="toast-text">✓ Adicionado!</span>
-    </div>
   </div>
 
   <script>
@@ -118,16 +127,15 @@
     const elH = $('cur-home'), elA = $('cur-away');
     const elPrev = $('add-preview');
     const elList = $('placar-list'), elEmpty = $('cart-empty');
-    const elJson = $('placares_json'), elPay = $('btn-pay');
+    const elJson = $('placares_json');
+    const elPay = $('btn-pay'), elCart = $('btn-cart');
     const elCount = $('cart-count');
     const elSCount = $('sticky-count'), elSTotal = $('sticky-total');
     const elForm = $('placar-form'), elSpacer = $('bottom-spacer');
     const elErr = $('client-error');
-    const elToast = $('placar-toast'), elTT = $('toast-text');
 
     const fmt = c => (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
-    function toast(msg) { elTT.textContent = msg; elToast.classList.add('show'); setTimeout(()=>elToast.classList.remove('show'),1800); }
     function err(m) { elErr.textContent=m; elErr.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
     function noErr() { elErr.style.display='none'; }
 
@@ -139,10 +147,9 @@
     function dup(h,a) { return placares.some(p=>p.home===h&&p.away===a); }
 
     function add(h,a) {
-      if (dup(h,a)) { toast('⚠️ '+h+'×'+a+' já está na lista'); return; }
+      if (dup(h,a)) return;
       placares.push({home:h,away:a});
       noErr(); render();
-      toast('✓ '+HT+' '+h+' × '+a+' '+AT);
     }
 
     function render() {
@@ -159,13 +166,15 @@
       elCount.textContent = n;
       elJson.value = JSON.stringify(placares);
       elPay.disabled = !n;
+      if (elCart) elCart.disabled = !n;
 
       if (n) {
         elForm.style.display = 'flex';
         elSpacer.style.display = 'block';
-        elSCount.textContent = n + '× ' + fmt(FEE);
+        elSCount.textContent = n + ' palpite' + (n > 1 ? 's' : '');
         elSTotal.textContent = fmt(FEE*n);
-        elPay.textContent = 'Pagar '+fmt(FEE*n);
+        elPay.textContent = 'Pagar ' + fmt(FEE*n);
+        if (elCart) elCart.textContent = '+ Carrinho';
       } else {
         elForm.style.display = 'none';
         elSpacer.style.display = 'none';
@@ -196,7 +205,10 @@
       if (!placares.length) { placares.push({home:cH,away:cA}); render(); }
       elJson.value = JSON.stringify(placares);
       if (!placares.length) { e.preventDefault(); err('Adicione pelo menos um palpite.'); return false; }
-      elPay.disabled=true; elPay.textContent='⏳ Gerando PIX...';
+
+      const isCart = e.submitter && e.submitter.id === 'btn-cart';
+      const btn = isCart ? elCart : elPay;
+      if (btn) { btn.disabled = true; btn.textContent = isCart ? '⏳ Adicionando...' : '⏳ Gerando PIX...'; }
       return true;
     };
 

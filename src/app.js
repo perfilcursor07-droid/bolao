@@ -6,10 +6,13 @@ const session = require('express-session');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const gamesRoutes = require('./routes/games');
+const cartRoutes = require('./routes/cart');
 const paymentRoutes = require('./routes/payment');
 const { startCronJobs } = require('./services/cronJobs');
 const { formatCents } = require('./routes/games');
 const { translateTeamName } = require('./utils/teamNamesPt');
+const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
+const { getCartCount } = require('./services/cartService');
 
 const app = express();
 
@@ -33,10 +36,15 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.formatCents = formatCents;
   res.locals.teamPt = translateTeamName;
+  res.locals.gameDateBR = formatGameDateBR;
+  res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
+  res.locals.toMySQLDateTime = toMySQLDateTime;
+  res.locals.cartCount = req.session.user ? getCartCount(req) : 0;
   next();
 });
 
 app.use('/', gamesRoutes);
+app.use('/', cartRoutes);
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/payment', paymentRoutes);
