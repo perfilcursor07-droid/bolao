@@ -82,19 +82,54 @@ router.get('/ganhadores', requireAdmin, async (req, res) => {
   }
 });
 
-// Pagamentos (payouts para ganhadores)
+// Pagamentos - visão completa
 router.get('/pagamentos', requireAdmin, async (req, res) => {
   try {
+    // 1. Pagamentos PIX pendentes (usuário gerou QR mas não pagou)
+    const [pendingPayments] = await pool.query(
+      `SELECT p.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
+        g.home_team, g.away_team, g.title as game_title
+       FROM payments p JOIN users u ON u.id = p.user_id JOIN games g ON g.id = p.game_id
+       WHERE p.status = 'pending'
+       ORDER BY p.created_at DESC`
+    );
+
+    // 2. Pagamentos PIX confirmados (apostas pagas)
+    const [confirmedPayments] = await pool.query(
+      `SELECT p.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
+        g.home_team, g.away_team, g.title as game_title
+       FROM payments p JOIN users u ON u.id = p.user_id JOIN games g ON g.id = p.game_id
+       WHERE p.status = 'paid'
+       ORDER BY p.paid_at DESC`
+    );
+
+    // 3. Prêmios a enviar (ganhadores)
     const [pendingPayouts] = await pool.query(
       `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
         g.home_team, g.away_team, g.title as game_title
        FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
-       WHERE b.is_winner = TRUE AND b.prize_amount_cents > 0
+       WHERE b.is_winner = TRUE AND b.prize_amount_cents > 0 AND b.prize_paid_at IS NULL
        ORDER BY b.created_at DESC`
     );
 
-    // Simula status de pago/pendente usando coluna prize_paid_at se existir
-    res.render('admin/pagamentos', { title: 'Pagamentos', payouts: pendingPayouts, user: req.session.user, activePage: 'pagamentos' });
+    // 4. Prêmios já pagos
+    const [paidPayouts] = await pool.query(
+      `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
+        g.home_team, g.away_team, g.title as game_title
+       FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
+       WHERE b.is_winner = TRUE AND b.prize_paid_at IS NOT NULL
+       ORDER BY b.prize_paid_at DESC`
+    );
+
+    res.render('admin/pagamentos', {
+      title: 'Pagamentos',
+      pendingPayments,
+      confirmedPayments,
+      pendingPayouts,
+      paidPayouts,
+      user: req.session.user,
+      activePage: 'pagamentos',
+    });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
   }

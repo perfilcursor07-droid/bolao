@@ -11,74 +11,83 @@
 <body class="page-payment">
   <%- include('partials/header') %>
 
-  <div class="container home-container">
-    <div class="steps-bar">
-      <div class="step done">
-        <span class="step-num">✓</span>
-        <span class="step-label">Placares</span>
+  <div class="container payment-page">
+    <div class="payment-steps">
+      <div class="payment-step done">
+        <span class="payment-step-icon">✓</span>
+        <span>Placares</span>
       </div>
-      <div class="step-line done"></div>
-      <div class="step active">
-        <span class="step-num">2</span>
-        <span class="step-label">PIX</span>
+      <div class="payment-step-line done"></div>
+      <div class="payment-step active">
+        <span class="payment-step-icon">2</span>
+        <span>PIX</span>
       </div>
     </div>
 
     <div class="card payment-card">
-      <div class="payment-header">
+      <div class="payment-top">
         <span class="pix-badge">PIX</span>
         <h1>Pague para confirmar</h1>
-        <p class="payment-match"><%= teamPt(payment.home_team) %> <span>×</span> <%= teamPt(payment.away_team) %></p>
+        <p class="payment-match">
+          <%= teamPt(payment.home_team) %>
+          <span>×</span>
+          <%= teamPt(payment.away_team) %>
+        </p>
       </div>
 
       <% const predRaw = payment.prediction_data ? (typeof payment.prediction_data === 'string' ? JSON.parse(payment.prediction_data) : payment.prediction_data) : null; %>
       <% const placares = predRaw && predRaw.placares ? predRaw.placares : (predRaw && predRaw.home !== undefined ? [predRaw] : []); %>
 
-      <% if (placares.length > 0) { %>
-        <div class="placar-confirmed-list">
-          <span class="placar-confirmed-label">
-            <%= placares.length === 1 ? 'Seu palpite' : placares.length + ' placares' %>
-          </span>
-          <div class="placar-chips">
-            <% placares.forEach(function(p) { %>
-              <span class="placar-chip"><%= p.home %> × <%= p.away %></span>
-            <% }); %>
+      <div class="payment-summary">
+        <% if (placares.length > 0) { %>
+          <div class="payment-summary-picks">
+            <span class="payment-summary-label">
+              <%= placares.length === 1 ? 'Seu palpite' : placares.length + ' placares' %>
+            </span>
+            <div class="placar-chips">
+              <% placares.forEach(function(p) { %>
+                <span class="placar-chip"><%= p.home %> × <%= p.away %></span>
+              <% }); %>
+            </div>
           </div>
+        <% } %>
+        <div class="payment-summary-amount">
+          <span class="payment-summary-label">
+            <%= placares.length > 1 ? 'Total' : 'Valor' %>
+          </span>
+          <strong><%= formatCents(payment.amount_cents) %></strong>
         </div>
-      <% } %>
-
-      <div class="payment-amount">
-        <span class="payment-amount-label">
-          <%= placares.length > 1 ? placares.length + ' apostas' : 'Valor da aposta' %>
-        </span>
-        <span class="payment-amount-value"><%= formatCents(payment.amount_cents) %></span>
-      </div>
-
-      <div id="status-badge" class="payment-status payment-pending">
-        <span class="pulse"></span> Aguardando pagamento...
       </div>
 
       <% if (!qrImage && !payment.qr_code_text) { %>
-        <div class="alert alert-error" style="margin-top:1rem;">
+        <div class="alert alert-error payment-error-box">
           Não foi possível gerar o QR Code PIX. Volte e tente novamente.
-          <a href="/games/<%= payment.game_id %>/placar?error=payment" class="btn btn-secondary btn-block" style="margin-top:0.75rem;">
+          <a href="/games/<%= payment.game_id %>/placar?error=payment" class="btn btn-outline btn-block" style="margin-top:0.75rem;">
             Tentar novamente
           </a>
         </div>
-      <% } %>
+      <% } else { %>
+        <div class="payment-qr-block">
+          <div id="status-badge" class="payment-status payment-pending">
+            <span class="pulse"></span> Aguardando pagamento
+          </div>
 
-      <% if (qrImage) { %>
-        <div class="qr-code">
-          <img src="<%= qrImage %>" alt="QR Code PIX">
+          <% if (qrImage) { %>
+            <div class="qr-code-wrap">
+              <div class="qr-code">
+                <img src="<%= qrImage %>" alt="QR Code PIX">
+              </div>
+            </div>
+            <p class="qr-hint">Escaneie com o app do seu banco</p>
+          <% } %>
+
+          <% if (payment.qr_code_text) { %>
+            <button type="button" class="btn btn-gold btn-block btn-copy-pix" id="btn-copy" onclick="copyPix()">
+              Copiar código PIX
+            </button>
+            <input type="hidden" id="pix-code" value="<%= payment.qr_code_text %>">
+          <% } %>
         </div>
-        <p class="qr-hint">Abra o app do banco e escaneie o QR Code</p>
-      <% } %>
-
-      <% if (payment.qr_code_text) { %>
-        <button type="button" class="btn btn-primary btn-block btn-copy-pix" id="btn-copy" onclick="copyPix()">
-          📋 Copiar código PIX
-        </button>
-        <input type="hidden" id="pix-code" value="<%= payment.qr_code_text %>">
       <% } %>
     </div>
   </div>
@@ -90,10 +99,10 @@
       const text = document.getElementById('pix-code').value;
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('btn-copy');
-        btn.textContent = '✅ Código copiado!';
+        btn.textContent = 'Código copiado!';
         btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = '📋 Copiar código PIX';
+          btn.textContent = 'Copiar código PIX';
           btn.classList.remove('copied');
         }, 3000);
       });

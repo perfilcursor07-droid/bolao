@@ -30,7 +30,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     let qrImage = null;
 
     if (payment.qr_code_text) {
-      qrImage = await QRCode.toDataURL(payment.qr_code_text, { width: 280, margin: 2 });
+      qrImage = await QRCode.toDataURL(payment.qr_code_text, { width: 200, margin: 1 });
     }
 
     res.render('payment', {

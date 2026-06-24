@@ -11,61 +11,170 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <h1 style="font-size:1.25rem; margin-bottom:0.5rem;">💳 Pagamentos de Prêmios</h1>
-    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">Ganhadores com prêmio pendente de pagamento via PIX</p>
+    <h1 style="font-size:1.25rem; margin-bottom:0.25rem;">💳 Pagamentos</h1>
+    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">Gerencie pagamentos recebidos e prêmios a enviar</p>
 
-    <% const pending = payouts.filter(p => !p.prize_paid_at); %>
-    <% const paid = payouts.filter(p => p.prize_paid_at); %>
+    <!-- Tabs -->
+    <div class="admin-tabs" style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm tab-btn active" data-tab="pending-pix" onclick="showTab('pending-pix', this)">
+        ⏳ PIX Pendentes (<%= pendingPayments.length %>)
+      </button>
+      <button type="button" class="btn btn-sm tab-btn" data-tab="confirmed-pix" onclick="showTab('confirmed-pix', this)">
+        ✅ PIX Confirmados (<%= confirmedPayments.length %>)
+      </button>
+      <button type="button" class="btn btn-sm tab-btn" data-tab="payouts-pending" onclick="showTab('payouts-pending', this)">
+        🏆 Prêmios a Enviar (<%= pendingPayouts.length %>)
+      </button>
+      <button type="button" class="btn btn-sm tab-btn" data-tab="payouts-paid" onclick="showTab('payouts-paid', this)">
+        ✓ Prêmios Pagos (<%= paidPayouts.length %>)
+      </button>
+    </div>
 
-    <% if (pending.length > 0) { %>
-      <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">⏳ Pendentes (<%= pending.length %>)</h3>
-      <div class="table-container" style="margin-bottom:1.5rem;">
-        <table>
-          <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Valor</th><th>Ação</th></tr></thead>
-          <tbody>
-            <% pending.forEach(p => { %>
-              <tr>
-                <td><strong><%= p.user_name %></strong></td>
-                <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
-                <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
-                <td><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
-                <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
-                <td>
-                  <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
-                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Confirmar que fez o PIX de <%= formatCents(p.prize_amount_cents) %> para <%= p.user_name %>?')">
-                      ✓ Marcar pago
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            <% }); %>
-          </tbody>
-        </table>
-      </div>
-    <% } else { %>
-      <div class="alert alert-success" style="margin-bottom:1rem;">✓ Nenhum prêmio pendente de pagamento!</div>
-    <% } %>
+    <!-- TAB 1: PIX Pendentes -->
+    <div class="tab-content" id="tab-pending-pix">
+      <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">⏳ Aguardando pagamento PIX</h3>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Usuários que geraram QR Code mas ainda não pagaram</p>
 
-    <% if (paid.length > 0) { %>
-      <h3 style="font-size:0.9rem; color:var(--accent); margin-bottom:0.5rem;">✓ Pagos (<%= paid.length %>)</h3>
-      <div class="table-container">
-        <table>
-          <thead><tr><th>Jogador</th><th>Jogo</th><th>Valor</th><th>Pago em</th></tr></thead>
-          <tbody>
-            <% paid.forEach(p => { %>
-              <tr>
-                <td><%= p.user_name %></td>
-                <td><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
-                <td><%= formatCents(p.prize_amount_cents) %></td>
-                <td style="font-size:0.8rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
-              </tr>
-            <% }); %>
-          </tbody>
-        </table>
-      </div>
-    <% } %>
+      <% if (pendingPayments.length === 0) { %>
+        <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">
+          Nenhum pagamento PIX pendente.
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Jogador</th><th>Telefone</th><th>Jogo</th><th>Valor</th><th>Criado em</th><th>QR</th></tr></thead>
+            <tbody>
+              <% pendingPayments.forEach(p => { %>
+                <tr>
+                  <td><strong><%= p.user_name %></strong></td>
+                  <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
+                  <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td><strong><%= formatCents(p.amount_cents) %></strong></td>
+                  <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.created_at).toLocaleString('pt-BR') %></td>
+                  <td><%= p.qr_code_text ? '✅' : '❌' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+          Total pendente: <strong><%= formatCents(pendingPayments.reduce((s, p) => s + p.amount_cents, 0)) %></strong>
+        </p>
+      <% } %>
+    </div>
+
+    <!-- TAB 2: PIX Confirmados -->
+    <div class="tab-content" id="tab-confirmed-pix" style="display:none;">
+      <h3 style="font-size:0.9rem; color:var(--accent); margin-bottom:0.5rem;">✅ Pagamentos PIX confirmados</h3>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Apostas pagas com sucesso</p>
+
+      <% if (confirmedPayments.length === 0) { %>
+        <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">
+          Nenhum pagamento confirmado ainda.
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Jogador</th><th>Jogo</th><th>Valor</th><th>Pago em</th></tr></thead>
+            <tbody>
+              <% confirmedPayments.forEach(p => { %>
+                <tr>
+                  <td><strong><%= p.user_name %></strong></td>
+                  <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td><strong><%= formatCents(p.amount_cents) %></strong></td>
+                  <td style="font-size:0.75rem; color:var(--text-muted);"><%= p.paid_at ? new Date(p.paid_at).toLocaleString('pt-BR') : '—' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+          Total recebido: <strong><%= formatCents(confirmedPayments.reduce((s, p) => s + p.amount_cents, 0)) %></strong>
+        </p>
+      <% } %>
+    </div>
+
+    <!-- TAB 3: Prêmios a enviar -->
+    <div class="tab-content" id="tab-payouts-pending" style="display:none;">
+      <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">🏆 Prêmios a enviar via PIX</h3>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Ganhadores aguardando recebimento do prêmio</p>
+
+      <% if (pendingPayouts.length === 0) { %>
+        <div class="alert alert-success" style="text-align:center;">✓ Nenhum prêmio pendente de envio!</div>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Prêmio</th><th>Ação</th></tr></thead>
+            <tbody>
+              <% pendingPayouts.forEach(p => { %>
+                <tr>
+                  <td><strong><%= p.user_name %></strong></td>
+                  <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis;" title="<%= p.user_pix || '' %>"><%= p.user_pix || '—' %></td>
+                  <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
+                  <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
+                  <td>
+                    <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
+                      <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Confirmar que enviou PIX de <%= formatCents(p.prize_amount_cents) %> para <%= p.user_name %>?')">
+                        ✓ Marcar pago
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+          Total a enviar: <strong><%= formatCents(pendingPayouts.reduce((s, p) => s + p.prize_amount_cents, 0)) %></strong>
+        </p>
+      <% } %>
+    </div>
+
+    <!-- TAB 4: Prêmios pagos -->
+    <div class="tab-content" id="tab-payouts-paid" style="display:none;">
+      <h3 style="font-size:0.9rem; color:var(--accent); margin-bottom:0.5rem;">✓ Prêmios já enviados</h3>
+
+      <% if (paidPayouts.length === 0) { %>
+        <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">
+          Nenhum prêmio pago ainda.
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Jogo</th><th>Prêmio</th><th>Pago em</th></tr></thead>
+            <tbody>
+              <% paidPayouts.forEach(p => { %>
+                <tr>
+                  <td><%= p.user_name %></td>
+                  <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
+                  <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td><%= formatCents(p.prize_amount_cents) %></td>
+                  <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
 
   </main>
 </div>
+
+<script>
+function showTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tabId).style.display = 'block';
+  btn.classList.add('active');
+}
+</script>
+
+<style>
+.tab-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.8rem; }
+.tab-btn.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 600; }
+.tab-btn:hover:not(.active) { border-color: var(--text-muted); }
+</style>
 </body>
 </html>
