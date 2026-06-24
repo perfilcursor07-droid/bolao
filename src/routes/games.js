@@ -6,6 +6,22 @@ const { findOrCreateParticipant, setSessionUser } = require('../services/guestSe
 
 const router = express.Router();
 
+// API: buscar dados do participante pelo telefone
+router.post('/api/lookup-phone', async (req, res) => {
+  const phone = (req.body.phone || '').replace(/\D/g, '');
+  if (phone.length < 10) return res.json({ found: false });
+
+  try {
+    const [users] = await pool.query('SELECT name, cpf FROM users WHERE phone = ? LIMIT 1', [phone]);
+    if (users.length > 0) {
+      return res.json({ found: true, name: users[0].name, cpf: users[0].cpf || '' });
+    }
+    res.json({ found: false });
+  } catch (err) {
+    res.json({ found: false });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const [games] = await pool.query(
@@ -63,8 +79,6 @@ router.get('/games/:id/participar', async (req, res) => {
     const game = games[0];
 
     if (req.session.user) {
-      const userStatus = await getUserGameStatus(req.session.user.id, game.id);
-      if (userStatus.step === 'pay') return res.redirect(`/payment/${userStatus.pendingPayment.id}`);
       return res.redirect(`/games/${game.id}`);
     }
 
@@ -105,9 +119,6 @@ router.post('/games/:id/participar', async (req, res) => {
     }
 
     setSessionUser(req, result);
-
-    const userStatus = await getUserGameStatus(result.id, game.id);
-    if (userStatus.step === 'pay') return res.redirect(`/payment/${userStatus.pendingPayment.id}`);
 
     res.redirect(`/games/${game.id}`);
   } catch (err) {
@@ -167,10 +178,6 @@ router.get('/games/:id/placar', requireAuth, async (req, res) => {
     const game = games[0];
     const userStatus = await getUserGameStatus(req.session.user.id, game.id);
 
-    if (userStatus.step === 'pay') {
-      return res.redirect(`/payment/${userStatus.pendingPayment.id}`);
-    }
-
     res.render('placar', {
       title: 'Escolher Placar',
       game,
@@ -228,9 +235,6 @@ router.post('/games/:id/placar', requireAuth, async (req, res) => {
   try {
     const result = await createPaymentWithPlacar(req.session.user.id, req.params.id, placares);
 
-    if (result.error === 'pending_payment') {
-      return res.redirect(`/payment/${result.paymentId}`);
-    }
     if (result.error === 'game_closed') return res.redirect('/');
     if (result.error === 'no_placares') {
       return res.redirect(`/games/${req.params.id}/placar`);
@@ -245,6 +249,48 @@ router.post('/games/:id/placar', requireAuth, async (req, res) => {
 
 router.get('/regras', (req, res) => {
   res.render('regras', { title: 'Regras', user: req.session.user || null });
+});
+
+// Editar placar de uma aposta
+router.get('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => {
+  try {
+    const [bets] = await pool.query(
+      'SELECT b.*, g.home_team, g.away_team, g.title, g.status FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
+      [req.params.betId, req.session.user.id]
+    );
+    if (bets.length === 0 || bets[0].status !== 'open') return res.redirect(`/games/${req.params.gameId}`);
+
+    res.render('edit-bet', { title: 'Editar Placar', bet: bets[0], user: req.session.user });
+  } catch (err) {
+    res.redirect(`/games/${req.params.gameId}`);
+  }
+});
+
+router.post('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => {
+  const homeScore = parseInt(req.body.home_score);
+  const awayScore = parseInt(req.body.away_score);
+
+  if (isNaN(homeScore) || isNaN(awayScore) || homeScore < 0 || awayScore < 0 || homeScore > 99 || awayScore > 99) {
+    return res.redirect(`/games/${req.params.gameId}`);
+  }
+
+  try {
+    // Verificar que a aposta pertence ao usuário e o jogo está aberto
+    const [bets] = await pool.query(
+      'SELECT b.*, g.status FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
+      [req.params.betId, req.session.user.id]
+    );
+    if (bets.length === 0 || bets[0].status !== 'open') return res.redirect(`/games/${req.params.gameId}`);
+
+    await pool.query(
+      'UPDATE bets SET home_score_prediction = ?, away_score_prediction = ? WHERE id = ?',
+      [homeScore, awayScore, req.params.betId]
+    );
+
+    res.redirect(`/games/${req.params.gameId}?success=1`);
+  } catch (err) {
+    res.redirect(`/games/${req.params.gameId}`);
+  }
 });
 
 function formatCents(cents) {

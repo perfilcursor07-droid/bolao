@@ -45,8 +45,11 @@
           </div>
           <% if (user) { %>
             <% const st = gameStatusMap[game.id]; %>
-            <% if (st && st.step === 'pay') { %>
-              <a href="/payment/<%= st.pendingPayment.id %>" class="btn btn-gold btn-block">💳 Pagar PIX</a>
+            <% if (st && st.pendingPayments && st.pendingPayments.length > 0) { %>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <a href="/games/<%= game.id %>/placar" class="btn btn-gold" style="flex:1;">Apostar</a>
+                <a href="/payment/<%= st.pendingPayments[0].id %>" class="btn btn-primary btn-sm">💳 PIX pendente</a>
+              </div>
             <% } else { %>
               <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block">Apostar</a>
             <% } %>
@@ -90,8 +93,8 @@
             <div class="game-row-action">
               <% if (user) { %>
                 <% const st = gameStatusMap[game.id]; %>
-                <% if (st && st.step === 'pay') { %>
-                  <a href="/payment/<%= st.pendingPayment.id %>" class="btn btn-gold btn-sm">PIX</a>
+                <% if (st && st.pendingPayments && st.pendingPayments.length > 0) { %>
+                  <a href="/payment/<%= st.pendingPayments[0].id %>" class="btn btn-gold btn-sm">💳 PIX</a>
                 <% } else { %>
                   <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-sm">Apostar</a>
                 <% } %>

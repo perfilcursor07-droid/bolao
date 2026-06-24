@@ -5,44 +5,73 @@ function cleanPhone(phone) {
 }
 
 function guestEmail(pixKey) {
-  // Gera um email único baseado na chave PIX
   const safe = (pixKey || 'unknown').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 50);
   return `guest_${safe}@bolao.local`;
 }
 
 async function findOrCreateParticipant({ name, phone, cpf }) {
-  // cpf aqui na verdade é a chave PIX (pode ser CPF, email, telefone, aleatória)
   const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
 
-  if (!name?.trim() || pixKey.length < 5 || phoneClean.length < 10) {
+  if (!phoneClean || phoneClean.length < 10) {
     return { error: 'invalid_data' };
   }
 
-  const [existing] = await pool.query('SELECT * FROM users WHERE cpf = ?', [pixKey]);
+  // Buscar primeiro pelo telefone (identificador principal)
+  const [byPhone] = await pool.query('SELECT * FROM users WHERE phone = ?', [phoneClean]);
 
-  if (existing.length > 0) {
-    const user = existing[0];
+  if (byPhone.length > 0) {
+    const user = byPhone[0];
 
     if (user.role === 'admin') {
       return { error: 'admin_cpf' };
     }
 
-    const updates = { name: name.trim(), phone: phoneClean };
-    await pool.query('UPDATE users SET name = ?, phone = ? WHERE id = ?', [
-      updates.name,
-      updates.phone,
-      user.id,
-    ]);
+    // Atualizar nome e chave PIX se fornecidos
+    const updates = {};
+    if (name?.trim()) updates.name = name.trim();
+    if (pixKey) updates.cpf = pixKey;
+
+    if (Object.keys(updates).length > 0) {
+      const sets = Object.entries(updates).map(([k]) => `${k} = ?`).join(', ');
+      await pool.query(`UPDATE users SET ${sets} WHERE id = ?`, [...Object.values(updates), user.id]);
+    }
 
     return {
       id: user.id,
-      name: updates.name,
+      name: updates.name || user.name,
       email: user.email,
-      cpf: user.cpf,
-      phone: updates.phone,
+      cpf: updates.cpf || user.cpf,
+      phone: phoneClean,
       role: user.role,
     };
+  }
+
+  // Buscar pela chave PIX (fallback)
+  if (pixKey) {
+    const [byPix] = await pool.query('SELECT * FROM users WHERE cpf = ?', [pixKey]);
+    if (byPix.length > 0) {
+      const user = byPix[0];
+      if (user.role === 'admin') return { error: 'admin_cpf' };
+
+      await pool.query('UPDATE users SET name = ?, phone = ? WHERE id = ?', [
+        name?.trim() || user.name, phoneClean, user.id
+      ]);
+
+      return {
+        id: user.id,
+        name: name?.trim() || user.name,
+        email: user.email,
+        cpf: user.cpf,
+        phone: phoneClean,
+        role: user.role,
+      };
+    }
+  }
+
+  // Novo participante
+  if (!name?.trim() || !pixKey || pixKey.length < 5) {
+    return { error: 'invalid_data' };
   }
 
   const email = guestEmail(pixKey);

@@ -133,19 +133,10 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
     return { error: 'no_placares' };
   }
 
+  // Cancelar pagamentos sem QR code (falhos)
   await cancelStalePendingPayments(userId, gameId);
 
-  const [pending] = await pool.query(
-    `SELECT * FROM payments WHERE user_id = ? AND game_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`,
-    [userId, gameId]
-  );
-
-  if (pending.length > 0) {
-    if (pending[0].qr_code_text) {
-      return { error: 'pending_payment', paymentId: pending[0].id };
-    }
-    await pool.query('UPDATE payments SET status = ? WHERE id = ?', ['cancelled', pending[0].id]);
-  }
+  // Permitir nova aposta mesmo com pendente - não bloquear mais
 
   const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'open']);
   if (games.length === 0) return { error: 'game_closed' };
@@ -201,16 +192,14 @@ async function getUserGameStatus(userId, gameId) {
   );
 
   const [pending] = await pool.query(
-    `SELECT * FROM payments WHERE user_id = ? AND game_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`,
+    `SELECT * FROM payments WHERE user_id = ? AND game_id = ? AND status = 'pending' ORDER BY created_at DESC`,
     [userId, gameId]
   );
 
-  if (pending.length > 0 && pending[0].qr_code_text) {
-    const placares = parsePredictions(pending[0].prediction_data);
-    return { step: 'pay', bets, pendingPayment: pending[0], placares };
-  }
+  const pendingPayments = pending.filter(p => p.qr_code_text);
 
-  return { step: 'placar', bets, pendingPayment: null, placares: [] };
+  // Sempre permitir nova aposta - mostrar pendentes como informação
+  return { step: 'placar', bets, pendingPayments, pendingPayment: pendingPayments[0] || null, placares: [] };
 }
 
 module.exports = {

@@ -29,31 +29,40 @@
         <div class="alert alert-error"><%= error %></div>
       <% } %>
 
-      <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form">
+      <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
+        <div class="form-group">
+          <label for="phone">WhatsApp / Telefone</label>
+          <input type="tel" id="phone" name="phone" class="form-control" required
+            placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>">
+          <small class="form-hint" id="phone-hint" style="display:none; color:var(--accent);">✓ Cadastro encontrado!</small>
+        </div>
         <div class="form-group">
           <label for="name">Nome</label>
           <input type="text" id="name" name="name" class="form-control" required
             placeholder="Seu nome" value="<%= typeof form !== 'undefined' && form ? form.name : '' %>">
         </div>
         <div class="form-group">
-          <label for="phone">WhatsApp</label>
-          <input type="tel" id="phone" name="phone" class="form-control" required
-            placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>">
-        </div>
-        <div class="form-group">
           <label for="cpf">Chave PIX (para receber prêmio)</label>
           <input type="text" id="cpf" name="cpf" class="form-control" required
             placeholder="CPF, telefone, e-mail ou chave aleatória"
             value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>">
+          <small class="form-hint">Usada somente para enviar prêmios</small>
         </div>
 
-        <button type="submit" class="btn btn-gold btn-block btn-xl">
+        <div class="form-group" style="margin-top:1rem;">
+          <label class="checkbox-label" style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" id="accept-rules" required style="margin-top:3px; min-width:18px; min-height:18px;">
+            <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+              Concordo com as <a href="/regras" target="_blank" style="color:var(--gold);">regras do bolão</a>.
+              Entendo que há uma taxa de <strong>15%</strong> sobre o prêmio total e que
+              <strong>85%</strong> é distribuído entre os ganhadores.
+            </span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-block btn-xl" id="btn-submit" disabled>
           Continuar →
         </button>
-        <p class="participar-terms">
-          Ao continuar, você concorda com as <a href="/regras" target="_blank">regras do bolão</a>.
-          Taxa do sistema: 15% — prêmio distribuído: 85% entre os ganhadores.
-        </p>
       </form>
 
       <div class="participar-divider"><span>ou</span></div>
@@ -69,20 +78,15 @@
       <p class="share-desc">Envie o link para os amigos participarem:</p>
 
       <div class="share-link-box">
-        <input type="text" class="share-link-input" id="share-link" readonly
-          value="<%= typeof process !== 'undefined' ? '' : '' %>" />
+        <input type="text" class="share-link-input" id="share-link" readonly value="" />
         <button type="button" class="btn btn-accent btn-sm" id="btn-copy-link">Copiar</button>
       </div>
 
       <div class="share-qr" id="share-qr"></div>
 
       <div class="share-buttons">
-        <a id="btn-whatsapp" href="#" target="_blank" class="share-btn share-btn-whatsapp">
-          WhatsApp
-        </a>
-        <a id="btn-telegram" href="#" target="_blank" class="share-btn share-btn-telegram">
-          Telegram
-        </a>
+        <a id="btn-whatsapp" href="#" target="_blank" class="share-btn share-btn-whatsapp">WhatsApp</a>
+        <a id="btn-telegram" href="#" target="_blank" class="share-btn share-btn-telegram">Telegram</a>
       </div>
     </div>
   </div>
@@ -91,25 +95,19 @@
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script>
-    // Share link
     const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
     const shareText = 'Participe do bolão: <%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %> — <%= formatCents(game.entry_fee_cents) %> por placar!';
 
     document.getElementById('share-link').value = gameUrl;
-
-    // Copy
     document.getElementById('btn-copy-link').onclick = function() {
       navigator.clipboard.writeText(gameUrl).then(() => {
         this.textContent = '✓ Copiado!';
         setTimeout(() => { this.textContent = 'Copiar'; }, 2000);
       });
     };
-
-    // WhatsApp & Telegram
     document.getElementById('btn-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(shareText + '\n' + gameUrl);
     document.getElementById('btn-telegram').href = 'https://t.me/share/url?url=' + encodeURIComponent(gameUrl) + '&text=' + encodeURIComponent(shareText);
 
-    // QR Code
     try {
       var qr = qrcode(0, 'M');
       qr.addData(gameUrl);
@@ -118,13 +116,53 @@
     } catch(e) {}
 
     // Phone mask
-    document.getElementById('phone').addEventListener('input', function(e) {
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('input', function(e) {
       let v = e.target.value.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
       if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
       else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
       else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
       e.target.value = v;
+    });
+
+    // Auto-preencher pelo telefone
+    let lookupTimeout;
+    phoneInput.addEventListener('input', function() {
+      clearTimeout(lookupTimeout);
+      const digits = this.value.replace(/\D/g, '');
+      if (digits.length >= 10) {
+        lookupTimeout = setTimeout(() => {
+          fetch('/api/lookup-phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: digits })
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.found) {
+              const nameEl = document.getElementById('name');
+              const cpfEl = document.getElementById('cpf');
+              const hint = document.getElementById('phone-hint');
+              if (!nameEl.value) nameEl.value = data.name;
+              if (!cpfEl.value && data.cpf) cpfEl.value = data.cpf;
+              hint.style.display = 'block';
+            } else {
+              document.getElementById('phone-hint').style.display = 'none';
+            }
+          })
+          .catch(() => {});
+        }, 500);
+      } else {
+        document.getElementById('phone-hint').style.display = 'none';
+      }
+    });
+
+    // Checkbox habilita botão
+    const checkbox = document.getElementById('accept-rules');
+    const btnSubmit = document.getElementById('btn-submit');
+    checkbox.addEventListener('change', function() {
+      btnSubmit.disabled = !this.checked;
     });
   </script>
 </body>
