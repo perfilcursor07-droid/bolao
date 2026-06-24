@@ -56,8 +56,9 @@ function buildPagBankCustomer(user) {
 }
 
 function getHeaders() {
+  const token = (process.env.PAGBANK_TOKEN || '').trim();
   return {
-    Authorization: `Bearer ${process.env.PAGBANK_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };

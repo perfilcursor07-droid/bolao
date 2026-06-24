@@ -58,6 +58,15 @@
         <span class="pulse"></span> Aguardando pagamento...
       </div>
 
+      <% if (!qrImage && !payment.qr_code_text) { %>
+        <div class="alert alert-error" style="margin-top:1rem;">
+          Não foi possível gerar o QR Code PIX. Volte e tente novamente.
+          <a href="/games/<%= payment.game_id %>/placar?error=payment" class="btn btn-secondary btn-block" style="margin-top:0.75rem;">
+            Tentar novamente
+          </a>
+        </div>
+      <% } %>
+
       <% if (qrImage) { %>
         <div class="qr-code">
           <img src="<%= qrImage %>" alt="QR Code PIX">

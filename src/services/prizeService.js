@@ -119,10 +119,21 @@ async function confirmPayment(paymentId) {
   }
 }
 
+async function cancelStalePendingPayments(userId, gameId) {
+  await pool.query(
+    `UPDATE payments SET status = 'cancelled'
+     WHERE user_id = ? AND game_id = ? AND status = 'pending'
+       AND (qr_code_text IS NULL OR qr_code_text = '')`,
+    [userId, gameId]
+  );
+}
+
 async function createPaymentWithPlacar(userId, gameId, placares) {
   if (!placares || placares.length === 0) {
     return { error: 'no_placares' };
   }
+
+  await cancelStalePendingPayments(userId, gameId);
 
   const [pending] = await pool.query(
     `SELECT * FROM payments WHERE user_id = ? AND game_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`,
@@ -130,7 +141,10 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
   );
 
   if (pending.length > 0) {
-    return { error: 'pending_payment', paymentId: pending[0].id };
+    if (pending[0].qr_code_text) {
+      return { error: 'pending_payment', paymentId: pending[0].id };
+    }
+    await pool.query('UPDATE payments SET status = ? WHERE id = ?', ['cancelled', pending[0].id]);
   }
 
   const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'open']);
@@ -183,7 +197,7 @@ async function getUserGameStatus(userId, gameId) {
     [userId, gameId]
   );
 
-  if (pending.length > 0) {
+  if (pending.length > 0 && pending[0].qr_code_text) {
     const placares = parsePredictions(pending[0].prediction_data);
     return { step: 'pay', bets, pendingPayment: pending[0], placares };
   }
