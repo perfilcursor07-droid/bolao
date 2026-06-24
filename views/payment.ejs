@@ -31,7 +31,7 @@
         <p class="payment-match"><%= teamPt(payment.home_team) %> <span>×</span> <%= teamPt(payment.away_team) %></p>
       </div>
 
-      <% const predRaw = payment.prediction_data ? JSON.parse(payment.prediction_data) : null; %>
+      <% const predRaw = payment.prediction_data ? (typeof payment.prediction_data === 'string' ? JSON.parse(payment.prediction_data) : payment.prediction_data) : null; %>
       <% const placares = predRaw && predRaw.placares ? predRaw.placares : (predRaw && predRaw.home !== undefined ? [predRaw] : []); %>
 
       <% if (placares.length > 0) { %>
