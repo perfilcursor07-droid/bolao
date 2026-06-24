@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <h1 style="font-size:1.25rem; margin-bottom:1rem;">🏆 Copa do Mundo 2026</h1>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <div class="card" style="padding:1.5rem; text-align:center;">
+        <p style="margin-bottom:1rem;">Para usar esta funcionalidade, cadastre uma chave gratuita da API:</p>
+        <ol style="text-align:left; color:var(--text-secondary); font-size:0.9rem; margin-bottom:1rem;">
+          <li>Acesse <a href="https://www.football-data.org/" target="_blank">football-data.org</a></li>
+          <li>Registre-se gratuitamente</li>
+          <li>Copie seu token</li>
+          <li>Adicione no <code>.env</code>: <code>FOOTBALL_API_KEY=seu-token</code></li>
+        </ol>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Plano gratuito: 10 req/min · Copa do Mundo incluída</p>
+      </div>
+    <% } else if (matches && matches.length > 0) { %>
+
+      <!-- Toolbar de seleção -->
+      <form method="POST" action="/admin/copa/create-bulk" id="bulk-form">
+        <div class="copa-toolbar">
+          <div class="copa-toolbar-left">
+            <label class="copa-select-all">
+              <input type="checkbox" id="select-all"> Selecionar tudo
+            </label>
+            <span class="copa-selected-count" id="selected-count">0 selecionados</span>
+          </div>
+          <div class="copa-toolbar-right">
+            <label class="copa-fee-label">
+              Valor R$
+              <input type="number" name="entry_fee" value="10" min="1" step="0.01" class="copa-fee-input-main" id="global-fee">
+            </label>
+            <button type="submit" class="btn btn-primary" id="btn-create-bulk" disabled>
+              Criar bolões selecionados
+            </button>
+          </div>
+        </div>
+
+        <%
+          const stages = {};
+          matches.forEach(m => {
+            const key = m.stage || 'OTHER';
+            if (!stages[key]) stages[key] = [];
+            stages[key].push(m);
+          });
+          const stageNames = {
+            'GROUP_STAGE': 'Fase de Grupos',
+            'ROUND_OF_16': 'Oitavas de Final',
+            'QUARTER_FINALS': 'Quartas de Final',
+            'SEMI_FINALS': 'Semifinais',
+            'THIRD_PLACE': 'Disputa 3º lugar',
+            'FINAL': 'Final',
+            'OTHER': 'Outros',
+            'KNOCKOUT': 'Eliminatórias'
+          };
+        %>
+
+        <% Object.keys(stages).forEach(function(stage) { %>
+          <div class="copa-stage-header">
+            <span><%= stageNames[stage] || stage %></span>
+            <button type="button" class="copa-stage-select-btn" data-stage="<%= stage %>">Selecionar fase</button>
+          </div>
+          <div class="copa-stage-list">
+            <% stages[stage].forEach(function(m) { %>
+              <label class="copa-match-item copa-match-selectable" data-stage="<%= stage %>">
+                <% if (m.status === 'SCHEDULED' || m.status === 'TIMED') { %>
+                  <input type="checkbox" class="copa-check" name="matches[]"
+                    value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: m.date, api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
+                <% } else { %>
+                  <input type="checkbox" disabled style="opacity:0.3;">
+                <% } %>
+                <div class="copa-match-info">
+                  <div class="copa-match-teams">
+                    <strong><%= m.homeTeam %></strong>
+                    <span class="copa-match-vs">
+                      <% if (m.homeScore !== null) { %>
+                        <%= m.homeScore %> × <%= m.awayScore %>
+                      <% } else { %>
+                        ×
+                      <% } %>
+                    </span>
+                    <strong><%= m.awayTeam %></strong>
+                  </div>
+                  <div class="copa-match-meta">
+                    <time><%= new Date(m.date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+                    <span class="copa-match-status <%= m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : '' %>">
+                      <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' ? '🔴 AO VIVO' : m.status === 'FINISHED' ? 'Finalizado' : m.status %>
+                    </span>
+                  </div>
+                </div>
+              </label>
+            <% }); %>
+          </div>
+        <% }); %>
+      </form>
+
+    <% } else { %>
+      <div class="empty-state">
+        <div class="empty-icon">🏆</div>
+        <p>Nenhuma partida encontrada</p>
+        <small>A Copa 2026 pode ainda não ter jogos agendados na API ou houve erro de conexão. Tente novamente.</small>
+      </div>
+    <% } %>
+  </main>
+</div>
+
+  <script>
+    const checks = document.querySelectorAll('.copa-check');
+    const selectAll = document.getElementById('select-all');
+    const countEl = document.getElementById('selected-count');
+    const btnCreate = document.getElementById('btn-create-bulk');
+
+    function updateCount() {
+      const n = document.querySelectorAll('.copa-check:checked').length;
+      countEl.textContent = n + ' selecionado' + (n !== 1 ? 's' : '');
+      btnCreate.disabled = n === 0;
+      btnCreate.textContent = n === 0 ? 'Criar bolões selecionados' : 'Criar ' + n + ' bolão' + (n > 1 ? 'es' : '');
+    }
+
+    if (selectAll) {
+      selectAll.onchange = () => {
+        checks.forEach(c => { c.checked = selectAll.checked; });
+        updateCount();
+      };
+    }
+
+    checks.forEach(c => { c.onchange = updateCount; });
+
+    // Selecionar por fase
+    document.querySelectorAll('.copa-stage-select-btn').forEach(btn => {
+      btn.onclick = () => {
+        const stage = btn.dataset.stage;
+        const items = document.querySelectorAll(`.copa-match-selectable[data-stage="${stage}"] .copa-check`);
+        const allChecked = Array.from(items).every(c => c.checked);
+        items.forEach(c => { c.checked = !allChecked; });
+        updateCount();
+      };
+    });
+
+    updateCount();
+  </script>
+</body>
+</html>

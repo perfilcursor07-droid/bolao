@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container">
+    <h1 style="font-size: 1.35rem; margin-bottom: 0.25rem;">Minhas Apostas</h1>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">Acompanhe seus palpites</p>
+
+    <% if (bets.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">🎟️</div>
+        <p>Você ainda não apostou.</p>
+        <a href="/" class="btn btn-primary btn-block" style="margin-top: 1rem; max-width: 280px; margin-left: auto; margin-right: auto;">Ver jogos abertos</a>
+      </div>
+    <% } else { %>
+      <div class="bets-list">
+        <% bets.forEach(function(bet) { %>
+          <div class="bet-card-mobile">
+            <div class="bet-card-top">
+              <strong><%= bet.title %></strong>
+              <% if (bet.is_winner) { %>
+                <span class="winner-badge">🏆 Ganhou!</span>
+              <% } else if (bet.game_status === 'finished') { %>
+                <span class="status-tag lost">Não ganhou</span>
+              <% } else { %>
+                <span class="status-tag waiting">Aguardando</span>
+              <% } %>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              <%= bet.home_team %> × <%= bet.away_team %>
+            </p>
+            <div class="bet-card-scores">
+              <div>
+                <small>Meu palpite</small>
+                <strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong>
+              </div>
+              <div>
+                <small>Resultado</small>
+                <strong>
+                  <% if (bet.home_score !== null) { %>
+                    <%= bet.home_score %> × <%= bet.away_score %>
+                  <% } else { %>—<% } %>
+                </strong>
+              </div>
+              <% if (bet.is_winner) { %>
+                <div class="bet-prize">
+                  <small>Prêmio</small>
+                  <strong class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></strong>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

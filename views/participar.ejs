@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container home-container">
+    <a href="/" class="back-link">← Voltar</a>
+
+    <div class="card participar-card">
+      <div class="participar-header">
+        <h1>⚽ Entrar no bolão</h1>
+        <div class="participar-match">
+          <strong><%= game.home_team %></strong>
+          <span>×</span>
+          <strong><%= game.away_team %></strong>
+        </div>
+        <div class="participar-fee">Entrada: <strong><%= formatCents(game.entry_fee_cents) %></strong> por placar</div>
+      </div>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form">
+        <div class="form-group">
+          <label for="name">Nome</label>
+          <input type="text" id="name" name="name" class="form-control" required
+            placeholder="Seu nome" value="<%= typeof form !== 'undefined' && form ? form.name : '' %>">
+        </div>
+        <div class="form-group">
+          <label for="phone">WhatsApp</label>
+          <input type="tel" id="phone" name="phone" class="form-control" required
+            placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>">
+        </div>
+        <div class="form-group">
+          <label for="cpf">Chave PIX</label>
+          <input type="text" id="cpf" name="cpf" class="form-control" required
+            placeholder="CPF, telefone, e-mail ou chave aleatória"
+            value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>">
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-block btn-xl">
+          Continuar →
+        </button>
+        <p class="participar-terms">
+          Ao continuar, você concorda com as <a href="/regras" target="_blank">regras do bolão</a>.
+          Taxa do sistema: 15% — prêmio distribuído: 85% entre os ganhadores.
+        </p>
+      </form>
+
+      <div class="participar-divider"><span>ou</span></div>
+
+      <p class="participar-alt">
+        Já tem conta? <a href="/login">Entrar</a> · <a href="/register">Criar conta</a>
+      </p>
+    </div>
+
+    <!-- Compartilhar -->
+    <div class="card share-card">
+      <h3 class="share-title">📤 Compartilhar este bolão</h3>
+      <p class="share-desc">Envie o link para os amigos participarem:</p>
+
+      <div class="share-link-box">
+        <input type="text" class="share-link-input" id="share-link" readonly
+          value="<%= typeof process !== 'undefined' ? '' : '' %>" />
+        <button type="button" class="btn btn-accent btn-sm" id="btn-copy-link">Copiar</button>
+      </div>
+
+      <div class="share-qr" id="share-qr"></div>
+
+      <div class="share-buttons">
+        <a id="btn-whatsapp" href="#" target="_blank" class="share-btn share-btn-whatsapp">
+          WhatsApp
+        </a>
+        <a id="btn-telegram" href="#" target="_blank" class="share-btn share-btn-telegram">
+          Telegram
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script>
+    // Share link
+    const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
+    const shareText = 'Participe do bolão: <%= game.home_team %> × <%= game.away_team %> — <%= formatCents(game.entry_fee_cents) %> por placar!';
+
+    document.getElementById('share-link').value = gameUrl;
+
+    // Copy
+    document.getElementById('btn-copy-link').onclick = function() {
+      navigator.clipboard.writeText(gameUrl).then(() => {
+        this.textContent = '✓ Copiado!';
+        setTimeout(() => { this.textContent = 'Copiar'; }, 2000);
+      });
+    };
+
+    // WhatsApp & Telegram
+    document.getElementById('btn-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(shareText + '\n' + gameUrl);
+    document.getElementById('btn-telegram').href = 'https://t.me/share/url?url=' + encodeURIComponent(gameUrl) + '&text=' + encodeURIComponent(shareText);
+
+    // QR Code
+    try {
+      var qr = qrcode(0, 'M');
+      qr.addData(gameUrl);
+      qr.make();
+      document.getElementById('share-qr').innerHTML = qr.createSvgTag(4, 0);
+    } catch(e) {}
+
+    // Phone mask
+    document.getElementById('phone').addEventListener('input', function(e) {
+      let v = e.target.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
+      else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+      e.target.value = v;
+    });
+  </script>
+</body>
+</html>

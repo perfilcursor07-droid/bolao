@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regras | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container home-container">
+    <a href="/" class="back-link">← Voltar</a>
+
+    <div class="card rules-card">
+      <h1>📋 Regras do Bolão</h1>
+
+      <div class="rule-section">
+        <h3>🎯 Como funciona</h3>
+        <ol>
+          <li>Escolha uma partida aberta</li>
+          <li>Informe o placar que você acredita (pode apostar em vários)</li>
+          <li>Pague via PIX o valor por placar</li>
+          <li>Se acertar o placar exato, você ganha!</li>
+        </ol>
+      </div>
+
+      <div class="rule-section">
+        <h3>🏆 Premiação</h3>
+        <ul>
+          <li>O prêmio total é a soma de todas as apostas da partida</li>
+          <li>Se houver mais de um ganhador, o prêmio é dividido igualmente entre eles</li>
+          <li><strong>85% do valor total</strong> é distribuído aos ganhadores</li>
+          <li><strong>15% é a taxa do sistema</strong> (manutenção, API de dados e processamento de pagamentos)</li>
+          <li>Se ninguém acertar, não há premiação para aquela partida</li>
+        </ul>
+      </div>
+
+      <div class="rule-section">
+        <h3>💳 Pagamentos</h3>
+        <ul>
+          <li>Apostas são pagas via PIX (pagamento instantâneo)</li>
+          <li>Os prêmios são pagos via PIX para a chave informada no cadastro</li>
+          <li>Após o resultado oficial, os ganhadores são identificados automaticamente</li>
+          <li>O pagamento do prêmio é realizado em até 24h após a confirmação do resultado</li>
+        </ul>
+      </div>
+
+      <div class="rule-section">
+        <h3>⚽ Resultados</h3>
+        <ul>
+          <li>O placar considerado é o do tempo regulamentar (90 minutos + acréscimos)</li>
+          <li>Prorrogação e pênaltis <strong>não</strong> são considerados</li>
+          <li>O resultado é obtido automaticamente via API oficial de dados de futebol</li>
+        </ul>
+      </div>
+
+      <div class="rule-section">
+        <h3>📌 Regras gerais</h3>
+        <ul>
+          <li>Cada usuário pode apostar em quantos placares quiser por partida</li>
+          <li>Apostas não podem ser canceladas após o pagamento</li>
+          <li>O bolão fecha automaticamente no horário de início da partida</li>
+          <li>Ao participar, você concorda com os termos e taxas descritos acima</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

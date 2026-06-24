@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container home-container">
+    <a href="/" class="back-link">← Voltar aos jogos</a>
+
+    <div class="card game-detail-card">
+      <span class="card-badge <%= game.status === 'open' ? 'open' : game.status === 'closed' ? 'closed' : 'finished' %>">
+        <%= game.status === 'open' ? 'Aberto' : game.status === 'closed' ? 'Aguardando resultado' : 'Finalizado' %>
+      </span>
+
+      <h1 class="game-title"><%= game.title %></h1>
+      <time class="game-date"><%= new Date(game.game_date).toLocaleString('pt-BR') %></time>
+
+      <div class="match-row match-row-lg">
+        <div class="match-team">
+          <span class="match-team-name"><%= game.home_team %></span>
+          <% if (game.home_score !== null) { %><span class="match-score"><%= game.home_score %></span><% } %>
+        </div>
+        <span class="match-x">×</span>
+        <div class="match-team">
+          <span class="match-team-name"><%= game.away_team %></span>
+          <% if (game.away_score !== null) { %><span class="match-score"><%= game.away_score %></span><% } %>
+        </div>
+      </div>
+
+      <div class="game-stats">
+        <div class="game-stat highlight">
+          <span class="game-stat-val"><%= formatCents(game.prize_pool_cents) %></span>
+          <span class="game-stat-lbl">prêmio acumulado</span>
+        </div>
+        <div class="game-stat">
+          <span class="game-stat-val"><%= formatCents(game.entry_fee_cents) %></span>
+          <span class="game-stat-lbl">por aposta</span>
+        </div>
+      </div>
+
+      <% if (success) { %>
+        <div class="alert alert-success">🎉 Aposta confirmada! Pode fazer outra se quiser.</div>
+      <% } %>
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (game.status === 'open' && user) { %>
+        <div class="game-detail-actions">
+          <% if (userStatus.step === 'pay') { %>
+            <% const preds = userStatus.placares || []; %>
+            <div class="pending-bet-banner">
+              <span>
+                <%= preds.length %> aposta<%= preds.length > 1 ? 's' : '' %> pendente<%= preds.length > 1 ? 's' : '' %>
+                <% if (preds.length > 0) { %>
+                  — <strong><%= preds.map(p => p.home + '×' + p.away).join(', ') %></strong>
+                <% } %>
+              </span>
+              <span><%= formatCents(userStatus.pendingPayment.amount_cents) %></span>
+            </div>
+            <a href="/payment/<%= userStatus.pendingPayment.id %>" class="btn btn-gold btn-block btn-xl">
+              💳 Pagar PIX agora
+            </a>
+          <% } else { %>
+            <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block btn-xl">
+              🎯 Fazer aposta agora
+            </a>
+            <p class="action-hint">Cada placar = <%= formatCents(game.entry_fee_cents) %> · Você pode apostar em vários placares</p>
+          <% } %>
+        </div>
+
+        <% if (userStatus.bets && userStatus.bets.length > 0) { %>
+          <h3 class="section-title" style="margin-top: 1.5rem;">Suas apostas neste jogo</h3>
+          <div class="my-bets-inline">
+            <% userStatus.bets.forEach(function(bet) { %>
+              <div class="bet-inline-item">
+                <strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong>
+                <% if (bet.is_winner) { %>
+                  <span class="winner-badge">🏆 <%= formatCents(bet.prize_amount_cents) %></span>
+                <% } else { %>
+                  <span class="status-tag waiting">Aguardando</span>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      <% } else if (game.status === 'open' && !user) { %>
+        <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block btn-xl" style="margin-top: 1rem;">
+          Participar — <%= formatCents(game.entry_fee_cents) %>
+        </a>
+      <% } %>
+
+      <% if (winners.length > 0) { %>
+        <h3 class="section-title" style="margin-top: 2rem;">🏆 Ganhadores</h3>
+        <div class="winners-list">
+          <% winners.forEach(function(w) { %>
+            <div class="winner-row">
+              <span><%= w.name %></span>
+              <span><%= w.home_score_prediction %> × <%= w.away_score_prediction %></span>
+              <span class="prize-amount"><%= formatCents(w.prize_amount_cents) %></span>
+            </div>
+          <% }); %>
+        </div>
+      <% } else if (game.status === 'finished') { %>
+        <div class="alert" style="margin-top: 1.25rem; background: rgba(100,116,139,0.1); border: 1px solid var(--border); color: var(--text-secondary); text-align: center;">
+          Nenhum ganhador neste jogo.
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

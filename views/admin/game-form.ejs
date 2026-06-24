@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="container" style="max-width: 700px;">
+    <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem;">← Voltar ao painel</a>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <h1><%= game ? 'Editar Jogo' : 'Novo Jogo' %></h1>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        <%= game ? 'Atualize as informações do jogo' : 'Cadastre um novo jogo para o bolão' %>
+      </p>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="<%= game ? '/admin/games/' + game.id : '/admin/games' %>">
+        <div class="form-group">
+          <label for="title">Título do bolão</label>
+          <input type="text" id="title" name="title" class="form-control" required
+            value="<%= game ? game.title : '' %>" placeholder="Ex: Brasileirão - Rodada 10">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Descrição (opcional)</label>
+          <textarea id="description" name="description" class="form-control" rows="2"
+            placeholder="Informações adicionais"><%= game ? (game.description || '') : '' %></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="home_team">Time da Casa</label>
+            <input type="text" id="home_team" name="home_team" class="form-control" required
+              value="<%= game ? game.home_team : '' %>" placeholder="Flamengo">
+          </div>
+          <div class="form-group">
+            <label for="away_team">Time Visitante</label>
+            <input type="text" id="away_team" name="away_team" class="form-control" required
+              value="<%= game ? game.away_team : '' %>" placeholder="Palmeiras">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="game_date">Data e Hora do Jogo</label>
+            <input type="datetime-local" id="game_date" name="game_date" class="form-control" required
+              value="<%= game ? new Date(game.game_date).toISOString().slice(0, 16) : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="entry_fee">Valor da Aposta (R$)</label>
+            <input type="number" id="entry_fee" name="entry_fee" class="form-control" required
+              step="0.01" min="1"
+              value="<%= game ? (game.entry_fee_cents / 100).toFixed(2) : '10.00' %>">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="api_match_id">ID da Partida na API (api-football)</label>
+          <input type="text" id="api_match_id" name="api_match_id" class="form-control"
+            value="<%= game ? (game.api_match_id || '') : '' %>"
+            placeholder="Ex: 1234567 (para busca automática de resultado)">
+          <small style="color: var(--text-muted); font-size: 0.75rem;">
+            Obtenha em <a href="https://www.api-football.com" target="_blank">api-football.com</a>
+          </small>
+        </div>
+
+        <% if (game) { %>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status" class="form-control">
+              <option value="open" <%= game.status === 'open' ? 'selected' : '' %>>Aberto</option>
+              <option value="closed" <%= game.status === 'closed' ? 'selected' : '' %>>Encerrado</option>
+              <option value="finished" <%= game.status === 'finished' ? 'selected' : '' %>>Finalizado</option>
+              <option value="cancelled" <%= game.status === 'cancelled' ? 'selected' : '' %>>Cancelado</option>
+            </select>
+          </div>
+        <% } %>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+          <%= game ? 'Salvar Alterações' : 'Cadastrar Jogo' %>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

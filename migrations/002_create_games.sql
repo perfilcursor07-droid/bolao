@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS games (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  home_team VARCHAR(255) NOT NULL,
+  away_team VARCHAR(255) NOT NULL,
+  game_date DATETIME NOT NULL,
+  entry_fee_cents INT NOT NULL DEFAULT 0,
+  prize_pool_cents INT NOT NULL DEFAULT 0,
+  api_match_id VARCHAR(100) NULL,
+  home_score INT NULL,
+  away_score INT NULL,
+  status ENUM('open', 'closed', 'finished', 'cancelled') NOT NULL DEFAULT 'open',
+  created_by INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+  INDEX idx_games_status (status),
+  INDEX idx_games_date (game_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

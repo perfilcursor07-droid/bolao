@@ -1,0 +1,57 @@
+<nav class="navbar">
+  <a href="/" class="navbar-brand">
+    <div class="logo">⚽</div>
+    <span class="brand-text">Bolão</span>
+  </a>
+
+  <div class="navbar-center" id="navbar-nav">
+    <% if (typeof user !== 'undefined' && user) { %>
+      <a href="/" class="nav-link">Jogos</a>
+      <a href="/my-bets" class="nav-link">Apostas</a>
+      <a href="/regras" class="nav-link">Regras</a>
+      <% if (user.role === 'admin') { %>
+        <a href="/admin" class="nav-link">Admin</a>
+      <% } %>
+    <% } else { %>
+      <a href="/regras" class="nav-link">Regras</a>
+    <% } %>
+  </div>
+
+  <div class="navbar-right">
+    <% if (typeof user !== 'undefined' && user) { %>
+      <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+      <a href="/logout" class="nav-link nav-link-muted">Sair</a>
+    <% } else { %>
+      <a href="/login" class="nav-link">Entrar</a>
+      <a href="/register" class="btn btn-accent btn-sm">Cadastrar</a>
+    <% } %>
+  </div>
+
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="nav-mobile" id="nav-mobile">
+  <% if (typeof user !== 'undefined' && user) { %>
+    <a href="/" class="nav-mobile-link">Jogos</a>
+    <a href="/my-bets" class="nav-mobile-link">Minhas Apostas</a>
+    <a href="/regras" class="nav-mobile-link">Regras</a>
+    <% if (user.role === 'admin') { %>
+      <a href="/admin" class="nav-mobile-link">Painel Admin</a>
+    <% } %>
+    <a href="/logout" class="nav-mobile-link nav-mobile-muted">Sair</a>
+  <% } else { %>
+    <a href="/regras" class="nav-mobile-link">Regras</a>
+    <a href="/login" class="nav-mobile-link">Entrar</a>
+    <a href="/register" class="nav-mobile-link">Cadastrar</a>
+  <% } %>
+</div>
+
+<script>
+  document.getElementById('nav-toggle')?.addEventListener('click', () => {
+    document.getElementById('nav-mobile').classList.toggle('open');
+    document.getElementById('nav-toggle').classList.toggle('open');
+  });
+</script>

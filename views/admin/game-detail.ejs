@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="container">
+    <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem;">← Voltar ao painel</a>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+          <h1><%= game.title %></h1>
+          <p style="color: var(--text-secondary);"><%= game.home_team %> x <%= game.away_team %></p>
+        </div>
+        <span class="status-badge status-<%= game.status %>"><%= game.status %></span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+        <div style="text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--text-muted);">DATA</div>
+          <div style="font-weight: 600;"><%= new Date(game.game_date).toLocaleString('pt-BR') %></div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--text-muted);">APOSTAS</div>
+          <div style="font-weight: 600;"><%= bets.length %></div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--text-muted);">PRÊMIO</div>
+          <div style="font-weight: 700; color: var(--gold);"><%= formatCents(game.prize_pool_cents) %></div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--text-muted);">RESULTADO</div>
+          <div style="font-weight: 700; color: var(--accent);">
+            <% if (game.home_score !== null) { %>
+              <%= game.home_score %> x <%= game.away_score %>
+            <% } else { %>
+              —
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <% if (game.home_score === null) { %>
+        <div class="card" style="background: var(--bg-secondary); margin-bottom: 1.5rem;">
+          <h3 style="margin-bottom: 1rem;">Informar Resultado Manualmente</h3>
+          <form method="POST" action="/admin/games/<%= game.id %>/result" style="display: flex; align-items: end; gap: 1rem;">
+            <div class="form-group" style="margin: 0;">
+              <label><%= game.home_team %></label>
+              <input type="number" name="home_score" class="form-control" min="0" required style="width: 80px;">
+            </div>
+            <span style="padding-bottom: 0.75rem; font-weight: 800;">x</span>
+            <div class="form-group" style="margin: 0;">
+              <label><%= game.away_team %></label>
+              <input type="number" name="away_score" class="form-control" min="0" required style="width: 80px;">
+            </div>
+            <button type="submit" class="btn btn-gold">Finalizar e Distribuir Prêmio</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
+
+    <h2 class="section-title">Apostas (<%= bets.length %>)</h2>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>CPF</th>
+            <th>Placar</th>
+            <th>Status</th>
+            <th>Prêmio</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (bets.length === 0) { %>
+            <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhuma aposta ainda</td></tr>
+          <% } %>
+          <% bets.forEach(function(bet) { %>
+            <tr>
+              <td><%= bet.user_name %></td>
+              <td><%= bet.phone || '—' %></td>
+              <td><%= bet.cpf ? bet.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—' %></td>
+              <td><strong><%= bet.home_score_prediction %> x <%= bet.away_score_prediction %></strong></td>
+              <td>
+                <% if (bet.is_winner) { %>
+                  <span class="winner-badge">🏆 Ganhador</span>
+                <% } else if (game.status === 'finished') { %>
+                  Não ganhou
+                <% } else { %>
+                  Aguardando
+                <% } %>
+              </td>
+              <td>
+                <% if (bet.is_winner) { %>
+                  <span class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></span>
+                <% } else { %>—<% } %>
+              </td>
+              <td><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

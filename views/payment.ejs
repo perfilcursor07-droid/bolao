@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-payment">
+  <%- include('partials/header') %>
+
+  <div class="container home-container">
+    <div class="steps-bar">
+      <div class="step done">
+        <span class="step-num">✓</span>
+        <span class="step-label">Placares</span>
+      </div>
+      <div class="step-line done"></div>
+      <div class="step active">
+        <span class="step-num">2</span>
+        <span class="step-label">PIX</span>
+      </div>
+    </div>
+
+    <div class="card payment-card">
+      <div class="payment-header">
+        <span class="pix-badge">PIX</span>
+        <h1>Pague para confirmar</h1>
+        <p class="payment-match"><%= payment.home_team %> <span>×</span> <%= payment.away_team %></p>
+      </div>
+
+      <% const predRaw = payment.prediction_data ? JSON.parse(payment.prediction_data) : null; %>
+      <% const placares = predRaw && predRaw.placares ? predRaw.placares : (predRaw && predRaw.home !== undefined ? [predRaw] : []); %>
+
+      <% if (placares.length > 0) { %>
+        <div class="placar-confirmed-list">
+          <span class="placar-confirmed-label">
+            <%= placares.length === 1 ? 'Seu palpite' : placares.length + ' placares' %>
+          </span>
+          <div class="placar-chips">
+            <% placares.forEach(function(p) { %>
+              <span class="placar-chip"><%= p.home %> × <%= p.away %></span>
+            <% }); %>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="payment-amount">
+        <span class="payment-amount-label">
+          <%= placares.length > 1 ? placares.length + ' apostas' : 'Valor da aposta' %>
+        </span>
+        <span class="payment-amount-value"><%= formatCents(payment.amount_cents) %></span>
+      </div>
+
+      <div id="status-badge" class="payment-status payment-pending">
+        <span class="pulse"></span> Aguardando pagamento...
+      </div>
+
+      <% if (qrImage) { %>
+        <div class="qr-code">
+          <img src="<%= qrImage %>" alt="QR Code PIX">
+        </div>
+        <p class="qr-hint">Abra o app do banco e escaneie o QR Code</p>
+      <% } %>
+
+      <% if (payment.qr_code_text) { %>
+        <button type="button" class="btn btn-primary btn-block btn-copy-pix" id="btn-copy" onclick="copyPix()">
+          📋 Copiar código PIX
+        </button>
+        <input type="hidden" id="pix-code" value="<%= payment.qr_code_text %>">
+      <% } %>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    function copyPix() {
+      const text = document.getElementById('pix-code').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = '✅ Código copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 Copiar código PIX';
+          btn.classList.remove('copied');
+        }, 3000);
+      });
+    }
+
+    function checkStatus() {
+      fetch('/payment/<%= payment.id %>/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'paid') {
+            document.getElementById('status-badge').className = 'payment-status payment-paid';
+            document.getElementById('status-badge').innerHTML = '✅ Apostas confirmadas!';
+            setTimeout(() => window.location.href = '/games/<%= payment.game_id %>?success=1', 1500);
+          }
+        });
+    }
+
+    setInterval(checkStatus, 4000);
+    checkStatus();
+  </script>
+</body>
+</html>

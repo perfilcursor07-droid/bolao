@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <h1 style="font-size:1.25rem; margin-bottom:1rem;">📊 Dashboard</h1>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value"><%= stats.total_users %></div><div class="stat-label">Usuários</div></div>
+      <div class="stat-card"><div class="stat-value"><%= stats.total_games %></div><div class="stat-label">Jogos</div></div>
+      <div class="stat-card"><div class="stat-value"><%= stats.total_bets %></div><div class="stat-label">Apostas</div></div>
+      <div class="stat-card"><div class="stat-value"><%= stats.total_winners %></div><div class="stat-label">Ganhadores</div></div>
+      <div class="stat-card"><div class="stat-value"><%= formatCents(stats.total_revenue) %></div><div class="stat-label">Receita</div></div>
+      <div class="stat-card"><div class="stat-value"><%= formatCents(stats.total_prizes) %></div><div class="stat-label">Prêmios</div></div>
+    </div>
+
+    <% if (recentWinners.length > 0) { %>
+      <h2 style="font-size:1rem; margin:1.5rem 0 0.75rem;">🏆 Últimos ganhadores</h2>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Jogador</th><th>Jogo</th><th>Placar</th><th>Prêmio</th></tr></thead>
+          <tbody>
+            <% recentWinners.forEach(w => { %>
+              <tr>
+                <td><%= w.user_name %></td>
+                <td><%= w.home_team %> × <%= w.away_team %></td>
+                <td><strong><%= w.home_score_prediction %>×<%= w.away_score_prediction %></strong></td>
+                <td class="prize-amount"><%= formatCents(w.prize_amount_cents) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <div style="margin-top:1.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <a href="/admin/games/new" class="btn btn-primary">+ Novo Jogo</a>
+      <a href="/admin/copa" class="btn btn-outline">🌍 Importar Copa</a>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

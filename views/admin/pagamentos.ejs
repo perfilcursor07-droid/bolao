@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <h1 style="font-size:1.25rem; margin-bottom:0.5rem;">💳 Pagamentos de Prêmios</h1>
+    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">Ganhadores com prêmio pendente de pagamento via PIX</p>
+
+    <% const pending = payouts.filter(p => !p.prize_paid_at); %>
+    <% const paid = payouts.filter(p => p.prize_paid_at); %>
+
+    <% if (pending.length > 0) { %>
+      <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">⏳ Pendentes (<%= pending.length %>)</h3>
+      <div class="table-container" style="margin-bottom:1.5rem;">
+        <table>
+          <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Valor</th><th>Ação</th></tr></thead>
+          <tbody>
+            <% pending.forEach(p => { %>
+              <tr>
+                <td><strong><%= p.user_name %></strong></td>
+                <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
+                <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
+                <td><%= p.home_team %> × <%= p.away_team %></td>
+                <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
+                <td>
+                  <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
+                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Confirmar que fez o PIX de <%= formatCents(p.prize_amount_cents) %> para <%= p.user_name %>?')">
+                      ✓ Marcar pago
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="alert alert-success" style="margin-bottom:1rem;">✓ Nenhum prêmio pendente de pagamento!</div>
+    <% } %>
+
+    <% if (paid.length > 0) { %>
+      <h3 style="font-size:0.9rem; color:var(--accent); margin-bottom:0.5rem;">✓ Pagos (<%= paid.length %>)</h3>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Jogador</th><th>Jogo</th><th>Valor</th><th>Pago em</th></tr></thead>
+          <tbody>
+            <% paid.forEach(p => { %>
+              <tr>
+                <td><%= p.user_name %></td>
+                <td><%= p.home_team %> × <%= p.away_team %></td>
+                <td><%= formatCents(p.prize_amount_cents) %></td>
+                <td style="font-size:0.8rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+  </main>
+</div>
+</body>
+</html>

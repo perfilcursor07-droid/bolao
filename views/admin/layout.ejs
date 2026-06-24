@@ -1,0 +1,27 @@
+<nav class="navbar">
+  <a href="/admin" class="navbar-brand">
+    <div class="logo">⚽</div>
+    <span class="brand-text">Admin</span>
+  </a>
+  <a href="/" class="nav-link" style="margin-left:auto; font-size:0.8rem;">← Ver site</a>
+</nav>
+
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <a href="/admin" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'dashboard' ? 'active' : '' %>">
+      <span>📊</span> Dashboard
+    </a>
+    <a href="/admin/partidas" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'partidas' ? 'active' : '' %>">
+      <span>⚽</span> Partidas
+    </a>
+    <a href="/admin/ganhadores" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'ganhadores' ? 'active' : '' %>">
+      <span>🏆</span> Ganhadores
+    </a>
+    <a href="/admin/pagamentos" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'pagamentos' ? 'active' : '' %>">
+      <span>💳</span> Pagamentos
+    </a>
+    <a href="/admin/copa" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'copa' ? 'active' : '' %>">
+      <span>🌍</span> Copa 2026
+    </a>
+  </aside>
+  <main class="admin-main">

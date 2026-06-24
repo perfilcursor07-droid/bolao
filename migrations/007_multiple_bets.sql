@@ -1,0 +1,1 @@
+-- Aplicado de forma idempotente em migrations/run.js (múltiplas apostas por jogo)

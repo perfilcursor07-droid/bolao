@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-home">
+  <%- include('partials/header') %>
+
+  <!-- Hero compacto -->
+  <section class="hero-compact">
+    <h1>Acerte o placar. <span class="text-gradient">Ganhe.</span></h1>
+    <div class="hero-steps">
+      <span>🎯 Placar</span>
+      <span class="hero-arrow">→</span>
+      <span>💳 PIX</span>
+      <span class="hero-arrow">→</span>
+      <span>🏆 Prêmio</span>
+    </div>
+  </section>
+
+  <div class="container home-container">
+
+    <!-- Jogo em Destaque -->
+    <% if (typeof featuredGames !== 'undefined' && featuredGames.length > 0) { %>
+      <% featuredGames.forEach(function(game) { %>
+        <article class="featured-card">
+          <div class="featured-card-top">
+            <span class="featured-badge">⭐ DESTAQUE</span>
+            <time class="featured-date"><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+          </div>
+          <div class="featured-teams">
+            <span><%= game.home_team %></span>
+            <span class="featured-x">×</span>
+            <span><%= game.away_team %></span>
+          </div>
+          <div class="featured-info">
+            <span class="fi-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+            <span><%= game.total_bets %> apostas</span>
+            <span class="fi-fee"><%= formatCents(game.entry_fee_cents) %>/placar</span>
+          </div>
+          <% if (user) { %>
+            <% const st = gameStatusMap[game.id]; %>
+            <% if (st && st.step === 'pay') { %>
+              <a href="/payment/<%= st.pendingPayment.id %>" class="btn btn-gold btn-block">💳 Pagar PIX</a>
+            <% } else { %>
+              <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block">Apostar</a>
+            <% } %>
+          <% } else { %>
+            <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block">Participar</a>
+          <% } %>
+        </article>
+      <% }); %>
+    <% } %>
+
+    <!-- Jogos Abertos -->
+    <% if (openGames.length > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
+      <div class="home-section-header">
+        <h2>Jogos abertos</h2>
+        <% if (openGames.length > 0) { %>
+          <span class="home-count"><%= openGames.length %></span>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (openGames.length === 0 && (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
+      <div class="empty-state">
+        <div class="empty-icon">🏟️</div>
+        <p>Nenhum jogo aberto.</p>
+        <small>Volte em breve!</small>
+      </div>
+    <% } else if (openGames.length > 0) { %>
+      <div class="games-list-compact">
+        <% openGames.forEach(function(game) { %>
+          <article class="game-row">
+            <div class="game-row-main">
+              <div class="game-row-teams">
+                <strong><%= game.home_team %></strong> × <strong><%= game.away_team %></strong>
+              </div>
+              <div class="game-row-meta">
+                <time><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
+                <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+                <span><%= formatCents(game.entry_fee_cents) %></span>
+              </div>
+            </div>
+            <div class="game-row-action">
+              <% if (user) { %>
+                <% const st = gameStatusMap[game.id]; %>
+                <% if (st && st.step === 'pay') { %>
+                  <a href="/payment/<%= st.pendingPayment.id %>" class="btn btn-gold btn-sm">PIX</a>
+                <% } else { %>
+                  <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-sm">Apostar</a>
+                <% } %>
+              <% } else { %>
+                <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Entrar</a>
+              <% } %>
+            </div>
+          </article>
+        <% }); %>
+      </div>
+    <% } %>
+
+    <!-- Resultados -->
+    <% if (otherGames.length > 0) { %>
+      <div class="home-section-header" style="margin-top:1.5rem;">
+        <h2>Resultados</h2>
+      </div>
+      <div class="games-list-compact">
+        <% otherGames.forEach(function(game) { %>
+          <a href="/games/<%= game.id %>" class="game-row game-row-link">
+            <div class="game-row-main">
+              <div class="game-row-teams">
+                <%= game.home_team %>
+                <% if (game.home_score !== null) { %>
+                  <span class="game-row-score"><%= game.home_score %>×<%= game.away_score %></span>
+                <% } else { %>
+                  <span class="game-row-score">×</span>
+                <% } %>
+                <%= game.away_team %>
+              </div>
+            </div>
+            <span class="card-badge <%= game.status === 'closed' ? 'closed' : 'finished' %>">
+              <%= game.status === 'closed' ? 'Aguardando' : 'Encerrado' %>
+            </span>
+          </a>
+        <% }); %>
+      </div>
+    <% } %>
+
+    <!-- Minhas apostas -->
+    <% if (user && myBets.length > 0) { %>
+      <div class="home-section-header" style="margin-top:1.5rem;">
+        <h2>Minhas Apostas</h2>
+        <a href="/my-bets" class="home-link">Ver todas →</a>
+      </div>
+      <div class="games-list-compact">
+        <% myBets.slice(0, 3).forEach(function(bet) { %>
+          <div class="game-row">
+            <div class="game-row-main">
+              <div class="game-row-teams"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %> <small style="color:var(--text-muted);margin-left:0.35rem;"><%= bet.title %></small></div>
+            </div>
+            <% if (bet.is_winner) { %>
+              <span class="winner-badge">🏆</span>
+            <% } else if (bet.game_status === 'finished') { %>
+              <span class="status-tag lost">✗</span>
+            <% } else { %>
+              <span class="status-tag waiting">⏳</span>
+            <% } %>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+
+  </div>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

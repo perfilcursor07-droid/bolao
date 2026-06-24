@@ -1,0 +1,1 @@
+-- Migração aplicada via migrations/run.js (phone, password nullable, role guest)

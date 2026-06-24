@@ -1,0 +1,1 @@
+ALTER TABLE bets ADD COLUMN prize_paid_at DATETIME NULL;

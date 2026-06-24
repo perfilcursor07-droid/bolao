@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+      <h1 style="font-size:1.25rem;">⚽ Partidas</h1>
+      <div style="display:flex; gap:0.4rem;">
+        <a href="/admin/copa" class="btn btn-outline btn-sm">🌍 Copa</a>
+        <a href="/admin/games/new" class="btn btn-primary btn-sm">+ Nova</a>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr><th>Partida</th><th>Data</th><th>Apostas</th><th>Prêmio</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+          <% games.forEach(game => { %>
+            <tr>
+              <td>
+                <strong><%= game.home_team %> × <%= game.away_team %></strong>
+                <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
+              </td>
+              <td><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></td>
+              <td><%= game.total_bets %></td>
+              <td class="prize-amount"><%= formatCents(game.prize_pool_cents) %></td>
+              <td><span class="card-badge <%= game.status %>"><%= game.status %></span></td>
+              <td class="admin-actions-cell">
+                <a href="/admin/games/<%= game.id %>" class="btn btn-outline btn-sm">Ver</a>
+                <a href="/admin/games/<%= game.id %>/edit" class="btn btn-outline btn-sm">Editar</a>
+                <form method="POST" action="/admin/games/<%= game.id %>/featured" style="display:inline;">
+                  <button type="submit" class="btn btn-sm <%= game.featured ? 'btn-danger' : 'btn-gold' %>"><%= game.featured ? '★' : '☆' %></button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>
