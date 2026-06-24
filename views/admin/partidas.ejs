@@ -28,7 +28,7 @@
           <% games.forEach(game => { %>
             <tr>
               <td>
-                <strong><%= game.home_team %> × <%= game.away_team %></strong>
+                <strong><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %></strong>
                 <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
               </td>
               <td><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></td>

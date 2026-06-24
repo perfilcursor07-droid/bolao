@@ -9,6 +9,7 @@ const gamesRoutes = require('./routes/games');
 const paymentRoutes = require('./routes/payment');
 const { startCronJobs } = require('./services/cronJobs');
 const { formatCents } = require('./routes/games');
+const { translateTeamName } = require('./utils/teamNamesPt');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use(
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.formatCents = formatCents;
+  res.locals.teamPt = translateTeamName;
   next();
 });
 

@@ -30,7 +30,7 @@
               <tr>
                 <td><strong><%= w.user_name %></strong></td>
                 <td style="font-size:0.75rem; color:var(--text-muted);"><%= w.user_pix || '—' %></td>
-                <td><%= w.home_team %> × <%= w.away_team %></td>
+                <td><%= teamPt(w.home_team) %> × <%= teamPt(w.away_team) %></td>
                 <td><%= w.home_score %>×<%= w.away_score %></td>
                 <td><strong style="color:var(--accent);"><%= w.home_score_prediction %>×<%= w.away_score_prediction %></strong></td>
                 <td class="prize-amount"><%= formatCents(w.prize_amount_cents) %></td>

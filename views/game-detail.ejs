@@ -24,12 +24,12 @@
 
       <div class="match-row match-row-lg">
         <div class="match-team">
-          <span class="match-team-name"><%= game.home_team %></span>
+          <span class="match-team-name"><%= teamPt(game.home_team) %></span>
           <% if (game.home_score !== null) { %><span class="match-score"><%= game.home_score %></span><% } %>
         </div>
         <span class="match-x">×</span>
         <div class="match-team">
-          <span class="match-team-name"><%= game.away_team %></span>
+          <span class="match-team-name"><%= teamPt(game.away_team) %></span>
           <% if (game.away_score !== null) { %><span class="match-score"><%= game.away_score %></span><% } %>
         </div>
       </div>

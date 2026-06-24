@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
 const { getWorldCupMatches } = require('../services/footballApi');
+const { translateTeamName } = require('../utils/teamNamesPt');
 
 const router = express.Router();
 
@@ -132,15 +133,17 @@ router.get('/copa', requireAdmin, async (req, res) => {
 
 // Criar jogo a partir da Copa (individual)
 router.post('/copa/create-game', requireAdmin, async (req, res) => {
-  const { home_team, away_team, game_date, api_match_id, entry_fee } = req.body;
+  const home = translateTeamName(req.body.home_team);
+  const away = translateTeamName(req.body.away_team);
+  const { game_date, api_match_id, entry_fee } = req.body;
   const entryFeeCents = Math.round(parseFloat(entry_fee || 10) * 100);
-  const title = `Copa 2026 - ${home_team} x ${away_team}`;
+  const title = `Copa 2026 - ${home} x ${away}`;
 
   try {
     await pool.query(
       `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-      [title, home_team, away_team, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
+      [title, home, away, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
     );
     res.redirect('/admin');
   } catch (err) {
@@ -172,11 +175,13 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
       const m = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (!m.home_team || !m.away_team || !m.game_date) continue;
 
-      const title = `Copa 2026 - ${m.home_team} x ${m.away_team}`;
+      const home = translateTeamName(m.home_team);
+      const away = translateTeamName(m.away_team);
+      const title = `Copa 2026 - ${home} x ${away}`;
       await pool.query(
         `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-        [title, m.home_team, m.away_team, m.game_date, entryFeeCents, m.api_match_id || null, req.session.user.id]
+        [title, home, away, m.game_date, entryFeeCents, m.api_match_id || null, req.session.user.id]
       );
       created++;
     } catch (err) {
@@ -209,6 +214,9 @@ router.post('/games', requireAdmin, async (req, res) => {
   const { title, description, home_team, away_team, game_date, entry_fee, api_match_id } = req.body;
   const entryFeeCents = Math.round(parseFloat(entry_fee || 0) * 100);
 
+  const home = translateTeamName(home_team);
+  const away = translateTeamName(away_team);
+
   if (!title || !home_team || !away_team || !game_date || entryFeeCents <= 0) {
     return res.render('admin/game-form', {
       title: 'Novo Jogo',
@@ -222,7 +230,7 @@ router.post('/games', requireAdmin, async (req, res) => {
     await pool.query(
       `INSERT INTO games (title, description, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description || null, home_team, away_team, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
+      [title, description || null, home, away, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
     );
     res.redirect('/admin');
   } catch (err) {
@@ -248,12 +256,14 @@ router.get('/games/:id/edit', requireAdmin, async (req, res) => {
 router.post('/games/:id', requireAdmin, async (req, res) => {
   const { title, description, home_team, away_team, game_date, entry_fee, api_match_id, status } = req.body;
   const entryFeeCents = Math.round(parseFloat(entry_fee || 0) * 100);
+  const home = translateTeamName(home_team);
+  const away = translateTeamName(away_team);
 
   try {
     await pool.query(
       `UPDATE games SET title=?, description=?, home_team=?, away_team=?, game_date=?,
        entry_fee_cents=?, api_match_id=?, status=? WHERE id=?`,
-      [title, description, home_team, away_team, game_date, entryFeeCents, api_match_id || null, status, req.params.id]
+      [title, description, home, away, game_date, entryFeeCents, api_match_id || null, status, req.params.id]
     );
     res.redirect('/admin');
   } catch (err) {

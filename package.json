@@ -6,7 +6,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "migrate": "node migrations/run.js"
+    "migrate": "node migrations/run.js",
+    "localize-teams": "node scripts/localize-teams.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:restart": "pm2 restart bolaopix",
+    "pm2:stop": "pm2 stop bolaopix",
+    "pm2:logs": "pm2 logs bolaopix"
   },
   "dependencies": {
     "axios": "^1.7.9",

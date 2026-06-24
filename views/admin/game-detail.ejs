@@ -18,7 +18,7 @@
       <div style="display: flex; justify-content: space-between; align-items: start;">
         <div>
           <h1><%= game.title %></h1>
-          <p style="color: var(--text-secondary);"><%= game.home_team %> x <%= game.away_team %></p>
+          <p style="color: var(--text-secondary);"><%= teamPt(game.home_team) %> x <%= teamPt(game.away_team) %></p>
         </div>
         <span class="status-badge status-<%= game.status %>"><%= game.status %></span>
       </div>
@@ -53,12 +53,12 @@
           <h3 style="margin-bottom: 1rem;">Informar Resultado Manualmente</h3>
           <form method="POST" action="/admin/games/<%= game.id %>/result" style="display: flex; align-items: end; gap: 1rem;">
             <div class="form-group" style="margin: 0;">
-              <label><%= game.home_team %></label>
+              <label><%= teamPt(game.home_team) %></label>
               <input type="number" name="home_score" class="form-control" min="0" required style="width: 80px;">
             </div>
             <span style="padding-bottom: 0.75rem; font-weight: 800;">x</span>
             <div class="form-group" style="margin: 0;">
-              <label><%= game.away_team %></label>
+              <label><%= teamPt(game.away_team) %></label>
               <input type="number" name="away_score" class="form-control" min="0" required style="width: 80px;">
             </div>
             <button type="submit" class="btn btn-gold">Finalizar e Distribuir Prêmio</button>

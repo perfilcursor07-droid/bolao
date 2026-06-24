@@ -41,12 +41,12 @@
           <div class="form-group">
             <label for="home_team">Time da Casa</label>
             <input type="text" id="home_team" name="home_team" class="form-control" required
-              value="<%= game ? game.home_team : '' %>" placeholder="Flamengo">
+              value="<%= game ? teamPt(game.home_team) : '' %>" placeholder="Flamengo">
           </div>
           <div class="form-group">
             <label for="away_team">Time Visitante</label>
             <input type="text" id="away_team" name="away_team" class="form-control" required
-              value="<%= game ? game.away_team : '' %>" placeholder="Palmeiras">
+              value="<%= game ? teamPt(game.away_team) : '' %>" placeholder="Palmeiras">
           </div>
         </div>
 

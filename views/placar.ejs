@@ -22,7 +22,7 @@
     <div class="placar-picker-card">
       <div class="placar-picker-teams">
         <div class="placar-picker-side">
-          <span class="placar-picker-team-name"><%= game.home_team %></span>
+          <span class="placar-picker-team-name"><%= teamPt(game.home_team) %></span>
           <div class="placar-picker-controls">
             <button type="button" class="pbtn" id="btn-home-minus">−</button>
             <span class="placar-picker-num" id="cur-home">0</span>
@@ -31,7 +31,7 @@
         </div>
         <div class="placar-picker-x">×</div>
         <div class="placar-picker-side">
-          <span class="placar-picker-team-name"><%= game.away_team %></span>
+          <span class="placar-picker-team-name"><%= teamPt(game.away_team) %></span>
           <div class="placar-picker-controls">
             <button type="button" class="pbtn" id="btn-away-minus">−</button>
             <span class="placar-picker-num" id="cur-away">0</span>
@@ -46,7 +46,7 @@
 
     <!-- Quick scores -->
     <div class="placar-quick-section">
-      <p class="placar-quick-label">⚡ Rápido — <span id="home-tag"><%= game.home_team %></span> × <span id="away-tag"><%= game.away_team %></span></p>
+      <p class="placar-quick-label">⚡ Rápido — <span id="home-tag"><%= teamPt(game.home_team) %></span> × <span id="away-tag"><%= teamPt(game.away_team) %></span></p>
       <div class="placar-quick-grid" id="quick-grid">
         <button type="button" class="pq-btn" data-h="1" data-a="0"><b>1</b>×<b>0</b></button>
         <button type="button" class="pq-btn" data-h="2" data-a="1"><b>2</b>×<b>1</b></button>
@@ -108,8 +108,8 @@
 
   <script>
     const FEE = <%= game.entry_fee_cents %>;
-    const HT = <%- JSON.stringify(game.home_team) %>;
-    const AT = <%- JSON.stringify(game.away_team) %>;
+    const HT = <%- JSON.stringify(teamPt(game.home_team)) %>;
+    const AT = <%- JSON.stringify(teamPt(game.away_team)) %>;
 
     let placares = [];
     let cH = 0, cA = 0;

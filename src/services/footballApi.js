@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { translateTeamName } = require('../utils/teamNamesPt');
 
 // ═══ football-data.org (principal — gratuito, 10 req/min) ═══
 const FD_BASE = 'https://api.football-data.org/v4';
@@ -64,8 +65,8 @@ async function getWorldCupMatches() {
 function parseFootballDataMatch(m) {
   return {
     id: m.id,
-    homeTeam: m.homeTeam?.name || m.homeTeam?.tla || 'A definir',
-    awayTeam: m.awayTeam?.name || m.awayTeam?.tla || 'A definir',
+    homeTeam: translateTeamName(m.homeTeam?.name || m.homeTeam?.tla || 'A definir'),
+    awayTeam: translateTeamName(m.awayTeam?.name || m.awayTeam?.tla || 'A definir'),
     date: m.utcDate,
     status: m.status,
     matchday: m.matchday,
@@ -86,8 +87,8 @@ function parseApiSportsMatch(f) {
 
   return {
     id: f.fixture.id,
-    homeTeam: f.teams.home?.name || 'A definir',
-    awayTeam: f.teams.away?.name || 'A definir',
+    homeTeam: translateTeamName(f.teams.home?.name || 'A definir'),
+    awayTeam: translateTeamName(f.teams.away?.name || 'A definir'),
     date: f.fixture.date,
     status: statusMap[f.fixture.status?.short] || f.fixture.status?.short || 'SCHEDULED',
     matchday: f.league.round,

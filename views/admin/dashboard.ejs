@@ -31,7 +31,7 @@
             <% recentWinners.forEach(w => { %>
               <tr>
                 <td><%= w.user_name %></td>
-                <td><%= w.home_team %> × <%= w.away_team %></td>
+                <td><%= teamPt(w.home_team) %> × <%= teamPt(w.away_team) %></td>
                 <td><strong><%= w.home_score_prediction %>×<%= w.away_score_prediction %></strong></td>
                 <td class="prize-amount"><%= formatCents(w.prize_amount_cents) %></td>
               </tr>

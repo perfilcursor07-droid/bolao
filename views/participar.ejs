@@ -18,9 +18,9 @@
       <div class="participar-header">
         <h1>⚽ Entrar no bolão</h1>
         <div class="participar-match">
-          <strong><%= game.home_team %></strong>
+          <strong><%= teamPt(game.home_team) %></strong>
           <span>×</span>
-          <strong><%= game.away_team %></strong>
+          <strong><%= teamPt(game.away_team) %></strong>
         </div>
         <div class="participar-fee">Entrada: <strong><%= formatCents(game.entry_fee_cents) %></strong> por placar</div>
       </div>
@@ -93,7 +93,7 @@
   <script>
     // Share link
     const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
-    const shareText = 'Participe do bolão: <%= game.home_team %> × <%= game.away_team %> — <%= formatCents(game.entry_fee_cents) %> por placar!';
+    const shareText = 'Participe do bolão: <%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %> — <%= formatCents(game.entry_fee_cents) %> por placar!';
 
     document.getElementById('share-link').value = gameUrl;
 

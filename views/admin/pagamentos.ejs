@@ -28,7 +28,7 @@
                 <td><strong><%= p.user_name %></strong></td>
                 <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
                 <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
-                <td><%= p.home_team %> × <%= p.away_team %></td>
+                <td><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
                 <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
                 <td>
                   <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
@@ -55,7 +55,7 @@
             <% paid.forEach(p => { %>
               <tr>
                 <td><%= p.user_name %></td>
-                <td><%= p.home_team %> × <%= p.away_team %></td>
+                <td><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
                 <td><%= formatCents(p.prize_amount_cents) %></td>
                 <td style="font-size:0.8rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
               </tr>

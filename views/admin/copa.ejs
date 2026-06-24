@@ -82,7 +82,7 @@
                 <% } %>
                 <div class="copa-match-info">
                   <div class="copa-match-teams">
-                    <strong><%= m.homeTeam %></strong>
+                    <strong><%= teamPt(m.homeTeam) %></strong>
                     <span class="copa-match-vs">
                       <% if (m.homeScore !== null) { %>
                         <%= m.homeScore %> × <%= m.awayScore %>
@@ -90,7 +90,7 @@
                         ×
                       <% } %>
                     </span>
-                    <strong><%= m.awayTeam %></strong>
+                    <strong><%= teamPt(m.awayTeam) %></strong>
                   </div>
                   <div class="copa-match-meta">
                     <time><%= new Date(m.date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>

@@ -28,7 +28,7 @@
       <div class="payment-header">
         <span class="pix-badge">PIX</span>
         <h1>Pague para confirmar</h1>
-        <p class="payment-match"><%= payment.home_team %> <span>×</span> <%= payment.away_team %></p>
+        <p class="payment-match"><%= teamPt(payment.home_team) %> <span>×</span> <%= teamPt(payment.away_team) %></p>
       </div>
 
       <% const predRaw = payment.prediction_data ? JSON.parse(payment.prediction_data) : null; %>

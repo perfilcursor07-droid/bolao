@@ -34,9 +34,9 @@
             <time class="featured-date"><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
           </div>
           <div class="featured-teams">
-            <span><%= game.home_team %></span>
+            <span><%= teamPt(game.home_team) %></span>
             <span class="featured-x">×</span>
-            <span><%= game.away_team %></span>
+            <span><%= teamPt(game.away_team) %></span>
           </div>
           <div class="featured-info">
             <span class="fi-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
@@ -79,7 +79,7 @@
           <article class="game-row">
             <div class="game-row-main">
               <div class="game-row-teams">
-                <strong><%= game.home_team %></strong> × <strong><%= game.away_team %></strong>
+                <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
               </div>
               <div class="game-row-meta">
                 <time><%= new Date(game.game_date).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></time>
@@ -114,13 +114,13 @@
           <a href="/games/<%= game.id %>" class="game-row game-row-link">
             <div class="game-row-main">
               <div class="game-row-teams">
-                <%= game.home_team %>
+                <%= teamPt(game.home_team) %>
                 <% if (game.home_score !== null) { %>
                   <span class="game-row-score"><%= game.home_score %>×<%= game.away_score %></span>
                 <% } else { %>
                   <span class="game-row-score">×</span>
                 <% } %>
-                <%= game.away_team %>
+                <%= teamPt(game.away_team) %>
               </div>
             </div>
             <span class="card-badge <%= game.status === 'closed' ? 'closed' : 'finished' %>">
