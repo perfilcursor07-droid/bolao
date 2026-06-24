@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
 const { getWorldCupMatches } = require('../services/footballApi');
 const { translateTeamName } = require('../utils/teamNamesPt');
+const { toMySQLDateTime } = require('../utils/dateTime');
 
 const router = express.Router();
 
@@ -143,7 +144,7 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
     await pool.query(
       `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-      [title, home, away, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
+      [title, home, away, toMySQLDateTime(game_date), entryFeeCents, api_match_id || null, req.session.user.id]
     );
     res.redirect('/admin');
   } catch (err) {
@@ -181,7 +182,7 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
       await pool.query(
         `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-        [title, home, away, m.game_date, entryFeeCents, m.api_match_id || null, req.session.user.id]
+        [title, home, away, toMySQLDateTime(m.game_date), entryFeeCents, m.api_match_id || null, req.session.user.id]
       );
       created++;
     } catch (err) {
@@ -230,7 +231,7 @@ router.post('/games', requireAdmin, async (req, res) => {
     await pool.query(
       `INSERT INTO games (title, description, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description || null, home, away, game_date, entryFeeCents, api_match_id || null, req.session.user.id]
+      [title, description || null, home, away, toMySQLDateTime(game_date), entryFeeCents, api_match_id || null, req.session.user.id]
     );
     res.redirect('/admin');
   } catch (err) {
@@ -263,7 +264,7 @@ router.post('/games/:id', requireAdmin, async (req, res) => {
     await pool.query(
       `UPDATE games SET title=?, description=?, home_team=?, away_team=?, game_date=?,
        entry_fee_cents=?, api_match_id=?, status=? WHERE id=?`,
-      [title, description, home, away, game_date, entryFeeCents, api_match_id || null, status, req.params.id]
+      [title, description, home, away, toMySQLDateTime(game_date), entryFeeCents, api_match_id || null, status, req.params.id]
     );
     res.redirect('/admin');
   } catch (err) {
