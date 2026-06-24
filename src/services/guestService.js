@@ -1,26 +1,25 @@
 const pool = require('../config/database');
 
-function cleanCpf(cpf) {
-  return (cpf || '').replace(/\D/g, '');
-}
-
 function cleanPhone(phone) {
   return (phone || '').replace(/\D/g, '');
 }
 
-function guestEmail(cpf) {
-  return `guest_${cpf}@bolao.local`;
+function guestEmail(pixKey) {
+  // Gera um email único baseado na chave PIX
+  const safe = (pixKey || 'unknown').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 50);
+  return `guest_${safe}@bolao.local`;
 }
 
 async function findOrCreateParticipant({ name, phone, cpf }) {
-  const cpfClean = (cpf || '').trim();
+  // cpf aqui na verdade é a chave PIX (pode ser CPF, email, telefone, aleatória)
+  const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
 
-  if (!name?.trim() || cpfClean.length < 5 || phoneClean.length < 10) {
+  if (!name?.trim() || pixKey.length < 5 || phoneClean.length < 10) {
     return { error: 'invalid_data' };
   }
 
-  const [existing] = await pool.query('SELECT * FROM users WHERE cpf = ?', [cpfClean]);
+  const [existing] = await pool.query('SELECT * FROM users WHERE cpf = ?', [pixKey]);
 
   if (existing.length > 0) {
     const user = existing[0];
@@ -46,17 +45,17 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
     };
   }
 
-  const email = guestEmail(cpfClean);
+  const email = guestEmail(pixKey);
   const [result] = await pool.query(
     `INSERT INTO users (name, email, password, cpf, phone, role) VALUES (?, ?, NULL, ?, ?, 'guest')`,
-    [name.trim(), email, cpfClean, phoneClean]
+    [name.trim(), email, pixKey, phoneClean]
   );
 
   return {
     id: result.insertId,
     name: name.trim(),
     email,
-    cpf: cpfClean,
+    cpf: pixKey,
     phone: phoneClean,
     role: 'guest',
   };
@@ -72,4 +71,4 @@ function setSessionUser(req, user) {
   };
 }
 
-module.exports = { findOrCreateParticipant, setSessionUser, cleanCpf, cleanPhone };
+module.exports = { findOrCreateParticipant, setSessionUser, cleanPhone };

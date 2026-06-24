@@ -6,53 +6,79 @@
 
   <div class="navbar-center" id="navbar-nav">
     <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/" class="nav-link">Jogos</a>
-      <a href="/my-bets" class="nav-link">Apostas</a>
-      <a href="/my-payments" class="nav-link">Pagamentos</a>
-      <a href="/regras" class="nav-link">Regras</a>
+      <a href="/" class="nav-pill">Jogos</a>
+      <a href="/my-bets" class="nav-pill">Apostas</a>
+      <a href="/my-payments" class="nav-pill">Pagamentos</a>
+      <a href="/regras" class="nav-pill">Regras</a>
       <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-link">Admin</a>
+        <a href="/admin" class="nav-pill nav-pill-admin">Admin</a>
       <% } %>
     <% } else { %>
-      <a href="/regras" class="nav-link">Regras</a>
+      <a href="/regras" class="nav-pill">Regras</a>
     <% } %>
   </div>
 
-  <div class="navbar-right">
+  <div class="navbar-actions">
     <% if (typeof user !== 'undefined' && user) { %>
-      <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-      <a href="/logout" class="nav-link nav-link-muted">Sair</a>
+      <div class="nav-user" title="<%= user.name %>">
+        <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+        <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
+      </div>
+      <a href="/logout" class="btn-nav btn-nav-ghost">Sair</a>
     <% } else { %>
-      <a href="/login" class="nav-link">Entrar</a>
-      <a href="/register" class="btn btn-accent btn-sm">Cadastrar</a>
+      <a href="/login" class="btn-nav btn-nav-ghost">Entrar</a>
+      <a href="/register" class="btn-nav btn-nav-primary">Cadastrar</a>
     <% } %>
   </div>
 
-  <button class="nav-toggle" id="nav-toggle" aria-label="Menu">
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menu" type="button">
     <span></span><span></span><span></span>
   </button>
 </nav>
 
-<!-- Mobile menu -->
 <div class="nav-mobile" id="nav-mobile">
   <% if (typeof user !== 'undefined' && user) { %>
-    <a href="/" class="nav-mobile-link">Jogos</a>
-    <a href="/my-bets" class="nav-mobile-link">Minhas Apostas</a>
-    <a href="/regras" class="nav-mobile-link">Regras</a>
+    <div class="nav-mobile-user">
+      <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+      <span><%= user.name %></span>
+    </div>
+    <a href="/" class="nav-mobile-link">🏟️ Jogos</a>
+    <a href="/my-bets" class="nav-mobile-link">🎯 Minhas Apostas</a>
+    <a href="/my-payments" class="nav-mobile-link">💳 Pagamentos</a>
+    <a href="/regras" class="nav-mobile-link">📋 Regras</a>
     <% if (user.role === 'admin') { %>
-      <a href="/admin" class="nav-mobile-link">Painel Admin</a>
+      <a href="/admin" class="nav-mobile-link">⚙️ Painel Admin</a>
     <% } %>
-    <a href="/logout" class="nav-mobile-link nav-mobile-muted">Sair</a>
+    <div class="nav-mobile-footer">
+      <a href="/logout" class="btn-nav btn-nav-ghost btn-nav-block">Sair</a>
+    </div>
   <% } else { %>
-    <a href="/regras" class="nav-mobile-link">Regras</a>
-    <a href="/login" class="nav-mobile-link">Entrar</a>
-    <a href="/register" class="nav-mobile-link">Cadastrar</a>
+    <a href="/regras" class="nav-mobile-link">📋 Regras</a>
+    <div class="nav-mobile-footer nav-mobile-footer-guest">
+      <a href="/login" class="btn-nav btn-nav-ghost btn-nav-block">Entrar</a>
+      <a href="/register" class="btn-nav btn-nav-primary btn-nav-block">Cadastrar</a>
+    </div>
   <% } %>
 </div>
 
 <script>
-  document.getElementById('nav-toggle')?.addEventListener('click', () => {
-    document.getElementById('nav-mobile').classList.toggle('open');
-    document.getElementById('nav-toggle').classList.toggle('open');
-  });
+  (function () {
+    const toggle = document.getElementById('nav-toggle');
+    const menu = document.getElementById('nav-mobile');
+    if (!toggle || !menu) return;
+
+    toggle.addEventListener('click', () => {
+      const open = menu.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      document.body.classList.toggle('nav-open', open);
+    });
+
+    menu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        menu.classList.remove('open');
+        toggle.classList.remove('open');
+        document.body.classList.remove('nav-open');
+      });
+    });
+  })();
 </script>
