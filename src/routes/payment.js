@@ -16,7 +16,15 @@ router.get('/:id', requireAuth, async (req, res) => {
       [req.params.id, req.session.user.id]
     );
 
-    if (payments.length === 0) return res.redirect('/');
+    if (payments.length === 0) {
+      console.error(`[Payment GET /${req.params.id}] Pagamento não encontrado para user_id=${req.session.user.id}`);
+      // Verificar se o pagamento existe com outro user
+      const [anyPayment] = await pool.query('SELECT id, user_id, status FROM payments WHERE id = ?', [req.params.id]);
+      if (anyPayment.length > 0) {
+        console.error(`[Payment GET /${req.params.id}] Pagamento existe mas pertence ao user_id=${anyPayment[0].user_id} (status: ${anyPayment[0].status})`);
+      }
+      return res.redirect('/');
+    }
 
     const payment = payments[0];
     let qrImage = null;
@@ -25,8 +33,6 @@ router.get('/:id', requireAuth, async (req, res) => {
       qrImage = await QRCode.toDataURL(payment.qr_code_text, { width: 280, margin: 2 });
     }
 
-    const prediction = payment.prediction_data ? JSON.parse(payment.prediction_data) : null;
-
     res.render('payment', {
       title: 'Pagamento PIX',
       payment,
@@ -34,6 +40,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       user: req.session.user,
     });
   } catch (err) {
+    console.error('[Payment GET] Erro:', err.message);
     res.redirect('/');
   }
 });
