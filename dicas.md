@@ -8,9 +8,8 @@ git commit -m "Implementação de questionários dinâmicos e override de compet
 git push -u origin main
 
 -- PULL  PARA GIT PRODUÇÃO
-cd /home/hgpto/htdocs/hgpto.shop
+cd ~/htdocs/bolaopix.site
 git pull origin main
-node scripts/add_bot_user_profiles.js
 npm run migrate
 git log --oneline -5
 pm2 flush bolaopix

@@ -261,5 +261,16 @@ router.get('/my-bets', requireAuth, async (req, res) => {
   res.render('my-bets', { title: 'Minhas Apostas', bets, user: req.session.user });
 });
 
+router.get('/my-payments', requireAuth, async (req, res) => {
+  const [payments] = await pool.query(
+    `SELECT p.*, g.title, g.home_team, g.away_team
+     FROM payments p JOIN games g ON g.id = p.game_id
+     WHERE p.user_id = ?
+     ORDER BY p.created_at DESC`,
+    [req.session.user.id]
+  );
+  res.render('my-payments', { title: 'Meus Pagamentos', payments, user: req.session.user });
+});
+
 module.exports = router;
 module.exports.formatCents = formatCents;
