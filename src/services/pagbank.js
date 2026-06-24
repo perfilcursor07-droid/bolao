@@ -5,15 +5,36 @@ const BASE_URL =
     ? 'https://api.pagseguro.com'
     : 'https://sandbox.api.pagseguro.com';
 
-const DEFAULT_TAX_ID = '12345678909';
+const DEFAULT_TAX_ID = '52984376137';
 
 function digitsOnly(value) {
   return (value || '').replace(/\D/g, '');
 }
 
+function isValidCpf(cpf) {
+  if (!cpf || cpf.length !== 11) return false;
+  // Rejeitar CPFs com todos os dígitos iguais (ex: 00000000000, 11111111111)
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+  // Validação dos dígitos verificadores
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+  let d1 = 11 - (sum % 11);
+  if (d1 >= 10) d1 = 0;
+  if (parseInt(cpf[9]) !== d1) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+  let d2 = 11 - (sum % 11);
+  if (d2 >= 10) d2 = 0;
+  if (parseInt(cpf[10]) !== d2) return false;
+
+  return true;
+}
+
 function resolveTaxId(user) {
   const digits = digitsOnly(user.cpf);
-  if (digits.length === 11) return digits;
+  if (isValidCpf(digits)) return digits;
   return process.env.PAGBANK_DEFAULT_TAX_ID || DEFAULT_TAX_ID;
 }
 
