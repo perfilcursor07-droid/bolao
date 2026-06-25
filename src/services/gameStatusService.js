@@ -10,18 +10,28 @@ async function closeExpiredOpenGames() {
   return result.affectedRows || 0;
 }
 
-async function syncGamesFromApi({ nearOnly = false } = {}) {
+/**
+ * Sincroniza placares via API apenas para jogos já encerrados para apostas (closed),
+ * dentro da janela de tempo, com limite por execução para respeitar rate limit (10 req/min).
+ */
+async function syncGamesFromApi({ nearOnly = true, maxGames = 4 } = {}) {
   const timeFilter = nearOnly
-    ? `AND game_date BETWEEN DATE_SUB(NOW(), INTERVAL 6 HOUR) AND DATE_ADD(NOW(), INTERVAL 3 HOUR)`
-    : '';
+    ? `AND game_date BETWEEN DATE_SUB(NOW(), INTERVAL 3 HOUR) AND DATE_ADD(NOW(), INTERVAL 2 HOUR)`
+    : `AND game_date <= DATE_ADD(NOW(), INTERVAL 2 HOUR)`;
 
   const [games] = await pool.query(
     `SELECT * FROM games
-     WHERE status IN ('open', 'closed')
+     WHERE status = 'closed'
        AND api_match_id IS NOT NULL
-       ${timeFilter}`
+       ${timeFilter}
+     ORDER BY game_date ASC
+     LIMIT ?`,
+    [maxGames]
   );
 
+  if (games.length === 0) return 0;
+
+  let synced = 0;
   for (const game of games) {
     try {
       const result = await getMatchResult(game.api_match_id);
@@ -36,6 +46,7 @@ async function syncGamesFromApi({ nearOnly = false } = {}) {
             game.id,
           ]
         );
+        synced++;
         continue;
       }
 
@@ -45,11 +56,14 @@ async function syncGamesFromApi({ nearOnly = false } = {}) {
           [result.homeScore, result.awayScore, game.id]
         );
         await processGameResults(game.id);
+        synced++;
       }
     } catch (err) {
       console.error(`[syncGames] jogo ${game.id}:`, err.message);
     }
   }
+
+  return synced;
 }
 
 function isBettingOpen(game) {

@@ -3,7 +3,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser } = require('../services/guestService');
-const { closeExpiredOpenGames, isBettingOpen, syncGamesFromApi } = require('../services/gameStatusService');
+const { closeExpiredOpenGames, isBettingOpen } = require('../services/gameStatusService');
 const { loadFinishedBoloes } = require('../services/finishedBoloesService');
 
 const router = express.Router();
@@ -27,11 +27,6 @@ router.post('/api/lookup-phone', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     await closeExpiredOpenGames();
-    try {
-      await syncGamesFromApi({ nearOnly: true });
-    } catch (syncErr) {
-      console.error('[index] sync API:', syncErr.message);
-    }
 
     const [games] = await pool.query(
       `SELECT g.*,

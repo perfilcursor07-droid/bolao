@@ -11,9 +11,14 @@ const AS_KEY = process.env.APISPORTS_KEY || '';
 
 const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
 const WC_CACHE_TTL_MS = 30 * 60 * 1000;
+const MATCH_CACHE_FINISHED_MS = 24 * 60 * 60 * 1000;
+const MATCH_CACHE_LIVE_MS = 2 * 60 * 1000;
+const MATCH_CACHE_PENDING_MS = 10 * 60 * 1000;
 
 let fdLastRequestAt = 0;
+let rateLimitedUntil = 0;
 let worldCupCache = { result: null, expiresAt: 0 };
+const matchResultCache = new Map();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -31,17 +36,44 @@ async function throttleFootballData() {
 }
 
 async function footballDataGet(url, config = {}) {
+  if (Date.now() < rateLimitedUntil) {
+    const err = new Error('RATE_LIMIT_COOLDOWN');
+    err.code = 'RATE_LIMIT_COOLDOWN';
+    throw err;
+  }
+
   await throttleFootballData();
   try {
     return await axios.get(url, config);
   } catch (err) {
     if (err.response?.status !== 429) throw err;
     const waitSec = parseRateLimitWaitSeconds(err.response?.data?.message);
+    rateLimitedUntil = Date.now() + (waitSec + 2) * 1000;
     console.warn(`[football-data.org] Rate limit — aguardando ${waitSec}s`);
     await sleep((waitSec + 2) * 1000);
     fdLastRequestAt = Date.now();
     return axios.get(url, config);
   }
+}
+
+function cacheMatchResult(matchId, data) {
+  if (!matchId || !data) return;
+  const ttl = data.finished
+    ? MATCH_CACHE_FINISHED_MS
+    : data.live
+      ? MATCH_CACHE_LIVE_MS
+      : MATCH_CACHE_PENDING_MS;
+  matchResultCache.set(String(matchId), { data, expiresAt: Date.now() + ttl });
+}
+
+function getCachedMatchResult(matchId) {
+  const cached = matchResultCache.get(String(matchId));
+  if (!cached) return null;
+  if (Date.now() >= cached.expiresAt) {
+    matchResultCache.delete(String(matchId));
+    return null;
+  }
+  return cached.data;
 }
 
 /**
@@ -174,26 +206,39 @@ function parseApiSportsMatch(f) {
 async function getMatchResult(matchId) {
   if (!matchId) return null;
 
+  const cached = getCachedMatchResult(matchId);
+  if (cached) return cached;
+
+  if (Date.now() < rateLimitedUntil) return null;
+
   // Tenta football-data.org
   if (FD_KEY) {
     try {
-      const res = await axios.get(`${FD_BASE}/matches/${matchId}`, {
+      const res = await footballDataGet(`${FD_BASE}/matches/${matchId}`, {
         headers: { 'X-Auth-Token': FD_KEY },
         timeout: 10000,
       });
       const m = res.data;
       const live = ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status);
       const finished = ['FINISHED', 'AWARDED'].includes(m.status);
-      if (!live && !finished) return { finished: false, live: false, status: m.status };
+      if (!live && !finished) {
+        const pending = { finished: false, live: false, status: m.status };
+        cacheMatchResult(matchId, pending);
+        return pending;
+      }
 
       const homeScore =
         m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? m.score?.halfTime?.home ?? 0;
       const awayScore =
         m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? m.score?.halfTime?.away ?? 0;
 
-      return { finished, live, homeScore, awayScore, status: m.status };
+      const result = { finished, live, homeScore, awayScore, status: m.status };
+      cacheMatchResult(matchId, result);
+      return result;
     } catch (err) {
-      console.error('[football-data.org] Match result erro:', err.message);
+      if (err.code !== 'RATE_LIMIT_COOLDOWN') {
+        console.error('[football-data.org] Match result erro:', err.message);
+      }
     }
   }
 
@@ -212,13 +257,15 @@ async function getMatchResult(matchId) {
       const finished = ['FT', 'AET', 'PEN'].includes(st);
       if (!live && !finished) return { finished: false, live: false, status: st };
 
-      return {
+      const result = {
         finished,
         live,
         homeScore: f.goals?.home ?? 0,
         awayScore: f.goals?.away ?? 0,
         status: f.fixture.status?.long || st,
       };
+      cacheMatchResult(matchId, result);
+      return result;
     } catch (err) {
       console.error('[api-sports] Match result erro:', err.message);
     }

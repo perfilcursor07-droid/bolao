@@ -17,15 +17,18 @@ function startCronJobs() {
     await checkPendingPayments();
   });
 
-  cron.schedule('*/5 * * * *', async () => {
+  cron.schedule('*/10 * * * *', async () => {
     try {
-      await syncGamesFromApi();
+      const synced = await syncGamesFromApi({ nearOnly: true, maxGames: 4 });
+      if (synced > 0) {
+        console.log(`[cron] ${synced} jogo(s) sincronizado(s) via API`);
+      }
     } catch (err) {
       console.error('[cron] Erro ao sincronizar jogos ao vivo:', err.message);
     }
   });
 
-  console.log('⏰ Cron jobs iniciados (fechar apostas: 1min, pagamentos: 2min, ao vivo: 5min)');
+  console.log('⏰ Cron jobs iniciados (fechar apostas: 1min, pagamentos: 2min, placares API: 10min)');
 }
 
 async function checkPendingPayments() {
