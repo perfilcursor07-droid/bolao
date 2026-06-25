@@ -34,20 +34,36 @@
 
       <div class="participar-layout">
         <section class="participar-hero" aria-label="Jogo do bolão">
-          <span class="participar-hero-badge">Bolão aberto</span>
-          <div class="participar-hero-match">
-            <span class="participar-hero-team"><%= teamPt(game.home_team) %></span>
-            <span class="participar-hero-vs">×</span>
-            <span class="participar-hero-team"><%= teamPt(game.away_team) %></span>
+          <div class="participar-hero-head">
+            <span class="participar-hero-badge">
+              <span class="participar-hero-pulse" aria-hidden="true"></span>
+              Bolão aberto
+            </span>
           </div>
+
+          <div class="participar-hero-fixture">
+            <div class="participar-hero-team-wrap">
+              <span class="participar-hero-team"><%= teamPt(game.home_team) %></span>
+            </div>
+            <span class="participar-hero-vs" aria-hidden="true">×</span>
+            <div class="participar-hero-team-wrap">
+              <span class="participar-hero-team"><%= teamPt(game.away_team) %></span>
+            </div>
+          </div>
+
           <time class="participar-hero-date">
             <%= gameDateBR(game.game_date, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
           </time>
-          <div class="participar-hero-meta">
-            <span class="participar-hero-fee"><%= formatCents(game.entry_fee_cents) %><small>/placar</small></span>
-            <% if (game.prize_pool_cents > 0) { %>
-              <span class="participar-hero-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
-            <% } %>
+
+          <div class="participar-hero-stats">
+            <div class="participar-hero-stat participar-hero-stat--fee">
+              <span class="participar-hero-stat-label">Por placar</span>
+              <span class="participar-hero-stat-value"><%= formatCents(game.entry_fee_cents) %></span>
+            </div>
+            <div class="participar-hero-stat participar-hero-stat--prize">
+              <span class="participar-hero-stat-label">Prêmio</span>
+              <span class="participar-hero-stat-value">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+            </div>
           </div>
         </section>
 
