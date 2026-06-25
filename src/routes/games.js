@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
-const { findOrCreateParticipant, setSessionUser } = require('../services/guestService');
+const { findOrCreateParticipant, setSessionUser, cleanPhone } = require('../services/guestService');
 const { closeExpiredOpenGames, isBettingOpen } = require('../services/gameStatusService');
 const { loadFinishedBoloes } = require('../services/finishedBoloesService');
 
@@ -75,6 +75,66 @@ router.get('/', async (req, res) => {
       totalFinishedCount: allFinishedSummaries.length,
       myBets,
       gameStatusMap,
+      user: req.session.user || null,
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user || null });
+  }
+});
+
+router.get('/consultar', (req, res) => {
+  res.render('consultar', {
+    title: 'Consultar apostas',
+    bets: null,
+    userName: null,
+    phone: '',
+    error: null,
+    user: req.session.user || null,
+  });
+});
+
+router.post('/consultar', async (req, res) => {
+  const phone = cleanPhone(req.body.phone);
+  const phoneDisplay = req.body.phone || '';
+
+  if (phone.length < 10) {
+    return res.render('consultar', {
+      title: 'Consultar apostas',
+      bets: null,
+      userName: null,
+      phone: phoneDisplay,
+      error: 'Informe um WhatsApp válido com DDD.',
+      user: req.session.user || null,
+    });
+  }
+
+  try {
+    const [users] = await pool.query('SELECT id, name FROM users WHERE phone = ? LIMIT 1', [phone]);
+    if (users.length === 0) {
+      return res.render('consultar', {
+        title: 'Consultar apostas',
+        bets: null,
+        userName: null,
+        phone: phoneDisplay,
+        error: 'Nenhuma aposta encontrada com este WhatsApp.',
+        user: req.session.user || null,
+      });
+    }
+
+    const user = users[0];
+    const [bets] = await pool.query(
+      `SELECT b.*, g.title, g.home_team, g.away_team, g.home_score, g.away_score, g.status as game_status, g.prize_pool_cents
+       FROM bets b JOIN games g ON g.id = b.game_id
+       WHERE b.user_id = ? ORDER BY b.created_at DESC`,
+      [user.id]
+    );
+
+    res.render('consultar', {
+      title: 'Consultar apostas',
+      bets,
+      userName: user.name.split(' ')[0],
+      phone: phoneDisplay,
+      error: null,
       user: req.session.user || null,
     });
   } catch (err) {

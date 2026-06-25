@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-consultar">
+  <%- include('partials/header') %>
+
+  <div class="container page-shell">
+    <a href="/" class="back-link">← Voltar aos jogos</a>
+
+    <header class="page-head">
+      <h1>Consultar apostas</h1>
+      <p>Participou sem senha? Digite o mesmo <strong>WhatsApp</strong> usado na aposta para ver se ganhou.</p>
+    </header>
+
+    <div class="card consultar-card">
+      <form method="POST" action="/consultar" class="consultar-form">
+        <label for="phone">Seu WhatsApp</label>
+        <input type="tel" id="phone" name="phone" class="form-control" required
+          placeholder="(00) 00000-0000" value="<%= phone %>">
+        <% if (error) { %>
+          <div class="alert alert-error" style="margin-top:0.75rem;"><%= error %></div>
+        <% } %>
+        <button type="submit" class="btn btn-gold btn-block" style="margin-top:0.85rem;">Buscar minhas apostas</button>
+      </form>
+    </div>
+
+    <% if (bets && bets.length > 0) { %>
+      <% const wins = bets.filter(b => b.is_winner); %>
+      <% if (wins.length > 0) { %>
+        <div class="consultar-win-alert">
+          <strong>🏆 Parabéns, <%= userName %>! Você ganhou <%= wins.length %> bolão<%= wins.length !== 1 ? 'ões' : '' %>!</strong>
+          <p>O prêmio será enviado para a chave PIX que você informou na aposta. Guarde este WhatsApp — usamos ele para contato se necessário.</p>
+          <a href="/ganhadores" class="btn btn-outline btn-sm">Ver lista pública de ganhadores</a>
+        </div>
+      <% } else { %>
+        <p class="consultar-greeting">Olá, <strong><%= userName %></strong> — suas apostas:</p>
+      <% } %>
+
+      <div class="bets-list">
+        <% bets.forEach(function(bet) { %>
+          <div class="bet-card-mobile <%= bet.is_winner ? 'bet-card-mobile--winner' : '' %>">
+            <div class="bet-card-top">
+              <strong><%= bet.title %></strong>
+              <% if (bet.is_winner) { %>
+                <span class="winner-badge">🏆 Ganhou!</span>
+              <% } else if (bet.game_status === 'finished') { %>
+                <span class="status-tag lost">Não ganhou</span>
+              <% } else { %>
+                <span class="status-tag waiting">Aguardando</span>
+              <% } %>
+            </div>
+            <p class="consultar-match">
+              <%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %>
+            </p>
+            <div class="bet-card-scores">
+              <div>
+                <small>Meu palpite</small>
+                <strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong>
+              </div>
+              <div>
+                <small>Resultado</small>
+                <strong>
+                  <% if (bet.home_score !== null) { %>
+                    <%= bet.home_score %> × <%= bet.away_score %>
+                  <% } else { %>—<% } %>
+                </strong>
+              </div>
+              <% if (bet.is_winner) { %>
+                <div class="bet-prize">
+                  <small>Prêmio</small>
+                  <strong class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></strong>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } else if (bets && bets.length === 0 && !error) { %>
+      <div class="empty-state" style="margin-top:1rem;">
+        <p>Nenhuma aposta confirmada ainda para este WhatsApp.</p>
+        <a href="/" class="btn btn-primary btn-sm" style="margin-top:0.5rem;">Ver jogos abertos</a>
+      </div>
+    <% } %>
+
+    <div class="consultar-tips card">
+      <h3>Como funciona para quem participa sem senha?</h3>
+      <ul>
+        <li>Na hora da aposta você informa <strong>nome, WhatsApp e chave PIX</strong> — isso já fica salvo no sistema.</li>
+        <li>Quando o jogo termina, volte aqui e consulte pelo <strong>mesmo WhatsApp</strong>.</li>
+        <li>Se ganhar, o prêmio vai para o PIX cadastrado. Você também aparece em <a href="/ganhadores">Ganhadores</a>.</li>
+        <li>Quer acesso permanente? <a href="/register">Crie uma conta</a> com o mesmo PIX e defina uma senha.</li>
+      </ul>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', function (e) {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 11) v = v.slice(0, 11);
+        if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
+        else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+        e.target.value = v;
+      });
+    }
+  </script>
+</body>
+</html>
