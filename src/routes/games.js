@@ -347,7 +347,6 @@ router.get('/my-bets', requireAuth, async (req, res) => {
 });
 
 router.get('/my-payments', requireAuth, async (req, res) => {
-  console.log(`[my-payments] user_id=${req.session.user.id}, name=${req.session.user.name}`);
   const [payments] = await pool.query(
     `SELECT p.*, g.title, g.home_team, g.away_team
      FROM payments p JOIN games g ON g.id = p.game_id
@@ -355,11 +354,17 @@ router.get('/my-payments', requireAuth, async (req, res) => {
      ORDER BY p.created_at DESC`,
     [req.session.user.id]
   );
-  console.log(`[my-payments] Encontrados ${payments.length} pagamentos`);
-  if (payments.length > 0) {
-    payments.forEach(p => console.log(`  -> id=${p.id} status=${p.status} qr=${p.qr_code_text ? 'SIM' : 'NAO'}`));
-  }
-  res.render('my-payments', { title: 'Meus Pagamentos', payments, user: req.session.user });
+
+  const pendingPayments = payments.filter(
+    (p) => p.status === 'pending' && p.qr_code_text
+  );
+
+  res.render('my-payments', {
+    title: 'Meus Pagamentos',
+    payments,
+    pendingPayments,
+    user: req.session.user,
+  });
 });
 
 module.exports = router;

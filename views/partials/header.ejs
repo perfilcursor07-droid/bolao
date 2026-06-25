@@ -6,30 +6,54 @@
 
   <div class="navbar-center" id="navbar-nav">
     <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/" class="nav-pill">Jogos</a>
-      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
-      <a href="/carrinho" class="nav-pill nav-pill-cart">
-        Carrinho
-        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-          <span class="nav-cart-badge"><%= cartCount %></span>
-        <% } %>
-      </a>
-      <a href="/my-bets" class="nav-pill">Apostas</a>
-      <a href="/my-payments" class="nav-pill">Pagamentos</a>
-      <a href="/regras" class="nav-pill">Regras</a>
+      <a href="/" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏟️</span> Jogos</a>
+      <a href="/boloes-encerrados" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏁</span> Encerrados</a>
+      <a href="/my-bets" class="nav-pill"><span class="nav-ico" aria-hidden="true">🎯</span> Apostas</a>
+      <a href="/regras" class="nav-pill"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
       <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-pill nav-pill-admin">Admin</a>
+        <a href="/admin" class="nav-pill nav-pill-admin"><span class="nav-ico" aria-hidden="true">⚙️</span> Admin</a>
       <% } %>
     <% } else { %>
-      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
-      <a href="/regras" class="nav-pill">Regras</a>
+      <a href="/boloes-encerrados" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏁</span> Encerrados</a>
+      <a href="/regras" class="nav-pill"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
     <% } %>
   </div>
 
-  <a href="/regras" class="nav-regras-mobile">Regras</a>
+  <% if (typeof user !== 'undefined' && user) { %>
+    <div class="navbar-tools navbar-tools--mobile">
+      <a href="/carrinho" class="nav-icon-btn" title="Carrinho" aria-label="Carrinho">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+          <span class="nav-icon-badge"><%= cartCount %></span>
+        <% } %>
+      </a>
+      <a href="/my-payments" class="nav-icon-btn nav-icon-btn--pay" title="Pagamentos" aria-label="Pagamentos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
+          <span class="nav-icon-badge nav-icon-badge--warn"><%= pendingPaymentsCount %></span>
+        <% } %>
+      </a>
+    </div>
+  <% } %>
+
+  <a href="/regras" class="nav-regras-mobile"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
 
   <div class="navbar-actions">
     <% if (typeof user !== 'undefined' && user) { %>
+      <div class="navbar-tools">
+        <a href="/carrinho" class="nav-icon-btn" title="Carrinho" aria-label="Carrinho">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+            <span class="nav-icon-badge"><%= cartCount %></span>
+          <% } %>
+        </a>
+        <a href="/my-payments" class="nav-icon-btn nav-icon-btn--pay" title="Pagamentos PIX" aria-label="Pagamentos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
+            <span class="nav-icon-badge nav-icon-badge--warn"><%= pendingPaymentsCount %></span>
+          <% } %>
+        </a>
+      </div>
       <div class="nav-user" title="<%= user.name %>">
         <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
         <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
@@ -52,21 +76,31 @@
       <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
       <span><%= user.name %></span>
     </div>
-    <a href="/" class="nav-mobile-link">🏟️ Jogos</a>
-    <a href="/boloes-encerrados" class="nav-mobile-link">🏁 Bolões encerrados</a>
+    <a href="/" class="nav-mobile-link"><span class="nav-ico">🏟️</span> Jogos</a>
+    <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-ico">🏁</span> Bolões encerrados</a>
     <a href="/carrinho" class="nav-mobile-link">
-      🛒 Carrinho<% if (typeof cartCount !== 'undefined' && cartCount > 0) { %> (<%= cartCount %>)<% } %>
+      <span class="nav-ico">🛒</span> Carrinho
+      <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+        <span class="nav-mobile-badge"><%= cartCount %></span>
+      <% } %>
     </a>
-    <a href="/my-bets" class="nav-mobile-link">🎯 Minhas Apostas</a>
-    <a href="/my-payments" class="nav-mobile-link">💳 Pagamentos</a>
+    <a href="/my-bets" class="nav-mobile-link"><span class="nav-ico">🎯</span> Minhas apostas</a>
+    <a href="/my-payments" class="nav-mobile-link">
+      <span class="nav-ico">💳</span> Pagamentos
+      <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
+        <span class="nav-mobile-badge nav-mobile-badge--warn"><%= pendingPaymentsCount %></span>
+      <% } %>
+    </a>
+    <a href="/regras" class="nav-mobile-link"><span class="nav-ico">📋</span> Regras</a>
     <% if (user.role === 'admin') { %>
-      <a href="/admin" class="nav-mobile-link">⚙️ Painel Admin</a>
+      <a href="/admin" class="nav-mobile-link"><span class="nav-ico">⚙️</span> Painel admin</a>
     <% } %>
     <div class="nav-mobile-footer">
       <a href="/logout" class="btn-nav btn-nav-ghost btn-nav-block">Sair</a>
     </div>
   <% } else { %>
-    <a href="/boloes-encerrados" class="nav-mobile-link">🏁 Bolões encerrados</a>
+    <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-ico">🏁</span> Bolões encerrados</a>
+    <a href="/regras" class="nav-mobile-link"><span class="nav-ico">📋</span> Regras</a>
     <div class="nav-mobile-guest">
       <p class="nav-mobile-guest-title">Bem-vindo</p>
       <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>

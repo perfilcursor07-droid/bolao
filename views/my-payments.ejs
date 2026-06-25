@@ -15,6 +15,21 @@
     <h1 style="font-size: 1.35rem; margin-bottom: 0.25rem;">Meus Pagamentos</h1>
     <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">Acompanhe o status dos seus pagamentos PIX</p>
 
+    <% if (typeof pendingPayments !== 'undefined' && pendingPayments.length > 0) { %>
+      <div class="payments-pending-alert">
+        <div class="payments-pending-alert-icon" aria-hidden="true">⏳</div>
+        <div class="payments-pending-alert-body">
+          <strong>
+            <%= pendingPayments.length %> PIX pendente<%= pendingPayments.length !== 1 ? 's' : '' %>
+          </strong>
+          <p>Pague para confirmar suas apostas. O bolão só entra após o pagamento.</p>
+          <a href="/payment/<%= pendingPayments[0].id %>" class="btn btn-gold btn-sm">
+            Pagar agora — <%= formatCents(pendingPayments[0].amount_cents) %>
+          </a>
+        </div>
+      </div>
+    <% } %>
+
     <% if (payments.length === 0) { %>
       <div class="empty-state">
         <div class="empty-icon">💳</div>

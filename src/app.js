@@ -13,6 +13,7 @@ const { formatCents } = require('./routes/games');
 const { translateTeamName } = require('./utils/teamNamesPt');
 const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
 const { getCartCount } = require('./services/cartService');
+const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames } = require('./services/gameStatusService');
 
 const app = express();
@@ -48,14 +49,26 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.formatCents = formatCents;
   res.locals.teamPt = translateTeamName;
   res.locals.gameDateBR = formatGameDateBR;
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
-  res.locals.cartCount = req.session.user ? getCartCount(req) : 0;
+  res.locals.cartCount = 0;
+  res.locals.pendingPaymentsCount = 0;
+
+  if (req.session.user) {
+    try {
+      res.locals.cartCount = getCartCount(req);
+      res.locals.pendingPaymentsCount = await getPendingPaymentsCount(req.session.user.id);
+    } catch {
+      res.locals.cartCount = 0;
+      res.locals.pendingPaymentsCount = 0;
+    }
+  }
+
   next();
 });
 
