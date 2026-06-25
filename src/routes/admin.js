@@ -271,12 +271,17 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
        ORDER BY b.prize_paid_at DESC`
     );
 
+    const totalReceivedCents = confirmedPayments.reduce((s, p) => s + p.amount_cents, 0);
+    const systemFeeRetainedCents = Math.floor(totalReceivedCents * (res.locals.systemFeePercent || 10) / 100);
+
     res.render('admin/pagamentos', {
       title: 'Pagamentos',
       pendingPayments,
       confirmedPayments,
       pendingPayouts,
       paidPayouts,
+      totalReceivedCents,
+      systemFeeRetainedCents,
       user: req.session.user,
       activePage: 'pagamentos',
     });

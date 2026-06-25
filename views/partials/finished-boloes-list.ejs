@@ -30,7 +30,7 @@
               <strong>− <%= formatCents(breakdown.feeCents) %></strong>
             </div>
             <div class="prize-breakdown-row prize-breakdown-net">
-              <span>Prêmio líquido (85%)</span>
+              <span>Prêmio líquido (<%= breakdown.netPercent %>%)</span>
               <strong><%= formatCents(breakdown.netPool) %></strong>
             </div>
             <% if (winners.length > 0) { %>

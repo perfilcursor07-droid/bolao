@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const { isBettingOpen } = require('./gameStatusService');
 
-const SYSTEM_FEE_RATE = 0.15;
+const SYSTEM_FEE_RATE = 0.10;
 
 function calcPrizeBreakdown(prizePoolCents, winnerCount) {
   const totalPool = prizePoolCents || 0;
@@ -14,6 +14,7 @@ function calcPrizeBreakdown(prizePoolCents, winnerCount) {
     netPool,
     prizeEach,
     feePercent: Math.round(SYSTEM_FEE_RATE * 100),
+    netPercent: Math.round((1 - SYSTEM_FEE_RATE) * 100),
     winnerCount,
   };
 }
@@ -61,7 +62,7 @@ async function processGameResults(gameId) {
       return { winners: 0, prizeEach: 0 };
     }
 
-    // Taxa de 15% do sistema
+    // Taxa do sistema (10%)
     const { netPool, prizeEach } = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
     for (const winner of winners) {
