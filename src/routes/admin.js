@@ -194,7 +194,7 @@ router.post('/pagamentos/:betId/pagar', requireAdmin, async (req, res) => {
 // Copa do Mundo - listar jogos da API
 router.get('/copa', requireAdmin, async (req, res) => {
   try {
-    const matches = await getWorldCupMatches();
+    const { matches, error: apiError } = await getWorldCupMatches();
     const defaultEntryFee = await getDefaultEntryFeeReais();
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
@@ -202,7 +202,8 @@ router.get('/copa', requireAdmin, async (req, res) => {
       defaultEntryFee,
       user: req.session.user,
       activePage: 'copa',
-      error: matches === null ? 'Não foi possível buscar os jogos. Verifique a FOOTBALL_API_KEY no .env' : null,
+      error: apiError
+        || (matches === null ? 'Não foi possível buscar os jogos. Verifique FOOTBALL_API_KEY ou APISPORTS_KEY no .env' : null),
     });
   } catch (err) {
     const defaultEntryFee = await getDefaultEntryFeeReais();

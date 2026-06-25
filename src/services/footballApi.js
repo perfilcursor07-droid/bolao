@@ -12,8 +12,11 @@ const AS_KEY = process.env.APISPORTS_KEY || '';
 /**
  * Lista partidas da Copa do Mundo 2026 via football-data.org
  * Competition code: WC
+ * @returns {Promise<{ matches: Array|null, error: string|null }>}
  */
 async function getWorldCupMatches() {
+  const errors = [];
+
   // Tenta football-data.org primeiro
   if (FD_KEY) {
     try {
@@ -24,23 +27,31 @@ async function getWorldCupMatches() {
       });
 
       const matches = res.data.matches || [];
-      return matches.map(parseFootballDataMatch);
+      return { matches: matches.map(parseFootballDataMatch), error: null };
     } catch (err) {
-      console.error('[football-data.org] Erro:', err.response?.status, err.response?.data?.message || err.message);
+      const msg = err.response?.data?.message || err.message;
+      const status = err.response?.status;
+      console.error('[football-data.org] Erro:', status, msg);
+      errors.push(`football-data.org (${status || 'erro'}): ${msg}`);
+
       // Se a season 2026 não existir ainda, tenta sem filtro
-      if (err.response?.status === 400) {
+      if (status === 400) {
         try {
           const res2 = await axios.get(`${FD_BASE}/competitions/WC/matches`, {
             headers: { 'X-Auth-Token': FD_KEY },
             timeout: 10000,
           });
           const matches = res2.data.matches || [];
-          return matches.map(parseFootballDataMatch);
+          return { matches: matches.map(parseFootballDataMatch), error: null };
         } catch (err2) {
-          console.error('[football-data.org] Fallback erro:', err2.response?.status, err2.message);
+          const msg2 = err2.response?.data?.message || err2.message;
+          console.error('[football-data.org] Fallback erro:', err2.response?.status, msg2);
+          errors.push(`football-data.org fallback: ${msg2}`);
         }
       }
     }
+  } else {
+    errors.push('FOOTBALL_API_KEY não configurada no .env');
   }
 
   // Fallback: api-sports.io
@@ -53,13 +64,20 @@ async function getWorldCupMatches() {
       });
 
       const fixtures = res.data.response || [];
-      return fixtures.map(parseApiSportsMatch);
+      return { matches: fixtures.map(parseApiSportsMatch), error: null };
     } catch (err) {
-      console.error('[api-sports] Erro:', err.response?.status, err.message);
+      const msg = err.response?.data?.message || err.message;
+      console.error('[api-sports] Erro:', err.response?.status, msg);
+      errors.push(`api-sports (${err.response?.status || 'erro'}): ${msg}`);
     }
+  } else if (!FD_KEY) {
+    errors.push('APISPORTS_KEY não configurada no .env');
   }
 
-  return null;
+  return {
+    matches: null,
+    error: errors.join(' · ') || 'Não foi possível buscar os jogos.',
+  };
 }
 
 function parseFootballDataMatch(m) {

@@ -9,6 +9,7 @@
     "migrate": "node migrations/run.js",
     "localize-teams": "node scripts/localize-teams.js",
     "check-env": "node scripts/check-env.js",
+    "test-football-api": "node scripts/test-football-api.js",
     "fix-dates-br": "node scripts/fix-game-dates-br.js",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:restart": "pm2 restart bolaopix",
