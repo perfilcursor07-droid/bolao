@@ -60,7 +60,7 @@
             <label for="entry_fee">Valor da Aposta (R$)</label>
             <input type="number" id="entry_fee" name="entry_fee" class="form-control" required
               step="0.01" min="1"
-              value="<%= game ? (game.entry_fee_cents / 100).toFixed(2) : '10.00' %>">
+              value="<%= game ? (game.entry_fee_cents / 100).toFixed(2) : defaultEntryFee %>">
           </div>
         </div>
 

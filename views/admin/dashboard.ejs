@@ -23,6 +23,47 @@
       </div>
     </div>
 
+    <!-- Configuração do valor do bolão -->
+    <div class="admin-settings-card">
+      <div class="admin-settings-head">
+        <div>
+          <h2>⚙️ Valor do bolão</h2>
+          <p>Define o valor padrão por placar em novos jogos e na importação da Copa.</p>
+        </div>
+        <div class="admin-settings-current">
+          <span>Atual</span>
+          <strong><%= formatCents(Math.round(parseFloat(defaultEntryFee) * 100)) %></strong>
+        </div>
+      </div>
+
+      <% if (settingsSaved) { %>
+        <div class="alert alert-success">Valor padrão atualizado com sucesso.</div>
+      <% } %>
+      <% if (settingsError) { %>
+        <div class="alert alert-error"><%= settingsError %></div>
+      <% } %>
+
+      <form method="POST" action="/admin/settings/entry-fee" class="admin-settings-form">
+        <label for="default_entry_fee">Valor padrão por placar (R$)</label>
+        <div class="admin-settings-row">
+          <input
+            type="number"
+            id="default_entry_fee"
+            name="entry_fee"
+            class="form-control"
+            step="0.01"
+            min="1"
+            required
+            value="<%= defaultEntryFee %>"
+          >
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+        <small class="admin-settings-hint">
+          Jogos já criados mantêm o valor individual. Altere em cada partida se precisar.
+        </small>
+      </form>
+    </div>
+
     <!-- Stats cards melhoradas -->
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem; margin-bottom:2rem;">
       <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:1rem; text-align:center;">

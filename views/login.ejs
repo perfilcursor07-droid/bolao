@@ -8,39 +8,102 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="page-auth">
+<body class="page-auth page-login">
   <%- include('partials/header') %>
 
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-icon">👋</div>
-      <h2>Bem-vindo de volta</h2>
-      <p class="subtitle">Entre na sua conta</p>
-
-      <% if (error) { %>
-        <div class="alert alert-error"><%= error %></div>
-      <% } %>
-
-      <form method="POST" action="/login">
-        <div class="form-group">
-          <label for="email">E-mail</label>
-          <input type="email" id="email" name="email" class="form-control" required placeholder="seu@email.com">
-        </div>
-        <div class="form-group">
-          <label for="password">Senha</label>
-          <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••">
-        </div>
-        <button type="submit" class="btn btn-accent btn-block btn-xl">Entrar</button>
-      </form>
-
-      <div class="auth-divider"><span>ou</span></div>
-
-      <p class="auth-footer">
-        Não tem conta? <a href="/register">Cadastre-se</a><br>
-        <a href="/" class="auth-quick-link">⚡ Participar sem cadastro</a>
-      </p>
+  <main class="auth-shell">
+    <div class="auth-shell-bg" aria-hidden="true">
+      <span class="auth-orb auth-orb-1"></span>
+      <span class="auth-orb auth-orb-2"></span>
     </div>
-  </div>
+
+    <div class="auth-shell-grid">
+      <section class="auth-showcase">
+        <a href="/" class="auth-showcase-brand">
+          <%- include('partials/logo') %>
+          <span class="auth-showcase-title">Bolão Online</span>
+        </a>
+        <h1 class="auth-showcase-headline">
+          Acerte o placar.<br>
+          <span class="text-gradient">Ganhe o prêmio.</span>
+        </h1>
+        <p class="auth-showcase-text">
+          Entre na sua conta para acompanhar apostas, pagamentos PIX e resultados em tempo real.
+        </p>
+        <ul class="auth-benefits">
+          <li>
+            <span class="auth-benefit-icon">🎯</span>
+            <span>Palpites em múltiplos placares</span>
+          </li>
+          <li>
+            <span class="auth-benefit-icon">💳</span>
+            <span>Pagamento rápido via PIX</span>
+          </li>
+          <li>
+            <span class="auth-benefit-icon">🏆</span>
+            <span>Prêmio dividido entre ganhadores</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="auth-panel">
+        <div class="auth-card auth-card-login">
+          <div class="auth-card-header">
+            <h2>Bem-vindo de volta</h2>
+            <p class="subtitle">Entre com seu e-mail e senha</p>
+          </div>
+
+          <% if (error) { %>
+            <div class="alert alert-error" role="alert">
+              <span class="alert-icon">!</span>
+              <%= error %>
+            </div>
+          <% } %>
+
+          <form method="POST" action="/login" class="auth-form">
+            <div class="form-group auth-field">
+              <label for="email">E-mail</label>
+              <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 8l8 5 8-5M4 8v10h16V8"/></svg>
+                </span>
+                <input type="email" id="email" name="email" class="form-control auth-input" required placeholder="seu@email.com" autocomplete="email">
+              </div>
+            </div>
+
+            <div class="form-group auth-field">
+              <label for="password">Senha</label>
+              <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                </span>
+                <input type="password" id="password" name="password" class="form-control auth-input" required placeholder="Sua senha" autocomplete="current-password">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-accent btn-block btn-xl auth-submit">
+              Entrar na conta
+            </button>
+          </form>
+
+          <div class="auth-divider"><span>ou</span></div>
+
+          <a href="/" class="auth-guest-card">
+            <span class="auth-guest-icon">⚡</span>
+            <span class="auth-guest-copy">
+              <strong>Participar sem cadastro</strong>
+              <small>Nome, telefone e CPF — aposte em segundos</small>
+            </span>
+            <span class="auth-guest-arrow" aria-hidden="true">→</span>
+          </a>
+
+          <p class="auth-footer">
+            Não tem conta? <a href="/register">Criar conta grátis</a>
+          </p>
+        </div>
+      </section>
+    </div>
+  </main>
 
   <%- include('partials/footer') %>
 </body>

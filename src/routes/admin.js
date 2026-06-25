@@ -5,6 +5,12 @@ const { getWorldCupMatches } = require('../services/footballApi');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
 const { deleteGamesByIds } = require('../services/gameDelete');
+const {
+  getDefaultEntryFeeCents,
+  getDefaultEntryFeeReais,
+  setDefaultEntryFeeFromReais,
+  centsToReaisInput,
+} = require('../services/settingsService');
 
 const router = express.Router();
 
@@ -36,6 +42,7 @@ router.get('/', requireAdmin, async (req, res) => {
 
     const featured = games.filter((g) => g.featured);
     const others = games.filter((g) => !g.featured);
+    const defaultEntryFee = await getDefaultEntryFeeReais();
 
     res.render('admin/dashboard', {
       title: 'Dashboard',
@@ -44,11 +51,23 @@ router.get('/', requireAdmin, async (req, res) => {
       others,
       stats: stats[0],
       recentWinners,
+      defaultEntryFee,
+      settingsSaved: req.query.saved === 'entry-fee',
+      settingsError: req.query.error || null,
       user: req.session.user,
       activePage: 'dashboard',
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/settings/entry-fee', requireAdmin, async (req, res) => {
+  try {
+    await setDefaultEntryFeeFromReais(req.body.entry_fee);
+    res.redirect('/admin?saved=entry-fee');
+  } catch (err) {
+    res.redirect('/admin?error=' + encodeURIComponent(err.message));
   }
 });
 
@@ -176,17 +195,21 @@ router.post('/pagamentos/:betId/pagar', requireAdmin, async (req, res) => {
 router.get('/copa', requireAdmin, async (req, res) => {
   try {
     const matches = await getWorldCupMatches();
+    const defaultEntryFee = await getDefaultEntryFeeReais();
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches,
+      defaultEntryFee,
       user: req.session.user,
       activePage: 'copa',
       error: matches === null ? 'Não foi possível buscar os jogos. Verifique a FOOTBALL_API_KEY no .env' : null,
     });
   } catch (err) {
+    const defaultEntryFee = await getDefaultEntryFeeReais();
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches: null,
+      defaultEntryFee,
       user: req.session.user,
       activePage: 'copa',
       error: 'Erro: ' + err.message,
@@ -199,7 +222,8 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
   const home = translateTeamName(req.body.home_team);
   const away = translateTeamName(req.body.away_team);
   const { game_date, api_match_id, entry_fee } = req.body;
-  const entryFeeCents = Math.round(parseFloat(entry_fee || 10) * 100);
+  const defaultCents = await getDefaultEntryFeeCents();
+  const entryFeeCents = Math.round(parseFloat(entry_fee || defaultCents / 100) * 100);
   const title = `Copa 2026 - ${home} x ${away}`;
 
   try {
@@ -219,7 +243,8 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
 router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
   // Express com urlencoded pode mandar como 'matches[]' ou 'matches'
   let matches = req.body['matches[]'] || req.body.matches || [];
-  const entryFeeCents = Math.round(parseFloat(req.body.entry_fee || 10) * 100);
+  const defaultCents = await getDefaultEntryFeeCents();
+  const entryFeeCents = Math.round(parseFloat(req.body.entry_fee || defaultCents / 100) * 100);
 
   // Se veio só um, transforma em array
   if (!Array.isArray(matches)) matches = [matches];
@@ -269,13 +294,22 @@ router.post('/games/:id/featured', requireAdmin, async (req, res) => {
   }
 });
 
-router.get('/games/new', requireAdmin, (req, res) => {
-  res.render('admin/game-form', { title: 'Novo Jogo', game: null, error: null, user: req.session.user });
+router.get('/games/new', requireAdmin, async (req, res) => {
+  const defaultEntryFee = await getDefaultEntryFeeReais();
+  res.render('admin/game-form', {
+    title: 'Novo Jogo',
+    game: null,
+    error: null,
+    defaultEntryFee,
+    user: req.session.user,
+  });
 });
 
 router.post('/games', requireAdmin, async (req, res) => {
   const { title, description, home_team, away_team, game_date, entry_fee, api_match_id } = req.body;
-  const entryFeeCents = Math.round(parseFloat(entry_fee || 0) * 100);
+  const defaultCents = await getDefaultEntryFeeCents();
+  const parsedFee = parseFloat(entry_fee);
+  const entryFeeCents = Math.round((Number.isFinite(parsedFee) ? parsedFee : defaultCents / 100) * 100);
 
   const home = translateTeamName(home_team);
   const away = translateTeamName(away_team);
@@ -285,6 +319,7 @@ router.post('/games', requireAdmin, async (req, res) => {
       title: 'Novo Jogo',
       game: req.body,
       error: 'Preencha todos os campos obrigatórios',
+      defaultEntryFee: centsToReaisInput(entryFeeCents > 0 ? entryFeeCents : defaultCents),
       user: req.session.user,
     });
   }
@@ -301,6 +336,7 @@ router.post('/games', requireAdmin, async (req, res) => {
       title: 'Novo Jogo',
       game: req.body,
       error: 'Erro ao cadastrar jogo',
+      defaultEntryFee: await getDefaultEntryFeeReais(),
       user: req.session.user,
     });
   }
@@ -310,7 +346,14 @@ router.get('/games/:id/edit', requireAdmin, async (req, res) => {
   try {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0) return res.redirect('/admin');
-    res.render('admin/game-form', { title: 'Editar Jogo', game: games[0], error: null, user: req.session.user });
+    const defaultEntryFee = await getDefaultEntryFeeReais();
+    res.render('admin/game-form', {
+      title: 'Editar Jogo',
+      game: games[0],
+      error: null,
+      defaultEntryFee,
+      user: req.session.user,
+    });
   } catch (err) {
     res.redirect('/admin');
   }

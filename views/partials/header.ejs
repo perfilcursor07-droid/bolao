@@ -1,10 +1,7 @@
 <nav class="navbar">
   <a href="/" class="navbar-brand">
     <%- include('logo') %>
-    <span class="brand-text-wrap">
-      <span class="brand-text">Bolão</span>
-      <span class="brand-sub">Online</span>
-    </span>
+    <span class="brand-text">Bolão <span class="brand-accent">Online</span></span>
   </a>
 
   <div class="navbar-center" id="navbar-nav">
@@ -26,6 +23,8 @@
       <a href="/regras" class="nav-pill">Regras</a>
     <% } %>
   </div>
+
+  <a href="/regras" class="nav-regras-mobile">Regras</a>
 
   <div class="navbar-actions">
     <% if (typeof user !== 'undefined' && user) { %>
@@ -57,7 +56,6 @@
     </a>
     <a href="/my-bets" class="nav-mobile-link">🎯 Minhas Apostas</a>
     <a href="/my-payments" class="nav-mobile-link">💳 Pagamentos</a>
-    <a href="/regras" class="nav-mobile-link">📋 Regras</a>
     <% if (user.role === 'admin') { %>
       <a href="/admin" class="nav-mobile-link">⚙️ Painel Admin</a>
     <% } %>
@@ -65,7 +63,10 @@
       <a href="/logout" class="btn-nav btn-nav-ghost btn-nav-block">Sair</a>
     </div>
   <% } else { %>
-    <a href="/regras" class="nav-mobile-link">📋 Regras</a>
+    <div class="nav-mobile-guest">
+      <p class="nav-mobile-guest-title">Bem-vindo</p>
+      <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>
+    </div>
     <div class="nav-mobile-footer nav-mobile-footer-guest">
       <a href="/login" class="btn-nav btn-nav-ghost btn-nav-block">Entrar</a>
       <a href="/register" class="btn-nav btn-nav-primary btn-nav-block">Cadastrar</a>
