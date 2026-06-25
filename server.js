@@ -1,4 +1,5 @@
 const path = require('path');
+process.env.TZ = process.env.TZ || 'America/Sao_Paulo';
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = require('./src/app');
 const { startCronJobs } = require('./src/services/cronJobs');

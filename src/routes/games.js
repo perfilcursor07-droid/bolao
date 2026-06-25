@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser } = require('../services/guestService');
+const { closeExpiredOpenGames, isBettingOpen, syncGamesFromApi } = require('../services/gameStatusService');
 
 const router = express.Router();
 
@@ -24,6 +25,13 @@ router.post('/api/lookup-phone', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
+    await closeExpiredOpenGames();
+    try {
+      await syncGamesFromApi({ nearOnly: true });
+    } catch (syncErr) {
+      console.error('[index] sync API:', syncErr.message);
+    }
+
     const [games] = await pool.query(
       `SELECT g.*,
         (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as total_bets
@@ -36,7 +44,8 @@ router.get('/', async (req, res) => {
     );
 
     const openGames = games.filter((g) => g.status === 'open');
-    const otherGames = games.filter((g) => g.status !== 'open');
+    const liveGames = games.filter((g) => g.status === 'closed');
+    const otherGames = games.filter((g) => g.status === 'finished');
     const featuredGames = openGames.filter((g) => g.featured);
     const normalGames = openGames.filter((g) => !g.featured);
 
@@ -60,6 +69,7 @@ router.get('/', async (req, res) => {
     res.render('index', {
       title: 'Bolão Online',
       openGames: normalGames,
+      liveGames,
       featuredGames,
       otherGames,
       myBets,
@@ -73,8 +83,9 @@ router.get('/', async (req, res) => {
 
 router.get('/games/:id/participar', async (req, res) => {
   try {
-    const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
-    if (games.length === 0) return res.redirect('/');
+    await closeExpiredOpenGames();
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+    if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
     const game = games[0];
 
@@ -92,8 +103,9 @@ router.post('/games/:id/participar', async (req, res) => {
   const { name, phone, cpf } = req.body;
 
   try {
-    const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
-    if (games.length === 0) return res.redirect('/');
+    await closeExpiredOpenGames();
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+    if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
     const game = games[0];
     const result = await findOrCreateParticipant({ name, phone, cpf });
@@ -172,8 +184,9 @@ router.get('/games/:id', async (req, res) => {
 
 router.get('/games/:id/placar', requireAuth, async (req, res) => {
   try {
-    const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
-    if (games.length === 0) return res.redirect('/');
+    await closeExpiredOpenGames();
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+    if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
     const game = games[0];
     const userStatus = await getUserGameStatus(req.session.user.id, game.id);

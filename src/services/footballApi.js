@@ -113,14 +113,16 @@ async function getMatchResult(matchId) {
         timeout: 10000,
       });
       const m = res.data;
-      const finished = m.status === 'FINISHED';
-      if (!finished) return { finished: false, status: m.status };
-      return {
-        finished: true,
-        homeScore: m.score?.fullTime?.home,
-        awayScore: m.score?.fullTime?.away,
-        status: m.status,
-      };
+      const live = ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status);
+      const finished = ['FINISHED', 'AWARDED'].includes(m.status);
+      if (!live && !finished) return { finished: false, live: false, status: m.status };
+
+      const homeScore =
+        m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? m.score?.halfTime?.home ?? 0;
+      const awayScore =
+        m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? m.score?.halfTime?.away ?? 0;
+
+      return { finished, live, homeScore, awayScore, status: m.status };
     } catch (err) {
       console.error('[football-data.org] Match result erro:', err.message);
     }
@@ -136,13 +138,17 @@ async function getMatchResult(matchId) {
       });
       const f = res.data.response?.[0];
       if (!f) return null;
-      const finished = ['FT', 'AET', 'PEN'].includes(f.fixture.status?.short);
-      if (!finished) return { finished: false, status: f.fixture.status?.short };
+      const st = f.fixture.status?.short;
+      const live = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(st);
+      const finished = ['FT', 'AET', 'PEN'].includes(st);
+      if (!live && !finished) return { finished: false, live: false, status: st };
+
       return {
-        finished: true,
-        homeScore: f.goals?.home,
-        awayScore: f.goals?.away,
-        status: f.fixture.status?.long,
+        finished,
+        live,
+        homeScore: f.goals?.home ?? 0,
+        awayScore: f.goals?.away ?? 0,
+        status: f.fixture.status?.long || st,
       };
     } catch (err) {
       console.error('[api-sports] Match result erro:', err.message);

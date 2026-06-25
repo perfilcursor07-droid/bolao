@@ -72,6 +72,7 @@ function formatGameDateBR(value, options = {}) {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZoneName: 'short',
   };
 
   if (hasExplicitTimezone(str)) {

@@ -60,6 +60,38 @@
       <% }); %>
     <% } %>
 
+    <!-- Jogos em andamento -->
+    <% if (typeof liveGames !== 'undefined' && liveGames.length > 0) { %>
+      <div class="home-section-header" style="margin-top:1.5rem;">
+        <h2>Jogos em andamento</h2>
+        <span class="home-count live-count"><%= liveGames.length %></span>
+      </div>
+      <div class="games-list-compact">
+        <% liveGames.forEach(function(game) { %>
+          <a href="/games/<%= game.id %>" class="game-row game-row-link game-row-live">
+            <div class="game-row-main">
+              <div class="game-row-teams">
+                <strong><%= teamPt(game.home_team) %></strong>
+                <% if (game.home_score !== null && game.away_score !== null) { %>
+                  <span class="game-row-score live-score"><%= game.home_score %>×<%= game.away_score %></span>
+                <% } else { %>
+                  <span class="game-row-score">×</span>
+                <% } %>
+                <strong><%= teamPt(game.away_team) %></strong>
+              </div>
+              <div class="game-row-meta">
+                <time><%= gameDateBR(game.game_date) %></time>
+                <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+              </div>
+            </div>
+            <span class="card-badge live">
+              <span class="live-dot"></span> AO VIVO
+            </span>
+          </a>
+        <% }); %>
+      </div>
+    <% } %>
+
     <!-- Jogos Abertos -->
     <% if (openGames.length > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
       <div class="home-section-header">
@@ -126,8 +158,8 @@
                 <%= teamPt(game.away_team) %>
               </div>
             </div>
-            <span class="card-badge <%= game.status === 'closed' ? 'closed' : 'finished' %>">
-              <%= game.status === 'closed' ? 'Aguardando' : 'Encerrado' %>
+            <span class="card-badge <%= game.status === 'finished' ? 'finished' : 'closed' %>">
+              <%= game.status === 'finished' ? 'Encerrado' : 'Aguardando' %>
             </span>
           </a>
         <% }); %>

@@ -13,8 +13,11 @@ const { formatCents } = require('./routes/games');
 const { translateTeamName } = require('./utils/teamNamesPt');
 const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
 const { getCartCount } = require('./services/cartService');
+const { closeExpiredOpenGames } = require('./services/gameStatusService');
 
 const app = express();
+
+let lastGameStatusCheck = 0;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
@@ -22,6 +25,19 @@ app.set('views', path.join(__dirname, '..', 'views'));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+app.use(async (req, res, next) => {
+  const now = Date.now();
+  if (now - lastGameStatusCheck > 30000) {
+    lastGameStatusCheck = now;
+    try {
+      await closeExpiredOpenGames();
+    } catch (err) {
+      console.error('[gameStatus] Erro ao fechar jogos:', err.message);
+    }
+  }
+  next();
+});
 
 app.use(
   session({
