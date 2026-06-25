@@ -4593,6 +4593,21 @@ body.admin-nav-open {
   max-width: 160px;
 }
 
+.admin-settings-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.admin-settings-check input {
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
+
 .admin-settings-hint {
   display: block;
   margin-top: 0.5rem;

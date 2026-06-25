@@ -19,7 +19,7 @@
       <div class="admin-settings-head">
         <div>
           <h2>Valor do bolão</h2>
-          <p>Valor padrão por placar em novos jogos e na importação da Copa.</p>
+          <p>Valor padrão por placar em novos jogos, na Copa e nos bolões abertos.</p>
         </div>
         <div class="admin-settings-current">
           <span>Atual</span>
@@ -28,7 +28,12 @@
       </div>
 
       <% if (settingsSaved) { %>
-        <div class="alert alert-success">Valor padrão atualizado com sucesso.</div>
+        <div class="alert alert-success">
+          Valor padrão atualizado com sucesso.
+          <% if (typeof gamesUpdated === 'number' && gamesUpdated > 0) { %>
+            <%= gamesUpdated %> jogo<%= gamesUpdated !== 1 ? 's' : '' %> aberto<%= gamesUpdated !== 1 ? 's' : '' %> atualizado<%= gamesUpdated !== 1 ? 's' : '' %>.
+          <% } %>
+        </div>
       <% } %>
       <% if (settingsError) { %>
         <div class="alert alert-error"><%= settingsError %></div>
@@ -49,8 +54,12 @@
           >
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
+        <label class="admin-settings-check">
+          <input type="checkbox" name="apply_open" value="1" checked>
+          <span>Atualizar também todos os <strong>jogos abertos</strong> com este valor</span>
+        </label>
         <small class="admin-settings-hint">
-          Jogos já criados mantêm o valor individual. Altere em cada partida se precisar.
+          Jogos encerrados ou finalizados não são alterados. Pagamentos pendentes já gerados mantêm o valor antigo.
         </small>
       </form>
     </div>

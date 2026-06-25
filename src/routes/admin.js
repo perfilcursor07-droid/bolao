@@ -74,6 +74,7 @@ router.get('/configuracoes', requireAdmin, async (req, res) => {
       title: 'Configurações',
       defaultEntryFee,
       settingsSaved: req.query.saved === 'entry-fee',
+      gamesUpdated: req.query.updated ? parseInt(req.query.updated, 10) : null,
       settingsError: req.query.error || null,
       user: req.session.user,
       activePage: 'configuracoes',
@@ -85,8 +86,15 @@ router.get('/configuracoes', requireAdmin, async (req, res) => {
 
 router.post('/settings/entry-fee', requireAdmin, async (req, res) => {
   try {
-    await setDefaultEntryFeeFromReais(req.body.entry_fee);
-    res.redirect('/admin/configuracoes?saved=entry-fee');
+    const applyToOpen = req.body.apply_open === '1';
+    const { openGamesUpdated } = await setDefaultEntryFeeFromReais(req.body.entry_fee, {
+      applyToOpenGames: applyToOpen,
+    });
+    const qs = new URLSearchParams({ saved: 'entry-fee' });
+    if (applyToOpen && openGamesUpdated > 0) {
+      qs.set('updated', String(openGamesUpdated));
+    }
+    res.redirect(`/admin/configuracoes?${qs.toString()}`);
   } catch (err) {
     res.redirect('/admin/configuracoes?error=' + encodeURIComponent(err.message));
   }

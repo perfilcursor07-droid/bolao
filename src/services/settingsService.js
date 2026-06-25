@@ -24,7 +24,7 @@ async function getDefaultEntryFeeReais() {
   return centsToReaisInput(await getDefaultEntryFeeCents());
 }
 
-async function setDefaultEntryFeeFromReais(reais) {
+async function setDefaultEntryFeeFromReais(reais, options = {}) {
   const cents = Math.round(parseFloat(reais) * 100);
   if (!Number.isFinite(cents) || cents <= 0) {
     throw new Error('Informe um valor maior que zero');
@@ -36,7 +36,20 @@ async function setDefaultEntryFeeFromReais(reais) {
     [String(cents)]
   );
 
-  return cents;
+  let openGamesUpdated = 0;
+  if (options.applyToOpenGames !== false) {
+    openGamesUpdated = await applyEntryFeeToOpenGames(cents);
+  }
+
+  return { cents, openGamesUpdated };
+}
+
+async function applyEntryFeeToOpenGames(cents) {
+  const [result] = await pool.query(
+    `UPDATE games SET entry_fee_cents = ? WHERE status = 'open'`,
+    [cents]
+  );
+  return result.affectedRows || 0;
 }
 
 module.exports = {
@@ -44,5 +57,6 @@ module.exports = {
   getDefaultEntryFeeCents,
   getDefaultEntryFeeReais,
   setDefaultEntryFeeFromReais,
+  applyEntryFeeToOpenGames,
   centsToReaisInput,
 };
