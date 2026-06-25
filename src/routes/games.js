@@ -95,6 +95,21 @@ router.get('/boloes-encerrados', async (req, res) => {
   }
 });
 
+router.get('/ganhadores', async (req, res) => {
+  try {
+    const allFinished = await loadFinishedBoloes();
+    const winnerSummaries = allFinished.filter((item) => item.winners.length > 0);
+
+    res.render('ganhadores', {
+      title: 'Ganhadores',
+      winnerSummaries,
+      user: req.session.user || null,
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user || null });
+  }
+});
+
 router.get('/games/:id/participar', async (req, res) => {
   try {
     await closeExpiredOpenGames();

@@ -1,0 +1,12 @@
+<a href="/carrinho" class="nav-icon-btn" title="Carrinho" aria-label="Carrinho">
+  <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+  <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+    <span class="nav-icon-badge"><%= cartCount %></span>
+  <% } %>
+</a>
+<a href="/my-payments" class="nav-icon-btn nav-icon-btn--pay" title="Pagamentos PIX" aria-label="Pagamentos">
+  <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+  <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
+    <span class="nav-icon-badge nav-icon-badge--warn"><%= pendingPaymentsCount %></span>
+  <% } %>
+</a>

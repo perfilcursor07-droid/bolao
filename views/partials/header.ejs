@@ -6,108 +6,95 @@
 
   <div class="navbar-center" id="navbar-nav">
     <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏟️</span> Jogos</a>
-      <a href="/boloes-encerrados" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏁</span> Encerrados</a>
-      <a href="/my-bets" class="nav-pill"><span class="nav-ico" aria-hidden="true">🎯</span> Apostas</a>
-      <a href="/regras" class="nav-pill"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
+      <a href="/" class="nav-pill">Jogos</a>
+      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
+      <a href="/ganhadores" class="nav-pill">Ganhadores</a>
+      <a href="/my-bets" class="nav-pill">Apostas</a>
+      <a href="/regras" class="nav-pill">Regras</a>
       <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-pill nav-pill-admin"><span class="nav-ico" aria-hidden="true">⚙️</span> Admin</a>
+        <a href="/admin" class="nav-pill nav-pill-admin">Admin</a>
       <% } %>
     <% } else { %>
-      <a href="/boloes-encerrados" class="nav-pill"><span class="nav-ico" aria-hidden="true">🏁</span> Encerrados</a>
-      <a href="/regras" class="nav-pill"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
+      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
+      <a href="/ganhadores" class="nav-pill">Ganhadores</a>
+      <a href="/regras" class="nav-pill">Regras</a>
     <% } %>
   </div>
 
   <% if (typeof user !== 'undefined' && user) { %>
-    <div class="navbar-tools navbar-tools--mobile">
-      <a href="/carrinho" class="nav-icon-btn" title="Carrinho" aria-label="Carrinho">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-          <span class="nav-icon-badge"><%= cartCount %></span>
-        <% } %>
-      </a>
-      <a href="/my-payments" class="nav-icon-btn nav-icon-btn--pay" title="Pagamentos" aria-label="Pagamentos">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-        <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
-          <span class="nav-icon-badge nav-icon-badge--warn"><%= pendingPaymentsCount %></span>
-        <% } %>
-      </a>
+    <div class="navbar-tools navbar-tools--bar">
+      <%- include('nav-tools') %>
     </div>
   <% } %>
 
-  <a href="/regras" class="nav-regras-mobile"><span class="nav-ico" aria-hidden="true">📋</span> Regras</a>
-
   <div class="navbar-actions">
     <% if (typeof user !== 'undefined' && user) { %>
-      <div class="navbar-tools">
-        <a href="/carrinho" class="nav-icon-btn" title="Carrinho" aria-label="Carrinho">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-          <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-            <span class="nav-icon-badge"><%= cartCount %></span>
-          <% } %>
-        </a>
-        <a href="/my-payments" class="nav-icon-btn nav-icon-btn--pay" title="Pagamentos PIX" aria-label="Pagamentos">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-          <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
-            <span class="nav-icon-badge nav-icon-badge--warn"><%= pendingPaymentsCount %></span>
-          <% } %>
-        </a>
+      <div class="navbar-tools navbar-tools--desktop">
+        <%- include('nav-tools') %>
       </div>
       <div class="nav-user" title="<%= user.name %>">
         <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
         <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
       </div>
-      <a href="/logout" class="btn-nav btn-nav-ghost">Sair</a>
+      <a href="/logout" class="nav-link-quiet">Sair</a>
     <% } else { %>
-      <a href="/login" class="btn-nav btn-nav-ghost">Entrar</a>
-      <a href="/register" class="btn-nav btn-nav-primary">Cadastrar</a>
+      <a href="/login" class="nav-link-quiet">Entrar</a>
+      <a href="/register" class="nav-btn-cta">Cadastrar</a>
     <% } %>
   </div>
 
-  <button class="nav-toggle" id="nav-toggle" aria-label="Menu" type="button">
-    <span></span><span></span><span></span>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menu" type="button" aria-expanded="false">
+    <span></span><span></span>
   </button>
 </nav>
 
-<div class="nav-mobile" id="nav-mobile">
+<div class="nav-mobile" id="nav-mobile" aria-hidden="true">
   <% if (typeof user !== 'undefined' && user) { %>
     <div class="nav-mobile-user">
       <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-      <span><%= user.name %></span>
+      <div>
+        <strong><%= user.name.split(' ')[0] %></strong>
+        <small>Minha conta</small>
+      </div>
     </div>
-    <a href="/" class="nav-mobile-link"><span class="nav-ico">🏟️</span> Jogos</a>
-    <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-ico">🏁</span> Bolões encerrados</a>
-    <a href="/carrinho" class="nav-mobile-link">
-      <span class="nav-ico">🛒</span> Carrinho
-      <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-        <span class="nav-mobile-badge"><%= cartCount %></span>
+    <nav class="nav-mobile-links">
+      <a href="/" class="nav-mobile-link"><span class="nav-mobile-link-label">Jogos</span></a>
+      <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
+      <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
+      <a href="/carrinho" class="nav-mobile-link">
+        <span class="nav-mobile-link-label">Carrinho</span>
+        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+          <span class="nav-mobile-badge"><%= cartCount %></span>
+        <% } %>
+      </a>
+      <a href="/my-bets" class="nav-mobile-link"><span class="nav-mobile-link-label">Apostas</span></a>
+      <a href="/my-payments" class="nav-mobile-link">
+        <span class="nav-mobile-link-label">Pagamentos</span>
+        <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
+          <span class="nav-mobile-badge nav-mobile-badge--warn"><%= pendingPaymentsCount %></span>
+        <% } %>
+      </a>
+      <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
+      <% if (user.role === 'admin') { %>
+        <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">Admin</span></a>
       <% } %>
-    </a>
-    <a href="/my-bets" class="nav-mobile-link"><span class="nav-ico">🎯</span> Minhas apostas</a>
-    <a href="/my-payments" class="nav-mobile-link">
-      <span class="nav-ico">💳</span> Pagamentos
-      <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
-        <span class="nav-mobile-badge nav-mobile-badge--warn"><%= pendingPaymentsCount %></span>
-      <% } %>
-    </a>
-    <a href="/regras" class="nav-mobile-link"><span class="nav-ico">📋</span> Regras</a>
-    <% if (user.role === 'admin') { %>
-      <a href="/admin" class="nav-mobile-link"><span class="nav-ico">⚙️</span> Painel admin</a>
-    <% } %>
+    </nav>
     <div class="nav-mobile-footer">
-      <a href="/logout" class="btn-nav btn-nav-ghost btn-nav-block">Sair</a>
+      <a href="/logout" class="nav-mobile-link nav-mobile-link--exit">Sair da conta</a>
     </div>
   <% } else { %>
-    <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-ico">🏁</span> Bolões encerrados</a>
-    <a href="/regras" class="nav-mobile-link"><span class="nav-ico">📋</span> Regras</a>
+    <nav class="nav-mobile-links">
+      <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
+      <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
+      <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
+    </nav>
     <div class="nav-mobile-guest">
       <p class="nav-mobile-guest-title">Bem-vindo</p>
       <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>
     </div>
     <div class="nav-mobile-footer nav-mobile-footer-guest">
-      <a href="/login" class="btn-nav btn-nav-ghost btn-nav-block">Entrar</a>
-      <a href="/register" class="btn-nav btn-nav-primary btn-nav-block">Cadastrar</a>
+      <a href="/login" class="nav-btn-cta nav-btn-cta--block">Entrar</a>
+      <a href="/register" class="nav-link-quiet nav-link-quiet--block">Criar conta</a>
     </div>
   <% } %>
 </div>
@@ -118,18 +105,18 @@
     const menu = document.getElementById('nav-mobile');
     if (!toggle || !menu) return;
 
-    toggle.addEventListener('click', () => {
-      const open = menu.classList.toggle('open');
+    function setOpen(open) {
+      menu.classList.toggle('open', open);
       toggle.classList.toggle('open', open);
       document.body.classList.toggle('nav-open', open);
-    });
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+
+    toggle.addEventListener('click', () => setOpen(!menu.classList.contains('open')));
 
     menu.querySelectorAll('a').forEach((link) => {
-      link.addEventListener('click', () => {
-        menu.classList.remove('open');
-        toggle.classList.remove('open');
-        document.body.classList.remove('nav-open');
-      });
+      link.addEventListener('click', () => setOpen(false));
     });
   })();
 </script>

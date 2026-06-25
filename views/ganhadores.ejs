@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-ganhadores">
+  <%- include('partials/header') %>
+
+  <div class="container home-container">
+    <a href="/" class="back-link">← Voltar aos jogos</a>
+
+    <header class="page-head">
+      <h1>🏆 Ganhadores</h1>
+      <p>Quem acertou o placar e levou o prêmio em cada bolão</p>
+    </header>
+
+    <% if (winnerSummaries.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">🏆</div>
+        <p>Nenhum ganhador ainda</p>
+        <small>Os ganhadores aparecem aqui quando um bolão é finalizado com acertos.</small>
+        <a href="/" class="btn btn-gold" style="margin-top:1rem;">Ver jogos abertos</a>
+      </div>
+    <% } else { %>
+      <p class="ganhadores-count"><%= winnerSummaries.length %> bolão<%= winnerSummaries.length !== 1 ? 'ões' : '' %> com ganhador<%= winnerSummaries.length !== 1 ? 'es' : '' %></p>
+      <%- include('partials/finished-boloes-list', { finishedSummaries: winnerSummaries }) %>
+    <% } %>
+  </div>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

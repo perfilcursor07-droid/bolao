@@ -8,12 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="page-payments">
   <%- include('partials/header') %>
 
-  <div class="container">
-    <h1 style="font-size: 1.35rem; margin-bottom: 0.25rem;">Meus Pagamentos</h1>
-    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">Acompanhe o status dos seus pagamentos PIX</p>
+  <div class="container page-shell">
+    <header class="page-head">
+      <h1>Meus Pagamentos</h1>
+      <p>Acompanhe seus PIX e confirme suas apostas</p>
+    </header>
 
     <% if (typeof pendingPayments !== 'undefined' && pendingPayments.length > 0) { %>
       <div class="payments-pending-alert">
