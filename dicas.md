@@ -8,7 +8,7 @@ git commit -m "Implementação de questionários dinâmicos e override de compet
 git push -u origin main
 
 -- PULL  PARA GIT PRODUÇÃO
-cd ~/htdocs/bolaopix.site
+cd/home/bolaopix/htdocs/bolaopix.site
 git pull origin main
 npm run migrate
 git log --oneline -5
