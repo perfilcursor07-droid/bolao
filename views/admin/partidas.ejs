@@ -11,12 +11,9 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-      <h1 style="font-size:1.25rem;">⚽ Partidas</h1>
-      <div style="display:flex; gap:0.4rem;">
-        <a href="/admin/copa" class="btn btn-outline btn-sm">🌍 Copa</a>
-        <a href="/admin/games/new" class="btn btn-primary btn-sm">+ Nova</a>
-      </div>
+    <div class="admin-page-actions">
+      <a href="/admin/copa" class="btn btn-outline btn-sm">🌍 Copa</a>
+      <a href="/admin/games/new" class="btn btn-primary btn-sm">+ Nova</a>
     </div>
 
     <% if (typeof deleted === 'number' && deleted > 0) { %>
@@ -90,8 +87,7 @@
       </form>
     <% } %>
 
-  </main>
-</div>
+  <%- include('layout-close') %>
 
   <script>
     const checks = document.querySelectorAll('.partidas-check');

@@ -14,6 +14,15 @@ const {
 
 const router = express.Router();
 
+router.use(async (req, res, next) => {
+  try {
+    res.locals.defaultEntryFee = await getDefaultEntryFeeReais();
+  } catch {
+    res.locals.defaultEntryFee = '10.00';
+  }
+  next();
+});
+
 router.get('/', requireAdmin, async (req, res) => {
   try {
     const [games] = await pool.query(
@@ -42,7 +51,6 @@ router.get('/', requireAdmin, async (req, res) => {
 
     const featured = games.filter((g) => g.featured);
     const others = games.filter((g) => !g.featured);
-    const defaultEntryFee = await getDefaultEntryFeeReais();
 
     res.render('admin/dashboard', {
       title: 'Dashboard',
@@ -51,11 +59,24 @@ router.get('/', requireAdmin, async (req, res) => {
       others,
       stats: stats[0],
       recentWinners,
+      user: req.session.user,
+      activePage: 'dashboard',
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.get('/configuracoes', requireAdmin, async (req, res) => {
+  try {
+    const defaultEntryFee = await getDefaultEntryFeeReais();
+    res.render('admin/configuracoes', {
+      title: 'Configurações',
       defaultEntryFee,
       settingsSaved: req.query.saved === 'entry-fee',
       settingsError: req.query.error || null,
       user: req.session.user,
-      activePage: 'dashboard',
+      activePage: 'configuracoes',
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
@@ -65,9 +86,9 @@ router.get('/', requireAdmin, async (req, res) => {
 router.post('/settings/entry-fee', requireAdmin, async (req, res) => {
   try {
     await setDefaultEntryFeeFromReais(req.body.entry_fee);
-    res.redirect('/admin?saved=entry-fee');
+    res.redirect('/admin/configuracoes?saved=entry-fee');
   } catch (err) {
-    res.redirect('/admin?error=' + encodeURIComponent(err.message));
+    res.redirect('/admin/configuracoes?error=' + encodeURIComponent(err.message));
   }
 });
 

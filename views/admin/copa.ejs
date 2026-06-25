@@ -11,8 +11,6 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <h1 style="font-size:1.25rem; margin-bottom:1rem;">🏆 Copa do Mundo 2026</h1>
-
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
       <div class="card" style="padding:1.5rem; text-align:center;">
@@ -39,7 +37,7 @@
           <div class="copa-toolbar-right">
             <label class="copa-fee-label">
               Valor R$
-              <input type="number" name="entry_fee" value="<%= defaultEntryFee %>" min="1" step="0.01" class="copa-fee-input-main" id="global-fee">
+              <input type="number" name="entry_fee" value="<%= typeof defaultEntryFee !== 'undefined' ? defaultEntryFee : '10.00' %>" min="1" step="0.01" class="copa-fee-input-main" id="global-fee">
             </label>
             <button type="submit" class="btn btn-primary" id="btn-create-bulk" disabled>
               Criar bolões selecionados
@@ -112,8 +110,8 @@
         <small>A Copa 2026 pode ainda não ter jogos agendados na API ou houve erro de conexão. Tente novamente.</small>
       </div>
     <% } %>
-  </main>
-</div>
+
+  <%- include('layout-close') %>
 
   <script>
     const checks = document.querySelectorAll('.copa-check');

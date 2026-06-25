@@ -1,9 +1,10 @@
 const express = require('express');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
-const { createPaymentWithPlacar, getUserGameStatus } = require('../services/prizeService');
+const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser } = require('../services/guestService');
 const { closeExpiredOpenGames, isBettingOpen, syncGamesFromApi } = require('../services/gameStatusService');
+const { loadFinishedBoloes } = require('../services/finishedBoloesService');
 
 const router = express.Router();
 
@@ -45,9 +46,12 @@ router.get('/', async (req, res) => {
 
     const openGames = games.filter((g) => g.status === 'open');
     const liveGames = games.filter((g) => g.status === 'closed');
-    const otherGames = games.filter((g) => g.status === 'finished');
     const featuredGames = openGames.filter((g) => g.featured);
     const normalGames = openGames.filter((g) => !g.featured);
+
+    const allFinishedSummaries = await loadFinishedBoloes();
+    const finishedSummaries = allFinishedSummaries.slice(0, 5);
+    const hasMoreFinished = allFinishedSummaries.length > 5;
 
     let myBets = [];
     let gameStatusMap = {};
@@ -71,9 +75,24 @@ router.get('/', async (req, res) => {
       openGames: normalGames,
       liveGames,
       featuredGames,
-      otherGames,
+      finishedSummaries,
+      hasMoreFinished,
+      totalFinishedCount: allFinishedSummaries.length,
       myBets,
       gameStatusMap,
+      user: req.session.user || null,
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user || null });
+  }
+});
+
+router.get('/boloes-encerrados', async (req, res) => {
+  try {
+    const finishedSummaries = await loadFinishedBoloes({ includeAllBets: true });
+    res.render('boloes-encerrados', {
+      title: 'Bolões encerrados',
+      finishedSummaries,
       user: req.session.user || null,
     });
   } catch (err) {
@@ -164,15 +183,19 @@ router.get('/games/:id', async (req, res) => {
 
     const [winners] = await pool.query(
       `SELECT b.*, u.name FROM bets b JOIN users u ON u.id = b.user_id
-       WHERE b.game_id = ? AND b.is_winner = TRUE`,
+       WHERE b.game_id = ? AND b.is_winner = TRUE
+       ORDER BY b.prize_amount_cents DESC, u.name ASC`,
       [game.id]
     );
+
+    const prizeBreakdown = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
     res.render('game-detail', {
       title: game.title,
       game,
       userStatus,
       winners,
+      prizeBreakdown,
       user: req.session.user || null,
       success: req.query.success === '1',
       error: req.query.error === 'payment' ? 'Erro ao gerar PIX. Verifique o token PagBank.' : null,

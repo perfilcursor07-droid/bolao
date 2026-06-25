@@ -9,25 +9,66 @@ const FD_KEY = process.env.FOOTBALL_API_KEY || '';
 const AS_BASE = 'https://v3.football.api-sports.io';
 const AS_KEY = process.env.APISPORTS_KEY || '';
 
+const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
+const WC_CACHE_TTL_MS = 30 * 60 * 1000;
+
+let fdLastRequestAt = 0;
+let worldCupCache = { result: null, expiresAt: 0 };
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRateLimitWaitSeconds(message) {
+  const match = String(message || '').match(/Wait (\d+)/i);
+  return match ? parseInt(match[1], 10) : 40;
+}
+
+async function throttleFootballData() {
+  const wait = Math.max(0, FD_MIN_INTERVAL_MS - (Date.now() - fdLastRequestAt));
+  if (wait > 0) await sleep(wait);
+  fdLastRequestAt = Date.now();
+}
+
+async function footballDataGet(url, config = {}) {
+  await throttleFootballData();
+  try {
+    return await axios.get(url, config);
+  } catch (err) {
+    if (err.response?.status !== 429) throw err;
+    const waitSec = parseRateLimitWaitSeconds(err.response?.data?.message);
+    console.warn(`[football-data.org] Rate limit — aguardando ${waitSec}s`);
+    await sleep((waitSec + 2) * 1000);
+    fdLastRequestAt = Date.now();
+    return axios.get(url, config);
+  }
+}
+
 /**
  * Lista partidas da Copa do Mundo 2026 via football-data.org
  * Competition code: WC
  * @returns {Promise<{ matches: Array|null, error: string|null }>}
  */
 async function getWorldCupMatches() {
+  if (worldCupCache.result && Date.now() < worldCupCache.expiresAt) {
+    return worldCupCache.result;
+  }
+
   const errors = [];
 
   // Tenta football-data.org primeiro
   if (FD_KEY) {
     try {
-      const res = await axios.get(`${FD_BASE}/competitions/WC/matches`, {
+      const res = await footballDataGet(`${FD_BASE}/competitions/WC/matches`, {
         headers: { 'X-Auth-Token': FD_KEY },
         params: { season: 2026 },
         timeout: 10000,
       });
 
       const matches = res.data.matches || [];
-      return { matches: matches.map(parseFootballDataMatch), error: null };
+      const result = { matches: matches.map(parseFootballDataMatch), error: null };
+      worldCupCache = { result, expiresAt: Date.now() + WC_CACHE_TTL_MS };
+      return result;
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       const status = err.response?.status;
@@ -37,17 +78,27 @@ async function getWorldCupMatches() {
       // Se a season 2026 não existir ainda, tenta sem filtro
       if (status === 400) {
         try {
-          const res2 = await axios.get(`${FD_BASE}/competitions/WC/matches`, {
+          const res2 = await footballDataGet(`${FD_BASE}/competitions/WC/matches`, {
             headers: { 'X-Auth-Token': FD_KEY },
             timeout: 10000,
           });
           const matches = res2.data.matches || [];
-          return { matches: matches.map(parseFootballDataMatch), error: null };
+          const result = { matches: matches.map(parseFootballDataMatch), error: null };
+          worldCupCache = { result, expiresAt: Date.now() + WC_CACHE_TTL_MS };
+          return result;
         } catch (err2) {
           const msg2 = err2.response?.data?.message || err2.message;
           console.error('[football-data.org] Fallback erro:', err2.response?.status, msg2);
           errors.push(`football-data.org fallback: ${msg2}`);
         }
+      }
+
+      // Em rate limit, devolve cache antigo se existir
+      if (status === 429 && worldCupCache.result?.matches) {
+        return {
+          matches: worldCupCache.result.matches,
+          error: 'Lista em cache (API no limite de requisições). Atualiza em alguns minutos.',
+        };
       }
     }
   } else {

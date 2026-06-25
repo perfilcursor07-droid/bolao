@@ -12,7 +12,6 @@ git push -u origin main
 su - bolaopix
 cd /home/bolaopix/htdocs/bolaopix.site
 git pull origin main
-npm install
 npm run migrate
 git log --oneline -5
 pm2 list

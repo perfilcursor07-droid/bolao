@@ -11,8 +11,6 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <h1 style="font-size:1.25rem; margin-bottom:1rem;">🏆 Ganhadores</h1>
-
     <% if (winners.length === 0) { %>
       <div class="empty-state">
         <div class="empty-icon">🏆</div>
@@ -48,7 +46,6 @@
       </div>
     <% } %>
 
-  </main>
-</div>
+  <%- include('layout-close') %>
 </body>
 </html>

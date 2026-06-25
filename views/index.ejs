@@ -92,6 +92,20 @@
       </div>
     <% } %>
 
+    <!-- Bolões encerrados -->
+    <% if (typeof finishedSummaries !== 'undefined' && finishedSummaries.length > 0) { %>
+      <div class="home-section-header" style="margin-top:1.5rem;">
+        <h2>Bolões encerrados</h2>
+        <div class="home-section-header-right">
+          <span class="home-count"><%= typeof totalFinishedCount !== 'undefined' ? totalFinishedCount : finishedSummaries.length %></span>
+          <% if (typeof hasMoreFinished !== 'undefined' && hasMoreFinished) { %>
+            <a href="/boloes-encerrados" class="home-link">Ver todos →</a>
+          <% } %>
+        </div>
+      </div>
+      <%- include('partials/finished-boloes-list', { finishedSummaries }) %>
+    <% } %>
+
     <!-- Jogos Abertos -->
     <% if (openGames.length > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
       <div class="home-section-header">
@@ -135,33 +149,6 @@
               <% } %>
             </div>
           </article>
-        <% }); %>
-      </div>
-    <% } %>
-
-    <!-- Resultados -->
-    <% if (otherGames.length > 0) { %>
-      <div class="home-section-header" style="margin-top:1.5rem;">
-        <h2>Resultados</h2>
-      </div>
-      <div class="games-list-compact">
-        <% otherGames.forEach(function(game) { %>
-          <a href="/games/<%= game.id %>" class="game-row game-row-link">
-            <div class="game-row-main">
-              <div class="game-row-teams">
-                <%= teamPt(game.home_team) %>
-                <% if (game.home_score !== null) { %>
-                  <span class="game-row-score"><%= game.home_score %>×<%= game.away_score %></span>
-                <% } else { %>
-                  <span class="game-row-score">×</span>
-                <% } %>
-                <%= teamPt(game.away_team) %>
-              </div>
-            </div>
-            <span class="card-badge <%= game.status === 'finished' ? 'finished' : 'closed' %>">
-              <%= game.status === 'finished' ? 'Encerrado' : 'Aguardando' %>
-            </span>
-          </a>
         <% }); %>
       </div>
     <% } %>

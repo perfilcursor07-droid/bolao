@@ -1,0 +1,69 @@
+    </main>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const shell = document.getElementById('admin-shell');
+    const sidebar = document.getElementById('admin-sidebar');
+    const toggle = document.getElementById('admin-sidebar-toggle');
+    const closeBtn = document.getElementById('admin-sidebar-close');
+    const backdrop = document.getElementById('admin-sidebar-backdrop');
+    if (!shell || !sidebar) return;
+
+    const STORAGE_KEY = 'adminSidebarCollapsed';
+
+    function isMobile() {
+      return window.matchMedia('(max-width: 991px)').matches;
+    }
+
+    function setCollapsed(collapsed) {
+      shell.classList.toggle('sidebar-collapsed', collapsed && !isMobile());
+      if (!isMobile()) {
+        try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch (e) {}
+      }
+    }
+
+    function openMobile() {
+      shell.classList.add('sidebar-mobile-open');
+      document.body.classList.add('admin-nav-open');
+    }
+
+    function closeMobile() {
+      shell.classList.remove('sidebar-mobile-open');
+      document.body.classList.remove('admin-nav-open');
+    }
+
+    function initDesktop() {
+      if (isMobile()) return;
+      try {
+        if (localStorage.getItem(STORAGE_KEY) === '1') {
+          shell.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
+    }
+
+    initDesktop();
+
+    toggle?.addEventListener('click', () => {
+      if (isMobile()) {
+        if (shell.classList.contains('sidebar-mobile-open')) closeMobile();
+        else openMobile();
+        return;
+      }
+      setCollapsed(!shell.classList.contains('sidebar-collapsed'));
+    });
+
+    closeBtn?.addEventListener('click', closeMobile);
+    backdrop?.addEventListener('click', closeMobile);
+
+    window.addEventListener('resize', () => {
+      if (!isMobile()) {
+        closeMobile();
+        initDesktop();
+      } else {
+        shell.classList.remove('sidebar-collapsed');
+      }
+    });
+  })();
+</script>

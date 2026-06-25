@@ -1,5 +1,22 @@
 const pool = require('../config/database');
 
+const SYSTEM_FEE_RATE = 0.15;
+
+function calcPrizeBreakdown(prizePoolCents, winnerCount) {
+  const totalPool = prizePoolCents || 0;
+  const feeCents = Math.floor(totalPool * SYSTEM_FEE_RATE);
+  const netPool = Math.floor(totalPool * (1 - SYSTEM_FEE_RATE));
+  const prizeEach = winnerCount > 0 ? Math.floor(netPool / winnerCount) : 0;
+  return {
+    totalPool,
+    feeCents,
+    netPool,
+    prizeEach,
+    feePercent: Math.round(SYSTEM_FEE_RATE * 100),
+    winnerCount,
+  };
+}
+
 function parsePredictions(predictionData) {
   if (!predictionData) return [];
   const data = typeof predictionData === 'string' ? JSON.parse(predictionData) : predictionData;
@@ -44,9 +61,7 @@ async function processGameResults(gameId) {
     }
 
     // Taxa de 15% do sistema
-    const SYSTEM_FEE = 0.15;
-    const netPool = Math.floor(game.prize_pool_cents * (1 - SYSTEM_FEE));
-    const prizeEach = Math.floor(netPool / winners.length);
+    const { netPool, prizeEach } = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
     for (const winner of winners) {
       await connection.query(
@@ -203,6 +218,8 @@ async function getUserGameStatus(userId, gameId) {
 }
 
 module.exports = {
+  SYSTEM_FEE_RATE,
+  calcPrizeBreakdown,
   processGameResults,
   confirmPayment,
   createPaymentWithPlacar,

@@ -7,6 +7,7 @@
   <div class="navbar-center" id="navbar-nav">
     <% if (typeof user !== 'undefined' && user) { %>
       <a href="/" class="nav-pill">Jogos</a>
+      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
       <a href="/carrinho" class="nav-pill nav-pill-cart">
         Carrinho
         <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
@@ -20,6 +21,7 @@
         <a href="/admin" class="nav-pill nav-pill-admin">Admin</a>
       <% } %>
     <% } else { %>
+      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
       <a href="/regras" class="nav-pill">Regras</a>
     <% } %>
   </div>
@@ -51,6 +53,7 @@
       <span><%= user.name %></span>
     </div>
     <a href="/" class="nav-mobile-link">🏟️ Jogos</a>
+    <a href="/boloes-encerrados" class="nav-mobile-link">🏁 Bolões encerrados</a>
     <a href="/carrinho" class="nav-mobile-link">
       🛒 Carrinho<% if (typeof cartCount !== 'undefined' && cartCount > 0) { %> (<%= cartCount %>)<% } %>
     </a>
@@ -63,6 +66,7 @@
       <a href="/logout" class="btn-nav btn-nav-ghost btn-nav-block">Sair</a>
     </div>
   <% } else { %>
+    <a href="/boloes-encerrados" class="nav-mobile-link">🏁 Bolões encerrados</a>
     <div class="nav-mobile-guest">
       <p class="nav-mobile-guest-title">Bem-vindo</p>
       <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>

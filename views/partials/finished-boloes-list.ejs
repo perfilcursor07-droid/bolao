@@ -1,0 +1,77 @@
+<% if (typeof finishedSummaries !== 'undefined' && finishedSummaries.length > 0) { %>
+  <div class="finished-boloes-list">
+    <% finishedSummaries.forEach(function(item) { %>
+      <% var game = item.game, winners = item.winners, breakdown = item.breakdown, bets = item.bets || []; %>
+      <details class="finished-bolao">
+        <summary class="finished-bolao-summary">
+          <div class="finished-bolao-teams">
+            <span class="finished-team"><%= teamPt(game.home_team) %></span>
+            <span class="finished-score"><%= game.home_score %> × <%= game.away_score %></span>
+            <span class="finished-team"><%= teamPt(game.away_team) %></span>
+          </div>
+          <div class="finished-bolao-meta">
+            <span class="finished-pool"><%= formatCents(breakdown.totalPool) %></span>
+            <span class="finished-bets-count"><%= game.total_bets %> aposta<%= game.total_bets !== 1 ? 's' : '' %></span>
+            <% if (winners.length > 0) { %>
+              <span class="finished-winners-badge"><%= winners.length %> ganhador<%= winners.length > 1 ? 'es' : '' %></span>
+            <% } else { %>
+              <span class="finished-winners-badge finished-winners-badge--empty">Sem ganhadores</span>
+            <% } %>
+          </div>
+        </summary>
+        <div class="finished-bolao-body">
+          <div class="prize-breakdown">
+            <div class="prize-breakdown-row">
+              <span>Total arrecadado</span>
+              <strong><%= formatCents(breakdown.totalPool) %></strong>
+            </div>
+            <div class="prize-breakdown-row prize-breakdown-fee">
+              <span>Taxa do sistema (<%= breakdown.feePercent %>%)</span>
+              <strong>− <%= formatCents(breakdown.feeCents) %></strong>
+            </div>
+            <div class="prize-breakdown-row prize-breakdown-net">
+              <span>Prêmio líquido (85%)</span>
+              <strong><%= formatCents(breakdown.netPool) %></strong>
+            </div>
+            <% if (winners.length > 0) { %>
+              <div class="prize-breakdown-row prize-breakdown-each">
+                <span>Por ganhador (÷ <%= winners.length %>)</span>
+                <strong class="prize-each-value"><%= formatCents(breakdown.prizeEach) %></strong>
+              </div>
+            <% } %>
+          </div>
+          <% if (winners.length > 0) { %>
+            <h4 class="finished-subtitle">🏆 Ganhadores</h4>
+            <div class="winners-list finished-winners-list">
+              <% winners.forEach(function(w) { %>
+                <div class="winner-row">
+                  <span><%= w.name %> — <%= w.home_score_prediction %>×<%= w.away_score_prediction %></span>
+                  <strong><%= formatCents(w.prize_amount_cents || breakdown.prizeEach) %></strong>
+                </div>
+              <% }); %>
+            </div>
+          <% } %>
+          <% if (typeof showAllBets !== 'undefined' && showAllBets && bets.length > 0) { %>
+            <h4 class="finished-subtitle">📋 Todas as apostas</h4>
+            <div class="winners-list finished-bets-list">
+              <% bets.forEach(function(bet) { %>
+                <div class="winner-row <%= bet.is_winner ? 'winner-row--won' : '' %>">
+                  <span>
+                    <% if (bet.is_winner) { %>🏆 <% } %>
+                    <%= bet.name %> — <%= bet.home_score_prediction %>×<%= bet.away_score_prediction %>
+                  </span>
+                  <% if (bet.is_winner) { %>
+                    <strong><%= formatCents(bet.prize_amount_cents || breakdown.prizeEach) %></strong>
+                  <% } else { %>
+                    <span class="status-tag lost">—</span>
+                  <% } %>
+                </div>
+              <% }); %>
+            </div>
+          <% } %>
+          <a href="/games/<%= game.id %>" class="finished-bolao-link">Ver detalhes do bolão →</a>
+        </div>
+      </details>
+    <% }); %>
+  </div>
+<% } %>
