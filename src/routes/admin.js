@@ -141,6 +141,81 @@ router.post('/partidas/delete', requireAdmin, async (req, res) => {
   }
 });
 
+// Apostas — visão por jogo
+router.get('/apostas', requireAdmin, async (req, res) => {
+  try {
+    const [games] = await pool.query(
+      `SELECT g.id, g.title, g.home_team, g.away_team, g.status, g.game_date, g.home_score, g.away_score,
+        (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as bet_count
+       FROM games g
+       ORDER BY g.game_date DESC`
+    );
+
+    const selectedGameId = req.query.game ? parseInt(req.query.game, 10) : null;
+    const validGameId = selectedGameId && games.some((g) => g.id === selectedGameId) ? selectedGameId : null;
+
+    let betsSql = `SELECT b.*, u.name as user_name, u.phone, u.cpf, u.role as user_role,
+        g.id as game_id, g.title as game_title, g.home_team, g.away_team, g.home_score, g.away_score,
+        g.status as game_status, g.game_date,
+        p.status as payment_status, p.paid_at, p.amount_cents
+       FROM bets b
+       JOIN users u ON u.id = b.user_id
+       JOIN games g ON g.id = b.game_id
+       JOIN payments p ON p.id = b.payment_id`;
+
+    const params = [];
+    if (validGameId) {
+      betsSql += ' WHERE g.id = ?';
+      params.push(validGameId);
+    }
+    betsSql += ' ORDER BY g.game_date DESC, b.is_winner DESC, b.created_at DESC';
+
+    const [bets] = await pool.query(betsSql, params);
+
+    const gameGroups = [];
+    const groupMap = new Map();
+    for (const bet of bets) {
+      if (!groupMap.has(bet.game_id)) {
+        const gameMeta = games.find((g) => g.id === bet.game_id) || {
+          id: bet.game_id,
+          title: bet.game_title,
+          home_team: bet.home_team,
+          away_team: bet.away_team,
+          status: bet.game_status,
+          game_date: bet.game_date,
+          home_score: bet.home_score,
+          away_score: bet.away_score,
+          bet_count: 0,
+        };
+        const group = { game: gameMeta, bets: [] };
+        groupMap.set(bet.game_id, group);
+        gameGroups.push(group);
+      }
+      groupMap.get(bet.game_id).bets.push(bet);
+    }
+
+    const stats = {
+      totalBets: bets.length,
+      winners: bets.filter((b) => b.is_winner).length,
+      waiting: bets.filter((b) => !b.is_winner && b.game_status !== 'finished').length,
+      lost: bets.filter((b) => !b.is_winner && b.game_status === 'finished').length,
+    };
+
+    res.render('admin/apostas', {
+      title: 'Apostas',
+      games,
+      bets,
+      gameGroups,
+      selectedGameId: validGameId,
+      stats,
+      user: req.session.user,
+      activePage: 'apostas',
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
 // Ganhadores
 router.get('/ganhadores', requireAdmin, async (req, res) => {
   try {

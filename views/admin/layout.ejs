@@ -26,6 +26,10 @@
           <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18M3 12h18"/></svg></span>
           <span class="sidebar-label">Partidas</span>
         </a>
+        <a href="/admin/apostas" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'apostas' ? 'active' : '' %>" title="Apostas">
+          <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></span>
+          <span class="sidebar-label">Apostas</span>
+        </a>
         <a href="/admin/copa" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'copa' ? 'active' : '' %>" title="Copa 2026">
           <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9M12 3c-2.5 2.5-4 5.5-4 9s1.5 6.5 4 9"/></svg></span>
           <span class="sidebar-label">Copa 2026</span>

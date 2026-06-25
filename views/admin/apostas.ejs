@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <p class="admin-page-intro">Todas as apostas confirmadas, agrupadas por jogo — quem apostou, palpite e status.</p>
+
+    <div class="admin-apostas-toolbar">
+      <form method="GET" action="/admin/apostas" class="admin-apostas-filter">
+        <label for="game">Filtrar por jogo</label>
+        <select name="game" id="game" class="form-control" onchange="this.form.submit()">
+          <option value="">Todos os jogos</option>
+          <% games.forEach(function(g) { %>
+            <option value="<%= g.id %>" <%= selectedGameId === g.id ? 'selected' : '' %>>
+              <%= g.title %> — <%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %> (<%= g.bet_count %>)
+            </option>
+          <% }); %>
+        </select>
+      </form>
+
+      <div class="admin-apostas-stats">
+        <div class="admin-stat-chip">
+          <span class="admin-stat-chip-value"><%= stats.totalBets %></span>
+          <span class="admin-stat-chip-label">Apostas</span>
+        </div>
+        <div class="admin-stat-chip admin-stat-chip--gold">
+          <span class="admin-stat-chip-value"><%= stats.winners %></span>
+          <span class="admin-stat-chip-label">Ganhadores</span>
+        </div>
+        <div class="admin-stat-chip admin-stat-chip--muted">
+          <span class="admin-stat-chip-value"><%= stats.waiting %></span>
+          <span class="admin-stat-chip-label">Aguardando</span>
+        </div>
+        <div class="admin-stat-chip admin-stat-chip--danger">
+          <span class="admin-stat-chip-value"><%= stats.lost %></span>
+          <span class="admin-stat-chip-label">Não ganhou</span>
+        </div>
+      </div>
+    </div>
+
+    <% if (bets.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>Nenhuma aposta registrada<%= selectedGameId ? ' neste jogo' : '' %> ainda</p>
+        <small>As apostas aparecem aqui após o pagamento PIX ser confirmado</small>
+      </div>
+    <% } else { %>
+      <% const groups = selectedGameId ? [{ game: games.find(g => g.id === selectedGameId), bets }] : gameGroups; %>
+      <% groups.forEach(function(group) { %>
+        <% if (!group.game) return; %>
+        <section class="admin-apostas-game">
+          <header class="admin-apostas-game-head">
+            <div>
+              <h2><%= group.game.title %></h2>
+              <p>
+                <%= teamPt(group.game.home_team) %> × <%= teamPt(group.game.away_team) %>
+                · <%= gameDateBR(group.game.game_date, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+              </p>
+            </div>
+            <div class="admin-apostas-game-meta">
+              <span class="status-badge status-<%= group.game.status %>"><%= group.game.status %></span>
+              <% if (group.game.home_score !== null) { %>
+                <span class="admin-apostas-result"><%= group.game.home_score %> × <%= group.game.away_score %></span>
+              <% } %>
+              <span class="admin-apostas-count"><%= group.bets.length %> aposta<%= group.bets.length !== 1 ? 's' : '' %></span>
+              <a href="/admin/games/<%= group.game.id %>" class="btn btn-outline btn-sm">Detalhes</a>
+            </div>
+          </header>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Jogador</th>
+                  <th>WhatsApp</th>
+                  <th>Chave PIX</th>
+                  <th>Palpite</th>
+                  <th>PIX entrada</th>
+                  <th>Status aposta</th>
+                  <th>Prêmio</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% group.bets.forEach(function(bet) { %>
+                  <tr class="<%= bet.is_winner ? 'row-winner' : '' %>">
+                    <td>
+                      <strong><%= bet.user_name %></strong>
+                      <% if (bet.user_role === 'guest') { %>
+                        <span class="admin-tag-guest">visitante</span>
+                      <% } %>
+                    </td>
+                    <td class="admin-cell-muted"><%= bet.phone || '—' %></td>
+                    <td class="admin-cell-muted" style="font-size:0.78rem; max-width:140px; word-break:break-all;"><%= bet.cpf || '—' %></td>
+                    <td><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong></td>
+                    <td>
+                      <% if (bet.payment_status === 'paid') { %>
+                        <span class="card-badge finished">Pago</span>
+                        <small class="admin-cell-muted"><%= formatCents(bet.amount_cents) %></small>
+                      <% } else { %>
+                        <span class="card-badge closed"><%= bet.payment_status %></span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <% if (bet.is_winner) { %>
+                        <span class="winner-badge">🏆 Ganhou</span>
+                        <% if (bet.prize_paid_at) { %>
+                          <small class="admin-cell-muted">prêmio pago</small>
+                        <% } else { %>
+                          <small class="admin-cell-muted">prêmio pendente</small>
+                        <% } %>
+                      <% } else if (bet.game_status === 'finished') { %>
+                        <span class="status-tag lost">Não ganhou</span>
+                      <% } else { %>
+                        <span class="status-tag waiting">Aguardando</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <% if (bet.is_winner) { %>
+                        <span class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></span>
+                      <% } else { %>—<% } %>
+                    </td>
+                    <td class="admin-cell-muted"><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      <% }); %>
+    <% } %>
+
+  <%- include('layout-close') %>
+</body>
+</html>

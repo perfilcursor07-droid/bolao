@@ -5309,3 +5309,132 @@ body.admin-nav-open {
 .consultar-tips li + li {
   margin-top: 0.35rem;
 }
+
+/* Admin — Apostas */
+.admin-apostas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-apostas-filter label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.admin-apostas-filter select {
+  min-width: 280px;
+  max-width: 100%;
+}
+
+.admin-apostas-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 72px;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.admin-stat-chip-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.admin-stat-chip-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-stat-chip--gold .admin-stat-chip-value { color: var(--gold); }
+.admin-stat-chip--muted .admin-stat-chip-value { color: var(--text-secondary); }
+.admin-stat-chip--danger .admin-stat-chip-value { color: #f87171; }
+
+.admin-apostas-game {
+  margin-bottom: 1.5rem;
+}
+
+.admin-apostas-game-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-apostas-game-head h2 {
+  font-size: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+.admin-apostas-game-head p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.admin-apostas-game-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-apostas-result {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.admin-apostas-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-tag-guest {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.12);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.admin-cell-muted {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+tr.row-winner {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+@media (max-width: 768px) {
+  .admin-apostas-filter select {
+    min-width: 100%;
+  }
+}
