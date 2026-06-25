@@ -2016,62 +2016,160 @@ td { border-top: 1px solid var(--border); }
   font-size: 0.95rem;
 }
 
-/* Featured card — compact */
+/* Featured card — meio-termo (destaque sem exagero) */
 .featured-card {
-  background: var(--bg-card);
-  border: 1.5px solid rgba(245,158,11,0.3);
-  border-radius: var(--radius);
-  padding: 1rem;
   margin-bottom: 1rem;
 }
 
-.featured-card-top {
+.featured-card-inner {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(160deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-card) 50%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(245, 158, 11, 0.1);
+}
+
+.featured-head {
+  display: flex;
   align-items: center;
-  margin-bottom: 0.6rem;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .featured-badge {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  color: var(--gold);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1a1206;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  line-height: 1.3;
 }
 
 .featured-date {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.featured-teams {
+.featured-match {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.65rem;
-  margin-bottom: 0.6rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  text-align: center;
+  padding: 0.1rem 0;
+}
+
+.featured-team {
   font-weight: 800;
   font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .featured-x {
-  color: var(--text-muted);
+  color: var(--gold);
   font-size: 0.85rem;
+  font-weight: 700;
 }
 
-.featured-info {
+.featured-chips {
   display: flex;
+  align-items: stretch;
   justify-content: center;
-  gap: 1rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
-.fi-prize { color: var(--gold); font-weight: 600; }
-.fi-fee { color: var(--accent); font-weight: 600; }
+.featured-chip {
+  flex: 1 1 0;
+  min-width: 72px;
+  max-width: 140px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.4rem 0.45rem;
+  border-radius: 9px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  line-height: 1.25;
+}
 
-.featured-card .btn { padding: 0.7rem; font-size: 0.9rem; }
+.featured-chip--prize {
+  color: var(--gold);
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.featured-chip--fee {
+  color: #4ade80;
+  font-weight: 700;
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.featured-foot {
+  margin-top: 0.1rem;
+}
+
+.featured-cta {
+  padding: 0.58rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.24);
+}
+
+.featured-cta:hover {
+  box-shadow: 0 5px 16px rgba(245, 158, 11, 0.32);
+  transform: translateY(-1px);
+}
+
+.featured-betting-closed {
+  display: block;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+
+.betting-closed-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.betting-closed-alert {
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 380px) {
+  .featured-team { font-size: 0.98rem; }
+  .featured-chip { font-size: 0.7rem; min-width: 64px; }
+}
 
 /* Game rows — compact list */
 .games-list-compact {

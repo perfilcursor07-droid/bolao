@@ -3,6 +3,7 @@ const QRCode = require('qrcode');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar } = require('../services/prizeService');
+const { isBettingOpen } = require('../services/gameStatusService');
 const {
   getCart,
   getCartCount,
@@ -56,7 +57,7 @@ router.post('/games/:id/cart/add', requireAuth, async (req, res) => {
 
   try {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
-    if (games.length === 0) return res.redirect('/');
+    if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
     if (placares.length === 0) {
       return res.redirect(`/games/${req.params.id}/placar?error=empty`);

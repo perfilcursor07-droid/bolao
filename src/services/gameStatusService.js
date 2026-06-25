@@ -2,6 +2,30 @@ const pool = require('../config/database');
 const { getMatchResult } = require('./footballApi');
 const { processGameResults } = require('./prizeService');
 
+const BETTING_CLOSE_MINUTES = 30;
+
+function parseGameDate(game) {
+  if (!game || !game.game_date) return null;
+  const d = game.game_date;
+  if (d instanceof Date) return d;
+  const parsed = new Date(d);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** Horário limite para apostar/editar (30 min antes do jogo). */
+function getBettingDeadline(game) {
+  const kickoff = parseGameDate(game);
+  if (!kickoff) return null;
+  return new Date(kickoff.getTime() - BETTING_CLOSE_MINUTES * 60 * 1000);
+}
+
+function isBettingOpen(game) {
+  if (!game || game.status !== 'open') return false;
+  const deadline = getBettingDeadline(game);
+  if (!deadline) return false;
+  return Date.now() < deadline.getTime();
+}
+
 async function closeExpiredOpenGames() {
   const [result] = await pool.query(
     `UPDATE games SET status = 'closed'
@@ -66,17 +90,15 @@ async function syncGamesFromApi({ nearOnly = true, maxGames = 4 } = {}) {
   return synced;
 }
 
-function isBettingOpen(game) {
-  return Boolean(game && game.status === 'open');
-}
-
 function isLiveGame(game) {
   return Boolean(game && game.status === 'closed');
 }
 
 module.exports = {
+  BETTING_CLOSE_MINUTES,
   closeExpiredOpenGames,
   syncGamesFromApi,
   isBettingOpen,
+  getBettingDeadline,
   isLiveGame,
 };

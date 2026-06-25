@@ -242,7 +242,7 @@ router.get('/games/:id', async (req, res) => {
 
     const game = games[0];
 
-    if (game.status === 'open' && !req.session.user) {
+    if (game.status === 'open' && isBettingOpen(game) && !req.session.user) {
       return res.redirect(`/games/${game.id}/participar`);
     }
 
@@ -369,10 +369,10 @@ router.get('/regras', (req, res) => {
 router.get('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => {
   try {
     const [bets] = await pool.query(
-      'SELECT b.*, g.home_team, g.away_team, g.title, g.status FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
+      'SELECT b.*, g.home_team, g.away_team, g.title, g.status, g.game_date FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
       [req.params.betId, req.session.user.id]
     );
-    if (bets.length === 0 || bets[0].status !== 'open') return res.redirect(`/games/${req.params.gameId}`);
+    if (bets.length === 0 || !isBettingOpen(bets[0])) return res.redirect(`/games/${req.params.gameId}`);
 
     res.render('edit-bet', { title: 'Editar Placar', bet: bets[0], user: req.session.user });
   } catch (err) {
@@ -391,10 +391,10 @@ router.post('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => 
   try {
     // Verificar que a aposta pertence ao usuário e o jogo está aberto
     const [bets] = await pool.query(
-      'SELECT b.*, g.status FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
+      'SELECT b.*, g.status, g.game_date FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
       [req.params.betId, req.session.user.id]
     );
-    if (bets.length === 0 || bets[0].status !== 'open') return res.redirect(`/games/${req.params.gameId}`);
+    if (bets.length === 0 || !isBettingOpen(bets[0])) return res.redirect(`/games/${req.params.gameId}`);
 
     await pool.query(
       'UPDATE bets SET home_score_prediction = ?, away_score_prediction = ? WHERE id = ?',

@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { isBettingOpen } = require('./gameStatusService');
 
 const SYSTEM_FEE_RATE = 0.15;
 
@@ -154,7 +155,7 @@ async function createPaymentWithPlacar(userId, gameId, placares) {
   // Permitir nova aposta mesmo com pendente - não bloquear mais
 
   const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'open']);
-  if (games.length === 0) return { error: 'game_closed' };
+  if (games.length === 0 || !isBettingOpen(games[0])) return { error: 'game_closed' };
 
   const game = games[0];
   const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);

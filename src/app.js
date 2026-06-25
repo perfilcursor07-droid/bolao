@@ -14,7 +14,7 @@ const { translateTeamName } = require('./utils/teamNamesPt');
 const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
-const { closeExpiredOpenGames } = require('./services/gameStatusService');
+const { closeExpiredOpenGames, isBettingOpen, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
 
 const app = express();
 
@@ -56,6 +56,8 @@ app.use(async (req, res, next) => {
   res.locals.gameDateBR = formatGameDateBR;
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
+  res.locals.isBettingOpen = isBettingOpen;
+  res.locals.bettingCloseMinutes = BETTING_CLOSE_MINUTES;
   res.locals.cartCount = 0;
   res.locals.pendingPaymentsCount = 0;
 
