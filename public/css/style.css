@@ -4477,63 +4477,90 @@ td { border-top: 1px solid var(--border); }
 
 .pc-rm:hover { border-color: var(--danger); color: var(--danger); }
 
-/* Sticky footer */
+/* Sticky footer — pagamento em destaque */
 .placar-sticky-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
-  padding: 0.65rem 1rem calc(0.65rem + var(--safe-bottom));
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.97) 0%, rgba(10, 14, 23, 0.99) 100%);
+  border-top: 2px solid rgba(34, 197, 94, 0.45);
+  padding: 0.85rem 1rem calc(0.9rem + var(--safe-bottom));
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   z-index: 100;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -8px 32px rgba(34, 197, 94, 0.12), 0 -4px 24px rgba(0, 0, 0, 0.45);
 }
 
 .placar-sticky-info {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  min-width: 0;
+  gap: 0.1rem;
+  min-width: 72px;
   flex-shrink: 0;
 }
 
 .placar-sticky-info span {
-  font-size: 0.65rem;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #4ade80;
+  line-height: 1.2;
 }
 
 .placar-sticky-info strong {
-  font-size: 1rem;
-  color: var(--accent);
+  font-size: 1.2rem;
+  color: #f0fdf4;
   font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .placar-sticky-actions {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.55rem;
   flex: 1;
   min-width: 0;
 }
 
 .placar-sticky-footer .btn-cart {
   flex: 0 0 auto;
-  font-size: 0.8rem;
-  padding: 0.75rem 0.65rem;
-  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.9rem 0.75rem;
+  border-radius: 12px;
   white-space: nowrap;
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #bbf7d0;
+}
+
+.placar-sticky-footer .btn-cart:hover {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(74, 222, 128, 0.5);
 }
 
 .placar-sticky-footer .btn-pay {
   flex: 1;
-  font-size: 0.85rem;
-  padding: 0.75rem 0.65rem;
-  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.95rem 1rem;
+  border-radius: 12px;
   white-space: nowrap;
   min-width: 0;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #f0fdf4;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.4);
+}
+
+.placar-sticky-footer .btn-pay:hover {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: #052e16;
+  box-shadow: 0 6px 22px rgba(34, 197, 94, 0.5);
+}
+
+.placar-sticky-footer .btn-pay:active {
+  transform: scale(0.98);
 }
 
 .placar-cart-link {
@@ -4566,7 +4593,7 @@ td { border-top: 1px solid var(--border); }
 
 .placar-bottom-spacer {
   display: none;
-  height: 75px;
+  height: 92px;
 }
 
 .placar-page { padding-top: 0.5rem; padding-bottom: 0; }
@@ -4579,10 +4606,22 @@ td { border-top: 1px solid var(--border); }
 
 @media (max-width: 400px) {
   .placar-sticky-footer {
-    gap: 0.5rem;
+    gap: 0.55rem;
+    padding: 0.75rem 0.75rem calc(0.8rem + var(--safe-bottom));
+  }
+  .placar-sticky-info strong {
+    font-size: 1.05rem;
+  }
+  .placar-sticky-footer .btn-pay {
+    font-size: 0.92rem;
+    padding: 0.85rem 0.7rem;
+  }
+  .placar-sticky-footer .btn-cart {
+    padding: 0.85rem 0.55rem;
+    font-size: 0.75rem;
   }
   .placar-bottom-spacer {
-    height: 85px;
+    height: 100px;
   }
 }
 
