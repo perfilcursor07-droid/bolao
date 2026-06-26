@@ -100,7 +100,7 @@
                 </div>
               </div>
 
-              <div class="form-group participar-field">
+              <div class="form-group participar-field participar-field-full">
                 <label for="cpf">Chave PIX <small>(prêmio)</small></label>
                 <div class="participar-input-wrap">
                   <span class="participar-input-icon" aria-hidden="true">💰</span>
@@ -109,6 +109,18 @@
                     value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>"
                     autocomplete="off">
                 </div>
+              </div>
+
+              <div class="form-group participar-field participar-field-full">
+                <label for="cpf_confirm">Confirmar chave PIX</label>
+                <div class="participar-input-wrap">
+                  <span class="participar-input-icon" aria-hidden="true">✓</span>
+                  <input type="text" id="cpf_confirm" name="cpf_confirm" class="form-control participar-input" required
+                    placeholder="Digite a chave PIX novamente"
+                    value="<%= typeof form !== 'undefined' && form ? form.cpf_confirm : '' %>"
+                    autocomplete="off">
+                </div>
+                <small class="form-hint participar-hint-error" id="pix-mismatch-hint" hidden>As chaves PIX não conferem</small>
               </div>
             </div>
 
@@ -222,6 +234,58 @@
       this.textContent = isHidden ? 'Ocultar QR' : 'QR Code';
     };
 
+    function normalizePixKey(val) {
+      const trimmed = (val || '').trim();
+      if (!trimmed) return '';
+      const digitsOnly = trimmed.replace(/\D/g, '');
+      const stripped = trimmed.replace(/[\s.\-/()]/g, '');
+      if (stripped === digitsOnly && digitsOnly.length >= 5) return digitsOnly;
+      return trimmed.toLowerCase();
+    }
+
+    function pixKeysMatch(a, b) {
+      const left = normalizePixKey(a);
+      const right = normalizePixKey(b);
+      return left.length > 0 && left === right;
+    }
+
+    const cpfInput = document.getElementById('cpf');
+    const cpfConfirmInput = document.getElementById('cpf_confirm');
+    const pixMismatchHint = document.getElementById('pix-mismatch-hint');
+    const acceptRules = document.getElementById('accept-rules');
+    const btnSubmit = document.getElementById('btn-submit');
+    const participarForm = document.getElementById('form-participar');
+
+    function updatePixMatchState() {
+      const pix = cpfInput.value;
+      const confirm = cpfConfirmInput.value;
+      const bothFilled = pix.trim() && confirm.trim();
+      const mismatch = bothFilled && !pixKeysMatch(pix, confirm);
+
+      cpfInput.classList.toggle('participar-input--error', mismatch);
+      cpfConfirmInput.classList.toggle('participar-input--error', mismatch);
+      pixMismatchHint.hidden = !mismatch;
+
+      return !mismatch;
+    }
+
+    function updateSubmitState() {
+      const pixOk = updatePixMatchState();
+      const confirmFilled = cpfConfirmInput.value.trim().length > 0;
+      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled;
+    }
+
+    cpfInput.addEventListener('input', updateSubmitState);
+    cpfConfirmInput.addEventListener('input', updateSubmitState);
+
+    participarForm.addEventListener('submit', function (e) {
+      if (!pixKeysMatch(cpfInput.value, cpfConfirmInput.value)) {
+        e.preventDefault();
+        updatePixMatchState();
+        cpfConfirmInput.focus();
+      }
+    });
+
     const phoneInput = document.getElementById('phone');
     const phoneHint = document.getElementById('phone-hint');
 
@@ -251,8 +315,12 @@
                 const nameEl = document.getElementById('name');
                 const cpfEl = document.getElementById('cpf');
                 if (!nameEl.value) nameEl.value = data.name;
-                if (!cpfEl.value && data.cpf) cpfEl.value = data.cpf;
+                if (!cpfEl.value && data.cpf) {
+                  cpfEl.value = data.cpf;
+                  cpfConfirmInput.value = '';
+                }
                 phoneHint.hidden = false;
+                updateSubmitState();
               } else {
                 phoneHint.hidden = true;
               }
@@ -264,9 +332,8 @@
       }
     });
 
-    document.getElementById('accept-rules').addEventListener('change', function () {
-      document.getElementById('btn-submit').disabled = !this.checked;
-    });
+    acceptRules.addEventListener('change', updateSubmitState);
+    updateSubmitState();
   </script>
 </body>
 </html>

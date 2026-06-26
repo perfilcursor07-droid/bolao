@@ -217,6 +217,27 @@ router.get('/apostas', requireAdmin, async (req, res) => {
   }
 });
 
+// Usuários
+router.get('/usuarios', requireAdmin, async (req, res) => {
+  try {
+    const [users] = await pool.query(
+      `SELECT u.*,
+        (SELECT COUNT(*) FROM bets b WHERE b.user_id = u.id) as total_bets,
+        (SELECT COUNT(*) FROM payments p WHERE p.user_id = u.id AND p.status = 'paid') as paid_payments
+       FROM users u
+       ORDER BY u.created_at DESC`
+    );
+    res.render('admin/usuarios', {
+      title: 'Usuários',
+      users,
+      user: req.session.user,
+      activePage: 'usuarios',
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
 // Ganhadores
 router.get('/ganhadores', requireAdmin, async (req, res) => {
   try {
@@ -310,6 +331,12 @@ router.get('/copa', requireAdmin, async (req, res) => {
     const defaultEntryFee = await getDefaultEntryFeeReais();
     const hasLive = matches?.some((m) => ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status));
 
+    const [existingGames] = await pool.query(
+      'SELECT api_match_id FROM games WHERE api_match_id IS NOT NULL AND api_match_id != ?',
+      ['']
+    );
+    const existingApiMatchIds = existingGames.map((g) => String(g.api_match_id));
+
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches,
@@ -317,6 +344,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       cachedAt,
       fromCache,
       hasLive,
+      existingApiMatchIds,
       user: req.session.user,
       activePage: 'copa',
       error: apiError
@@ -331,6 +359,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       cachedAt: null,
       fromCache: false,
       hasLive: false,
+      existingApiMatchIds: [],
       user: req.session.user,
       activePage: 'copa',
       error: 'Erro: ' + err.message,
@@ -348,6 +377,16 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
   const title = `Copa 2026 - ${home} x ${away}`;
 
   try {
+    if (api_match_id) {
+      const [existing] = await pool.query(
+        'SELECT id FROM games WHERE api_match_id = ? LIMIT 1',
+        [String(api_match_id)]
+      );
+      if (existing.length > 0) {
+        return res.redirect('/admin/copa');
+      }
+    }
+
     await pool.query(
       `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
@@ -384,6 +423,14 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
       const m = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (!m.home_team || !m.away_team || !m.game_date) continue;
       if (new Date(m.game_date).getTime() <= Date.now()) continue;
+
+      if (m.api_match_id) {
+        const [existing] = await pool.query(
+          'SELECT id FROM games WHERE api_match_id = ? LIMIT 1',
+          [String(m.api_match_id)]
+        );
+        if (existing.length > 0) continue;
+      }
 
       const home = translateTeamName(m.home_team);
       const away = translateTeamName(m.away_team);

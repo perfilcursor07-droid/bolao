@@ -9,6 +9,23 @@ function guestEmail(pixKey) {
   return `guest_${safe}@bolao.local`;
 }
 
+function normalizePixKey(val) {
+  const trimmed = (val || '').trim();
+  if (!trimmed) return '';
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  const stripped = trimmed.replace(/[\s.\-/()]/g, '');
+  if (stripped === digitsOnly && digitsOnly.length >= 5) {
+    return digitsOnly;
+  }
+  return trimmed.toLowerCase();
+}
+
+function pixKeysMatch(a, b) {
+  const left = normalizePixKey(a);
+  const right = normalizePixKey(b);
+  return left.length > 0 && left === right;
+}
+
 async function findOrCreateParticipant({ name, phone, cpf }) {
   const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
@@ -100,4 +117,4 @@ function setSessionUser(req, user) {
   };
 }
 
-module.exports = { findOrCreateParticipant, setSessionUser, cleanPhone };
+module.exports = { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch, normalizePixKey };

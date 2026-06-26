@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <p class="admin-page-intro">Todos os usuários cadastrados no sistema — participantes, convidados e administradores.</p>
+
+    <% if (users.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <p>Nenhum usuário cadastrado</p>
+      </div>
+    <% } else { %>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Telefone</th>
+              <th>PIX / CPF</th>
+              <th>Tipo</th>
+              <th>Apostas</th>
+              <th>Pagamentos</th>
+              <th>Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function(u) {
+              const roleLabel = u.role === 'admin' ? 'Administrador' : u.role === 'guest' ? 'Convidado' : 'Usuário';
+              const roleClass = u.role === 'admin' ? 'finished' : u.role === 'guest' ? 'closed' : 'open';
+            %>
+              <tr>
+                <td><strong><%= u.name %></strong></td>
+                <td style="font-size:0.8rem; color:var(--text-muted);"><%= u.email || '—' %></td>
+                <td style="font-size:0.8rem;"><%= u.phone || '—' %></td>
+                <td style="font-size:0.75rem; color:var(--text-muted);"><%= u.cpf || '—' %></td>
+                <td><span class="card-badge <%= roleClass %>"><%= roleLabel %></span></td>
+                <td><%= u.total_bets %></td>
+                <td><%= u.paid_payments %></td>
+                <td style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap;"><%= new Date(u.created_at).toLocaleString('pt-BR') %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+  <%- include('layout-close') %>
+</body>
+</html>

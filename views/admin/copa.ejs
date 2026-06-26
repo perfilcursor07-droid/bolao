@@ -29,6 +29,7 @@
     </div>
     <p class="copa-sync-hint">
       Marque jogos que <strong>ainda não iniciaram</strong> para criar bolões.
+      Jogos com <strong>✓ Bolão criado</strong> ficam desativados para não duplicar.
       <strong>✓ confirmado</strong> / <strong>⚠ provável</strong> é só informativo no mata-mata — o admin pode criar bolão em qualquer jogo futuro com os dois times definidos.
     </p>
 
@@ -85,6 +86,7 @@
           };
         %>
 
+        <% var existingIds = typeof existingApiMatchIds !== 'undefined' ? existingApiMatchIds.map(String) : []; %>
         <% Object.keys(stages).forEach(function(stage) { %>
           <div class="copa-stage-header">
             <span><%= stageNames[stage] || stage %></span>
@@ -92,15 +94,17 @@
           </div>
           <div class="copa-stage-list">
             <% stages[stage].forEach(function(m) { %>
-              <label class="copa-match-item copa-match-selectable" data-stage="<%= stage %>">
-                <% var matchNotStarted = (m.status === 'SCHEDULED' || m.status === 'TIMED') && new Date(m.date).getTime() > Date.now(); %>
-                <% var hasTeams = m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir'; %>
-                <% var canCreateBolao = matchNotStarted && hasTeams; %>
+              <% var matchNotStarted = (m.status === 'SCHEDULED' || m.status === 'TIMED') && new Date(m.date).getTime() > Date.now(); %>
+              <% var hasTeams = m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir'; %>
+              <% var alreadyCreated = existingIds.indexOf(String(m.id)) !== -1; %>
+              <% var canCreateBolao = matchNotStarted && hasTeams && !alreadyCreated; %>
+              <label class="copa-match-item copa-match-selectable<%= alreadyCreated ? ' copa-match-already' : '' %><%= !canCreateBolao && !alreadyCreated ? ' copa-match-unavailable' : '' %>" data-stage="<%= stage %>">
                 <% if (canCreateBolao) { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
                     value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
-                  <input type="checkbox" disabled style="opacity:0.3;" title="<%= !matchNotStarted ? 'Jogo já iniciou ou encerrou' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
+                  <input type="checkbox" disabled class="copa-check copa-check--disabled"
+                    title="<%= alreadyCreated ? 'Bolão já criado para este jogo' : !matchNotStarted ? 'Jogo já iniciou ou encerrou' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
                 <% } %>
                 <div class="copa-match-info">
                   <div class="copa-match-teams">
@@ -118,6 +122,9 @@
                     <time><%= gameDateBR(m.date) %></time>
                     <span class="copa-match-status <%= m.status === 'FINISHED' || m.status === 'AWARDED' ? 'finished' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? 'live' : '' %>">
                       <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? '🔴 AO VIVO' : m.status === 'FINISHED' || m.status === 'AWARDED' ? 'Finalizado' : m.status %>
+                      <% if (alreadyCreated) { %>
+                        <span class="copa-match-badge-created">✓ Bolão criado</span>
+                      <% } %>
                       <% if (m.bracketCertainty === 'confirmed') { %>
                         <span class="copa-certainty-badge copa-certainty-badge--confirmed" title="<%= m.bracketSlotHome %> × <%= m.bracketSlotAway %>"> · ✓ confirmado</span>
                       <% } else if (m.bracketCertainty === 'tentative') { %>
@@ -143,16 +150,21 @@
   <%- include('layout-close') %>
 
   <script>
-    const checks = document.querySelectorAll('.copa-check');
+    const checks = document.querySelectorAll('.copa-check:not(:disabled)');
     const selectAll = document.getElementById('select-all');
     const countEl = document.getElementById('selected-count');
     const btnCreate = document.getElementById('btn-create-bulk');
 
     function updateCount() {
-      const n = document.querySelectorAll('.copa-check:checked').length;
+      const n = document.querySelectorAll('.copa-check:not(:disabled):checked').length;
+      const total = document.querySelectorAll('.copa-check:not(:disabled)').length;
       countEl.textContent = n + ' selecionado' + (n !== 1 ? 's' : '');
       btnCreate.disabled = n === 0;
       btnCreate.textContent = n === 0 ? 'Criar bolões selecionados' : 'Criar ' + n + ' bolão' + (n > 1 ? 'es' : '');
+      if (selectAll) {
+        selectAll.checked = total > 0 && n === total;
+        selectAll.indeterminate = n > 0 && n < total;
+      }
     }
 
     if (selectAll) {
@@ -164,12 +176,11 @@
 
     checks.forEach(c => { c.onchange = updateCount; });
 
-    // Selecionar por fase
     document.querySelectorAll('.copa-stage-select-btn').forEach(btn => {
       btn.onclick = () => {
         const stage = btn.dataset.stage;
-        const items = document.querySelectorAll(`.copa-match-selectable[data-stage="${stage}"] .copa-check`);
-        const allChecked = Array.from(items).every(c => c.checked);
+        const items = document.querySelectorAll(`.copa-match-selectable[data-stage="${stage}"] .copa-check:not(:disabled)`);
+        const allChecked = items.length > 0 && Array.from(items).every(c => c.checked);
         items.forEach(c => { c.checked = !allChecked; });
         updateCount();
       };

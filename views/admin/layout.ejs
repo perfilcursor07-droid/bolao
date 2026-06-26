@@ -50,6 +50,10 @@
 
       <div class="sidebar-group">
         <span class="sidebar-section">Sistema</span>
+        <a href="/admin/usuarios" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'usuarios' ? 'active' : '' %>" title="Usuários">
+          <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span class="sidebar-label">Usuários</span>
+        </a>
         <a href="/admin/configuracoes" class="sidebar-item <%= typeof activePage !== 'undefined' && activePage === 'configuracoes' ? 'active' : '' %>" title="Configurações">
           <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></span>
           <span class="sidebar-label">Configurações</span>
@@ -58,15 +62,14 @@
     </nav>
 
     <div class="admin-sidebar-foot">
-      <a href="/" class="sidebar-item sidebar-item-site" title="Ver site">
-        <span class="sidebar-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></span>
-        <span class="sidebar-label">Ver site público</span>
-      </a>
       <% if (typeof user !== 'undefined' && user) { %>
         <div class="admin-sidebar-user">
           <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
           <div class="admin-sidebar-user-info">
-            <span class="admin-sidebar-user-name"><%= user.name.split(' ')[0] %></span>
+            <div class="admin-sidebar-user-row">
+              <span class="admin-sidebar-user-name"><%= user.name.split(' ')[0] %></span>
+              <a href="/logout" class="admin-sidebar-user-logout" title="Sair da conta">Sair</a>
+            </div>
             <span class="admin-sidebar-user-role">Administrador</span>
           </div>
         </div>
@@ -85,10 +88,14 @@
           <h1><%= title %></h1>
         <% } %>
       </div>
-      <a href="/" class="admin-topbar-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
-        <span>Ver site</span>
-      </a>
+      <div class="admin-topbar-actions">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <a href="/logout" class="admin-topbar-btn admin-topbar-btn--logout" title="Sair da conta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            <span>Sair</span>
+          </a>
+        <% } %>
+      </div>
     </header>
 
     <main class="admin-main">

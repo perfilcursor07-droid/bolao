@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
-const { findOrCreateParticipant, setSessionUser, cleanPhone } = require('../services/guestService');
+const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch } = require('../services/guestService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
 const { isBettingOpen } = require('../services/bettingRules');
@@ -159,7 +159,7 @@ router.get('/games/:id/participar', async (req, res) => {
 });
 
 router.post('/games/:id/participar', async (req, res) => {
-  const { name, phone, cpf } = req.body;
+  const { name, phone, cpf, cpf_confirm } = req.body;
 
   try {
     await closeExpiredOpenGames();
@@ -167,6 +167,17 @@ router.post('/games/:id/participar', async (req, res) => {
     if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
     const game = games[0];
+
+    if (!pixKeysMatch(cpf, cpf_confirm)) {
+      return res.render('participar', {
+        title: 'Participar',
+        game,
+        error: 'As chaves PIX não conferem. Digite a mesma chave nos dois campos.',
+        form: req.body,
+        user: null,
+      });
+    }
+
     const result = await findOrCreateParticipant({ name, phone, cpf });
 
     if (result.error === 'invalid_data') {
