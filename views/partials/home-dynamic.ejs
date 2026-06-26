@@ -29,7 +29,7 @@
                   <% var featSnap = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
                   <% if (featSnap && featSnap.bets && featSnap.bets.length > 0) { %>
                     <div class="featured-closed-panel">
-                      <%- include('partials/closed-betting-panel', { breakdown: featSnap.breakdown, bets: featSnap.bets, compact: true }) %>
+                      <%- include('closed-betting-panel', { breakdown: featSnap.breakdown, bets: featSnap.bets, compact: true }) %>
                       <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
                     </div>
                   <% } %>
@@ -42,7 +42,7 @@
                   <% var featSnapGuest = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
                   <% if (featSnapGuest && featSnapGuest.bets && featSnapGuest.bets.length > 0) { %>
                     <div class="featured-closed-panel">
-                      <%- include('partials/closed-betting-panel', { breakdown: featSnapGuest.breakdown, bets: featSnapGuest.bets, compact: true }) %>
+                      <%- include('closed-betting-panel', { breakdown: featSnapGuest.breakdown, bets: featSnapGuest.bets, compact: true }) %>
                       <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
                     </div>
                   <% } %>
@@ -97,7 +97,7 @@
           <% } %>
         </div>
       </div>
-      <%- include('partials/finished-boloes-list', { finishedSummaries }) %>
+      <%- include('finished-boloes-list', { finishedSummaries }) %>
     <% } %>
 
     <!-- Jogos abertos -->
@@ -129,7 +129,7 @@
         </div>
         <div class="games-grid-twin">
           <% upcomingGames.forEach(function(game) { %>
-            <%- include('partials/open-game-row', {
+            <%- include('open-game-row', {
               game,
               user,
               closedSnapshot: typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null,
@@ -145,7 +145,7 @@
         </div>
         <div class="games-grid-twin">
           <% otherOpenGames.forEach(function(game) { %>
-            <%- include('partials/open-game-row', {
+            <%- include('open-game-row', {
               game,
               user,
               closedSnapshot: typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null,
