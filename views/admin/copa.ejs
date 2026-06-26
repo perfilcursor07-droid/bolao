@@ -28,8 +28,8 @@
       <a href="/admin/copa?refresh=1" class="btn btn-sm btn-outline">↻ Atualizar agora</a>
     </div>
     <p class="copa-sync-hint">
-      <strong>Confirmado</strong> = grupos encerrados, confronto definido (ex.: Brasil × Japão).
-      <strong>Provável</strong> = ainda pode mudar (3º colocado ou jogos do grupo pendentes). Só crie bolão nos confirmados.
+      Marque jogos que <strong>ainda não iniciaram</strong> para criar bolões.
+      <strong>✓ confirmado</strong> / <strong>⚠ provável</strong> é só informativo no mata-mata — o admin pode criar bolão em qualquer jogo futuro com os dois times definidos.
     </p>
 
     <% if (error) { %>
@@ -93,12 +93,14 @@
           <div class="copa-stage-list">
             <% stages[stage].forEach(function(m) { %>
               <label class="copa-match-item copa-match-selectable" data-stage="<%= stage %>">
-                <% var canCreateBolao = (m.status === 'SCHEDULED' || m.status === 'TIMED') && m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir' && m.bracketCertainty === 'confirmed'; %>
+                <% var matchNotStarted = (m.status === 'SCHEDULED' || m.status === 'TIMED') && new Date(m.date).getTime() > Date.now(); %>
+                <% var hasTeams = m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir'; %>
+                <% var canCreateBolao = matchNotStarted && hasTeams; %>
                 <% if (canCreateBolao) { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
                     value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
-                  <input type="checkbox" disabled style="opacity:0.3;" title="<%= m.bracketCertainty === 'tentative' ? 'Confronto ainda provável — aguarde confirmação' : 'Indisponível' %>">
+                  <input type="checkbox" disabled style="opacity:0.3;" title="<%= !matchNotStarted ? 'Jogo já iniciou ou encerrou' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
                 <% } %>
                 <div class="copa-match-info">
                   <div class="copa-match-teams">

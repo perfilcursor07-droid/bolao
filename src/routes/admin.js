@@ -383,6 +383,7 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
     try {
       const m = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (!m.home_team || !m.away_team || !m.game_date) continue;
+      if (new Date(m.game_date).getTime() <= Date.now()) continue;
 
       const home = translateTeamName(m.home_team);
       const away = translateTeamName(m.away_team);

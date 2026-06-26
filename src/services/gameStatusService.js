@@ -27,6 +27,12 @@ function shouldAutoFinalize(game) {
   return Boolean(endTime && Date.now() >= endTime.getTime());
 }
 
+function hasGameStarted(game) {
+  const kickoff = parseGameDate(game);
+  if (!kickoff) return false;
+  return Date.now() >= kickoff.getTime();
+}
+
 /** Horário limite para apostar/editar (30 min antes do jogo). */
 function getBettingDeadline(game) {
   const kickoff = parseGameDate(game);
@@ -36,6 +42,7 @@ function getBettingDeadline(game) {
 
 function isBettingOpen(game) {
   if (!game || game.status !== 'open') return false;
+  if (hasGameStarted(game)) return false;
   const deadline = getBettingDeadline(game);
   if (!deadline) return false;
   return Date.now() < deadline.getTime();
@@ -220,6 +227,7 @@ module.exports = {
   syncGamesFromApi,
   isBettingOpen,
   getBettingDeadline,
+  hasGameStarted,
   shouldAutoFinalize,
   isLiveGame,
 };

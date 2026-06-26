@@ -14,7 +14,7 @@ const { translateTeamName } = require('./utils/teamNamesPt');
 const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
-const { closeExpiredOpenGames, isBettingOpen, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
 const { SYSTEM_FEE_RATE } = require('./services/prizeService');
 
 const app = express();
@@ -34,6 +34,7 @@ app.use(async (req, res, next) => {
     lastGameStatusCheck = now;
     try {
       await closeExpiredOpenGames();
+      await finalizeClosedGamesWithScores();
     } catch (err) {
       console.error('[gameStatus] Erro ao fechar jogos:', err.message);
     }
@@ -58,6 +59,7 @@ app.use(async (req, res, next) => {
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
   res.locals.isBettingOpen = isBettingOpen;
+  res.locals.hasGameStarted = hasGameStarted;
   res.locals.bettingCloseMinutes = BETTING_CLOSE_MINUTES;
   res.locals.systemFeePercent = Math.round(SYSTEM_FEE_RATE * 100);
   res.locals.prizeNetPercent = 100 - res.locals.systemFeePercent;
