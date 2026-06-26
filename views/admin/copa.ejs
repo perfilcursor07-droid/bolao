@@ -11,6 +11,23 @@
 <body class="page-admin">
   <%- include('layout') %>
 
+    <div class="copa-sync-bar">
+      <div class="copa-sync-info">
+        <% if (typeof cachedAt !== 'undefined' && cachedAt) { %>
+          <span>Atualizado <%= gameDateBR(new Date(cachedAt), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) %></span>
+          <% if (typeof fromCache !== 'undefined' && fromCache) { %>
+            <span class="copa-sync-cache">· cache</span>
+          <% } %>
+        <% } else { %>
+          <span>Dados da football-data.org</span>
+        <% } %>
+        <% if (typeof hasLive !== 'undefined' && hasLive) { %>
+          <span class="copa-sync-live">· atualiza a cada 3 min</span>
+        <% } %>
+      </div>
+      <a href="/admin/copa?refresh=1" class="btn btn-sm btn-outline">↻ Atualizar agora</a>
+    </div>
+
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
       <div class="card" style="padding:1.5rem; text-align:center;">
@@ -92,8 +109,8 @@
                   </div>
                   <div class="copa-match-meta">
                     <time><%= gameDateBR(m.date) %></time>
-                    <span class="copa-match-status <%= m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : '' %>">
-                      <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' ? '🔴 AO VIVO' : m.status === 'FINISHED' ? 'Finalizado' : m.status %>
+                    <span class="copa-match-status <%= m.status === 'FINISHED' || m.status === 'AWARDED' ? 'finished' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? 'live' : '' %>">
+                      <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? '🔴 AO VIVO' : m.status === 'FINISHED' || m.status === 'AWARDED' ? 'Finalizado' : m.status %>
                     </span>
                   </div>
                 </div>
@@ -147,6 +164,10 @@
     });
 
     updateCount();
+
+    <% if (typeof hasLive !== 'undefined' && hasLive) { %>
+    setTimeout(() => { window.location.reload(); }, 180000);
+    <% } %>
   </script>
 </body>
 </html>

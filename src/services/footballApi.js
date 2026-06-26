@@ -10,15 +10,53 @@ const AS_BASE = 'https://v3.football.api-sports.io';
 const AS_KEY = process.env.APISPORTS_KEY || '';
 
 const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
-const WC_CACHE_TTL_MS = 30 * 60 * 1000;
+const WC_CACHE_TTL_DEFAULT_MS = 15 * 60 * 1000;
+const WC_CACHE_TTL_LIVE_MS = 2 * 60 * 1000;
+const WC_CACHE_TTL_TODAY_MS = 5 * 60 * 1000;
 const MATCH_CACHE_FINISHED_MS = 24 * 60 * 60 * 1000;
 const MATCH_CACHE_LIVE_MS = 2 * 60 * 1000;
 const MATCH_CACHE_PENDING_MS = 10 * 60 * 1000;
 
 let fdLastRequestAt = 0;
 let rateLimitedUntil = 0;
-let worldCupCache = { result: null, expiresAt: 0 };
+let worldCupCache = { result: null, expiresAt: 0, fetchedAt: 0 };
 const matchResultCache = new Map();
+
+function extractFootballDataScores(m) {
+  const ft = m.score?.fullTime;
+  const rt = m.score?.regularTime;
+  const ht = m.score?.halfTime;
+  if (ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
+  if (rt?.home != null && rt?.away != null) return { home: rt.home, away: rt.away };
+  if (ht?.home != null && ht?.away != null) return { home: ht.home, away: ht.away };
+  return { home: null, away: null };
+}
+
+function computeWorldCupCacheTtl(matches) {
+  if (!matches?.length) return WC_CACHE_TTL_TODAY_MS;
+  if (matches.some((m) => ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status))) {
+    return WC_CACHE_TTL_LIVE_MS;
+  }
+  const todayStr = new Date().toDateString();
+  const hasPendingToday = matches.some((m) => {
+    const d = new Date(m.date);
+    return d.toDateString() === todayStr && !['FINISHED', 'AWARDED'].includes(m.status);
+  });
+  if (hasPendingToday) return WC_CACHE_TTL_TODAY_MS;
+  return WC_CACHE_TTL_DEFAULT_MS;
+}
+
+function invalidateWorldCupCache() {
+  worldCupCache.expiresAt = 0;
+}
+
+function getWorldCupCacheInfo() {
+  return {
+    fetchedAt: worldCupCache.fetchedAt || null,
+    expiresAt: worldCupCache.expiresAt || null,
+    hasData: Boolean(worldCupCache.result?.matches?.length),
+  };
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,12 +116,17 @@ function getCachedMatchResult(matchId) {
 
 /**
  * Lista partidas da Copa do Mundo 2026 via football-data.org
- * Competition code: WC
- * @returns {Promise<{ matches: Array|null, error: string|null }>}
+ * @param {{ forceRefresh?: boolean }} options
  */
-async function getWorldCupMatches() {
-  if (worldCupCache.result && Date.now() < worldCupCache.expiresAt) {
-    return worldCupCache.result;
+async function getWorldCupMatches(options = {}) {
+  const forceRefresh = options.forceRefresh === true;
+
+  if (!forceRefresh && worldCupCache.result && Date.now() < worldCupCache.expiresAt) {
+    return {
+      ...worldCupCache.result,
+      cachedAt: worldCupCache.fetchedAt,
+      fromCache: true,
+    };
   }
 
   const errors = [];
@@ -97,15 +140,18 @@ async function getWorldCupMatches() {
         timeout: 10000,
       });
 
-      const matches = res.data.matches || [];
-      const result = { matches: matches.map(parseFootballDataMatch), error: null };
-      worldCupCache = { result, expiresAt: Date.now() + WC_CACHE_TTL_MS };
-      return result;
+      const matches = (res.data.matches || []).map(parseFootballDataMatch);
+      const result = { matches, error: null };
+      const ttl = computeWorldCupCacheTtl(matches);
+      worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
+      return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       const status = err.response?.status;
-      console.error('[football-data.org] Erro:', status, msg);
-      errors.push(`football-data.org (${status || 'erro'}): ${msg}`);
+      if (err.code !== 'RATE_LIMIT_COOLDOWN') {
+        console.error('[football-data.org] Erro:', status, msg);
+      }
+      errors.push(`football-data.org (${status || err.code || 'erro'}): ${msg}`);
 
       // Se a season 2026 não existir ainda, tenta sem filtro
       if (status === 400) {
@@ -114,10 +160,11 @@ async function getWorldCupMatches() {
             headers: { 'X-Auth-Token': FD_KEY },
             timeout: 10000,
           });
-          const matches = res2.data.matches || [];
-          const result = { matches: matches.map(parseFootballDataMatch), error: null };
-          worldCupCache = { result, expiresAt: Date.now() + WC_CACHE_TTL_MS };
-          return result;
+          const matches = (res2.data.matches || []).map(parseFootballDataMatch);
+          const result = { matches, error: null };
+          const ttl = computeWorldCupCacheTtl(matches);
+          worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
+          return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
         } catch (err2) {
           const msg2 = err2.response?.data?.message || err2.message;
           console.error('[football-data.org] Fallback erro:', err2.response?.status, msg2);
@@ -125,11 +172,14 @@ async function getWorldCupMatches() {
         }
       }
 
-      // Em rate limit, devolve cache antigo se existir
-      if (status === 429 && worldCupCache.result?.matches) {
+      if (worldCupCache.result?.matches) {
         return {
           matches: worldCupCache.result.matches,
-          error: 'Lista em cache (API no limite de requisições). Atualiza em alguns minutos.',
+          error: status === 429 || err.code === 'RATE_LIMIT_COOLDOWN'
+            ? 'Lista em cache (API no limite). Tente em 1 minuto.'
+            : errors.join(' · '),
+          cachedAt: worldCupCache.fetchedAt,
+          fromCache: true,
         };
       }
     }
@@ -164,6 +214,7 @@ async function getWorldCupMatches() {
 }
 
 function parseFootballDataMatch(m) {
+  const scores = extractFootballDataScores(m);
   return {
     id: m.id,
     homeTeam: translateTeamName(m.homeTeam?.name || m.homeTeam?.tla || 'A definir'),
@@ -173,8 +224,8 @@ function parseFootballDataMatch(m) {
     matchday: m.matchday,
     stage: m.stage,
     group: m.group,
-    homeScore: m.score?.fullTime?.home ?? null,
-    awayScore: m.score?.fullTime?.away ?? null,
+    homeScore: scores.home,
+    awayScore: scores.away,
   };
 }
 
@@ -274,4 +325,9 @@ async function getMatchResult(matchId) {
   return null;
 }
 
-module.exports = { getWorldCupMatches, getMatchResult };
+module.exports = {
+  getWorldCupMatches,
+  getMatchResult,
+  invalidateWorldCupCache,
+  getWorldCupCacheInfo,
+};

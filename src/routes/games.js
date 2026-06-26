@@ -3,7 +3,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser, cleanPhone } = require('../services/guestService');
-const { closeExpiredOpenGames, isBettingOpen } = require('../services/gameStatusService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, isBettingOpen } = require('../services/gameStatusService');
 const { loadFinishedBoloes } = require('../services/finishedBoloesService');
 
 const router = express.Router();
@@ -27,6 +27,8 @@ router.post('/api/lookup-phone', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     await closeExpiredOpenGames();
+    await syncGamesFromWorldCupMatches();
+    await finalizeClosedGamesWithScores();
 
     const [games] = await pool.query(
       `SELECT g.*,

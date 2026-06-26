@@ -4305,6 +4305,30 @@ td { border-top: 1px solid var(--border); }
    COPA PAGE - BULK SELECT
    ══════════════════════════════════════ */
 
+.copa-sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.copa-sync-info {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.copa-sync-cache {
+  color: var(--text-muted);
+}
+
+.copa-sync-live {
+  color: #ef4444;
+  font-weight: 600;
+}
+
 .copa-toolbar {
   display: flex;
   align-items: center;

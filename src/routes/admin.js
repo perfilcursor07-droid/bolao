@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
 const { getWorldCupMatches } = require('../services/footballApi');
+const { syncGamesFromWorldCupMatches } = require('../services/gameStatusService');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
 const { deleteGamesByIds } = require('../services/gameDelete');
@@ -303,12 +304,19 @@ router.post('/pagamentos/:betId/pagar', requireAdmin, async (req, res) => {
 // Copa do Mundo - listar jogos da API
 router.get('/copa', requireAdmin, async (req, res) => {
   try {
-    const { matches, error: apiError } = await getWorldCupMatches();
+    const forceRefresh = req.query.refresh === '1';
+    await syncGamesFromWorldCupMatches({ forceRefresh });
+    const { matches, error: apiError, cachedAt, fromCache } = await getWorldCupMatches();
     const defaultEntryFee = await getDefaultEntryFeeReais();
+    const hasLive = matches?.some((m) => ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status));
+
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches,
       defaultEntryFee,
+      cachedAt,
+      fromCache,
+      hasLive,
       user: req.session.user,
       activePage: 'copa',
       error: apiError
@@ -320,6 +328,9 @@ router.get('/copa', requireAdmin, async (req, res) => {
       title: 'Copa do Mundo 2026',
       matches: null,
       defaultEntryFee,
+      cachedAt: null,
+      fromCache: false,
+      hasLive: false,
       user: req.session.user,
       activePage: 'copa',
       error: 'Erro: ' + err.message,

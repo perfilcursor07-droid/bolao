@@ -2,14 +2,18 @@ const cron = require('node-cron');
 const pool = require('../config/database');
 const { getOrderStatus, extractChargeStatus } = require('./pagbank');
 const { confirmPayment } = require('./prizeService');
-const { closeExpiredOpenGames, syncGamesFromApi } = require('./gameStatusService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, syncGamesFromApi } = require('./gameStatusService');
 
 function startCronJobs() {
   cron.schedule('*/1 * * * *', async () => {
     try {
       await closeExpiredOpenGames();
+      const finalized = await finalizeClosedGamesWithScores();
+      if (finalized > 0) {
+        console.log(`[cron] ${finalized} jogo(s) finalizado(s) com placar`);
+      }
     } catch (err) {
-      console.error('[cron] Erro ao fechar jogos expirados:', err.message);
+      console.error('[cron] Erro ao fechar/finalizar jogos:', err.message);
     }
   });
 
@@ -17,18 +21,31 @@ function startCronJobs() {
     await checkPendingPayments();
   });
 
-  cron.schedule('*/10 * * * *', async () => {
+  // 1 chamada à API atualiza todos os bolões + cache da Copa (a cada 3 min)
+  cron.schedule('*/3 * * * *', async () => {
     try {
-      const synced = await syncGamesFromApi({ nearOnly: true, maxGames: 4 });
+      const synced = await syncGamesFromWorldCupMatches();
       if (synced > 0) {
-        console.log(`[cron] ${synced} jogo(s) sincronizado(s) via API`);
+        console.log(`[cron] ${synced} bolão(ões) sincronizado(s) via Copa API`);
       }
     } catch (err) {
-      console.error('[cron] Erro ao sincronizar jogos ao vivo:', err.message);
+      console.error('[cron] Erro sync Copa API:', err.message);
     }
   });
 
-  console.log('⏰ Cron jobs iniciados (fechar apostas: 1min, pagamentos: 2min, placares API: 10min)');
+  // Fallback: jogos sem api_match_id ou fora da lista WC
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const synced = await syncGamesFromApi({ maxGames: 2 });
+      if (synced > 0) {
+        console.log(`[cron] ${synced} jogo(s) sincronizado(s) via match API`);
+      }
+    } catch (err) {
+      console.error('[cron] Erro sync match API:', err.message);
+    }
+  });
+
+  console.log('⏰ Cron jobs iniciados (fechar: 1min, pagamentos: 2min, Copa API: 3min, match API: 10min)');
 }
 
 async function checkPendingPayments() {
