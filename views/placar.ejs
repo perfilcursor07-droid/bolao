@@ -41,34 +41,36 @@
     <% } %>
 
     <!-- Score picker compacto -->
-    <div class="placar-picker-card">
+    <p class="placar-flow-hint">Ajuste o placar, toque em <strong>Adicionar</strong> e repita quantas vezes quiser.</p>
+    <div class="placar-picker-card" id="placar-picker-card">
       <div class="placar-picker-teams">
         <div class="placar-picker-side">
           <span class="placar-picker-team-name"><%= teamPt(game.home_team) %></span>
           <div class="placar-picker-controls">
-            <button type="button" class="pbtn" id="btn-home-minus">−</button>
+            <button type="button" class="pbtn" id="btn-home-minus" aria-label="Menos gol <%= teamPt(game.home_team) %>">−</button>
             <span class="placar-picker-num" id="cur-home">0</span>
-            <button type="button" class="pbtn" id="btn-home-plus">+</button>
+            <button type="button" class="pbtn" id="btn-home-plus" aria-label="Mais gol <%= teamPt(game.home_team) %>">+</button>
           </div>
         </div>
         <div class="placar-picker-x">×</div>
         <div class="placar-picker-side">
           <span class="placar-picker-team-name"><%= teamPt(game.away_team) %></span>
           <div class="placar-picker-controls">
-            <button type="button" class="pbtn" id="btn-away-minus">−</button>
+            <button type="button" class="pbtn" id="btn-away-minus" aria-label="Menos gol <%= teamPt(game.away_team) %>">−</button>
             <span class="placar-picker-num" id="cur-away">0</span>
-            <button type="button" class="pbtn" id="btn-away-plus">+</button>
+            <button type="button" class="pbtn" id="btn-away-plus" aria-label="Mais gol <%= teamPt(game.away_team) %>">+</button>
           </div>
         </div>
       </div>
       <button type="button" class="btn btn-accent btn-block placar-picker-add" id="btn-add-placar">
-        + Adicionar <span id="add-preview">0×0</span>
+        + Adicionar <span id="add-preview">0×0</span> à lista
       </button>
+      <p class="placar-picker-reset-hint" id="picker-hint">Após adicionar, o placar volta para 0×0.</p>
     </div>
 
     <!-- Quick scores -->
     <div class="placar-quick-section">
-      <p class="placar-quick-label">⚡ Rápido — <span id="home-tag"><%= teamPt(game.home_team) %></span> × <span id="away-tag"><%= teamPt(game.away_team) %></span></p>
+      <p class="placar-quick-label">⚡ Atalhos — toque para adicionar na hora</p>
       <div class="placar-quick-grid" id="quick-grid">
         <button type="button" class="pq-btn" data-h="1" data-a="0"><b>1</b>×<b>0</b></button>
         <button type="button" class="pq-btn" data-h="2" data-a="1"><b>2</b>×<b>1</b></button>
@@ -88,7 +90,7 @@
         <span class="placar-cart-count" id="cart-count">0</span>
       </div>
       <div class="placar-cart-empty" id="cart-empty">
-        Nenhum palpite ainda
+        Nenhum palpite ainda — use os botões acima para montar sua lista
       </div>
       <ul class="placar-cart-list" id="placar-list"></ul>
     </div>
@@ -146,11 +148,33 @@
     const elSCount = $('sticky-count'), elSTotal = $('sticky-total');
     const elForm = $('placar-form'), elSpacer = $('bottom-spacer');
     const elErr = $('client-error');
+    const elPickerCard = $('placar-picker-card');
+    const elPickerHint = $('picker-hint');
+    const elPlacarCart = $('placar-cart');
 
     const fmt = c => (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
     function err(m) { elErr.textContent=m; elErr.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
     function noErr() { elErr.style.display='none'; }
+
+    function flashPicker(msg) {
+      if (!elPickerHint) return;
+      const prev = elPickerHint.textContent;
+      elPickerHint.textContent = msg;
+      elPickerHint.classList.add('is-flash');
+      if (elPickerCard) elPickerCard.classList.add('is-added');
+      setTimeout(() => {
+        elPickerHint.textContent = prev;
+        elPickerHint.classList.remove('is-flash');
+        if (elPickerCard) elPickerCard.classList.remove('is-added');
+      }, 1400);
+    }
+
+    function resetPicker() {
+      cH = 0;
+      cA = 0;
+      upd();
+    }
 
     function upd() {
       elH.textContent = cH; elA.textContent = cA;
@@ -159,10 +183,27 @@
 
     function dup(h,a) { return placares.some(p=>p.home===h&&p.away===a); }
 
-    function add(h,a) {
-      if (dup(h,a)) return;
+    function add(h,a, opts) {
+      const fromQuick = opts && opts.quick;
+      if (dup(h,a)) {
+        flashPicker('⚠️ ' + h + '×' + a + ' já está na lista');
+        if (!fromQuick) resetPicker();
+        return false;
+      }
       placares.push({home:h,away:a});
-      noErr(); render();
+      noErr();
+      render();
+      resetPicker();
+      flashPicker('✓ ' + h + '×' + a + ' adicionado! Escolha o próximo.');
+      const lastItem = elList.lastElementChild;
+      if (lastItem) {
+        lastItem.classList.add('pc-item--new');
+        setTimeout(() => lastItem.classList.remove('pc-item--new'), 1200);
+      }
+      if (elPlacarCart && placares.length === 1) {
+        elPlacarCart.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return true;
     }
 
     function render() {
@@ -207,10 +248,10 @@
     $('btn-home-minus').onclick = ()=>{ if(cH>0){cH--;upd();} };
     $('btn-away-plus').onclick = ()=>{ if(cA<20){cA++;upd();} };
     $('btn-away-minus').onclick = ()=>{ if(cA>0){cA--;upd();} };
-    $('btn-add-placar').onclick = ()=> add(cH,cA);
+    $('btn-add-placar').onclick = ()=> add(cH, cA);
 
     document.querySelectorAll('.pq-btn').forEach(b => {
-      b.onclick = ()=> add(+b.dataset.h, +b.dataset.a);
+      b.onclick = ()=> add(+b.dataset.h, +b.dataset.a, { quick: true });
     });
 
     $('placar-form').onsubmit = (e) => {
