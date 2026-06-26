@@ -27,6 +27,19 @@
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
+    <% if (userStatus.bets && userStatus.bets.length > 0) { %>
+      <div class="placar-existing-bets">
+        <p class="placar-existing-title">✅ Suas apostas neste jogo</p>
+        <% userStatus.bets.forEach(function(bet) { %>
+          <div class="placar-existing-row">
+            <span><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong> <span class="status-tag waiting">confirmado</span></span>
+            <a href="/games/<%= game.id %>/bets/<%= bet.id %>/edit" class="btn btn-outline btn-sm">✏️ Editar</a>
+          </div>
+        <% }); %>
+        <p class="placar-existing-hint">Para apostar de novo, adicione outro palpite abaixo e pague.</p>
+      </div>
+    <% } %>
+
     <!-- Score picker compacto -->
     <div class="placar-picker-card">
       <div class="placar-picker-teams">

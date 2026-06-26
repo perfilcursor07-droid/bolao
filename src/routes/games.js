@@ -283,7 +283,12 @@ router.get('/games/:id', async (req, res) => {
       prizeBreakdown,
       user: req.session.user || null,
       success: req.query.success === '1',
-      error: req.query.error === 'payment' ? 'Erro ao gerar PIX. Verifique o token PagBank.' : null,
+      edited: req.query.edited === '1',
+      error: req.query.error === 'payment'
+        ? 'Erro ao gerar PIX. Verifique o token PagBank.'
+        : req.query.error === 'edit_closed'
+          ? 'Não é mais possível editar este palpite — apostas encerradas.'
+          : null,
     });
   } catch (err) {
     res.redirect('/');
@@ -384,10 +389,15 @@ router.get('/regras', (req, res) => {
 router.get('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => {
   try {
     const [bets] = await pool.query(
-      'SELECT b.*, g.home_team, g.away_team, g.title, g.status, g.game_date FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
-      [req.params.betId, req.session.user.id]
+      'SELECT b.*, g.home_team, g.away_team, g.title, g.game_date FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ? AND b.game_id = ?',
+      [req.params.betId, req.session.user.id, req.params.gameId]
     );
-    if (bets.length === 0 || !isBettingOpen(bets[0])) return res.redirect(`/games/${req.params.gameId}`);
+    if (bets.length === 0) return res.redirect(`/games/${req.params.gameId}`);
+
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.gameId]);
+    if (games.length === 0 || !isBettingOpen(games[0])) {
+      return res.redirect(`/games/${req.params.gameId}?error=edit_closed`);
+    }
 
     res.render('edit-bet', { title: 'Editar Placar', bet: bets[0], user: req.session.user });
   } catch (err) {
@@ -404,19 +414,23 @@ router.post('/games/:gameId/bets/:betId/edit', requireAuth, async (req, res) => 
   }
 
   try {
-    // Verificar que a aposta pertence ao usuário e o jogo está aberto
     const [bets] = await pool.query(
-      'SELECT b.*, g.status, g.game_date FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ? AND b.user_id = ?',
-      [req.params.betId, req.session.user.id]
+      'SELECT b.id FROM bets b WHERE b.id = ? AND b.user_id = ? AND b.game_id = ?',
+      [req.params.betId, req.session.user.id, req.params.gameId]
     );
-    if (bets.length === 0 || !isBettingOpen(bets[0])) return res.redirect(`/games/${req.params.gameId}`);
+    if (bets.length === 0) return res.redirect(`/games/${req.params.gameId}`);
+
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.gameId]);
+    if (games.length === 0 || !isBettingOpen(games[0])) {
+      return res.redirect(`/games/${req.params.gameId}?error=edit_closed`);
+    }
 
     await pool.query(
       'UPDATE bets SET home_score_prediction = ?, away_score_prediction = ? WHERE id = ?',
       [homeScore, awayScore, req.params.betId]
     );
 
-    res.redirect(`/games/${req.params.gameId}?success=1`);
+    res.redirect(`/games/${req.params.gameId}?edited=1`);
   } catch (err) {
     res.redirect(`/games/${req.params.gameId}`);
   }
