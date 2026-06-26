@@ -1,18 +1,16 @@
 const pool = require('../config/database');
 const { getMatchResult, getWorldCupMatches } = require('./footballApi');
 const { processGameResults } = require('./prizeService');
+const {
+  BETTING_CLOSE_MINUTES,
+  parseGameDate,
+  hasGameStarted,
+  getBettingDeadline,
+  isBettingOpen,
+} = require('./bettingRules');
 
-const BETTING_CLOSE_MINUTES = 5;
 /** Tempo após o apito inicial para considerar o jogo encerrado (90min + intervalo + acréscimos). */
 const MATCH_END_MINUTES = 120;
-
-function parseGameDate(game) {
-  if (!game || !game.game_date) return null;
-  const d = game.game_date;
-  if (d instanceof Date) return d;
-  const parsed = new Date(d);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
 
 function getMatchEndTime(game) {
   const kickoff = parseGameDate(game);
@@ -25,27 +23,6 @@ function shouldAutoFinalize(game) {
   if (game.home_score === null || game.away_score === null) return false;
   const endTime = getMatchEndTime(game);
   return Boolean(endTime && Date.now() >= endTime.getTime());
-}
-
-function hasGameStarted(game) {
-  const kickoff = parseGameDate(game);
-  if (!kickoff) return false;
-  return Date.now() >= kickoff.getTime();
-}
-
-/** Horário limite para apostar/editar (5 min antes do jogo). */
-function getBettingDeadline(game) {
-  const kickoff = parseGameDate(game);
-  if (!kickoff) return null;
-  return new Date(kickoff.getTime() - BETTING_CLOSE_MINUTES * 60 * 1000);
-}
-
-function isBettingOpen(game) {
-  if (!game || game.status !== 'open') return false;
-  if (hasGameStarted(game)) return false;
-  const deadline = getBettingDeadline(game);
-  if (!deadline) return false;
-  return Date.now() < deadline.getTime();
 }
 
 async function closeExpiredOpenGames() {

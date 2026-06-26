@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { isBettingOpen } = require('./gameStatusService');
+const { isBettingOpen } = require('./bettingRules');
 
 const SYSTEM_FEE_RATE = 0.10;
 
