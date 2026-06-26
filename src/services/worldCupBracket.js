@@ -1,10 +1,8 @@
 /**
- * Enriquece jogos de mata-mata quando football-data.org ainda não definiu os times
- * (homeTeam/awayTeam null). Usa resultados da fase de grupos + chaveamento FIFA 2026.
+ * Enriquece jogos de mata-mata quando football-data.org ainda não definiu os times.
+ * Diferencia confrontos CONFIRMADOS (grupos encerrados, 1º×2º) de PROVÁVEIS (3º lugar ou grupo em aberto).
  * Ref: https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage
  */
-
-const { translateTeamName } = require('../utils/teamNamesPt');
 
 /** Chaveamento das 16-avos por horário UTC (prefixo do utcDate da API). */
 const LAST_32_PAIRINGS = [
@@ -26,6 +24,8 @@ const LAST_32_PAIRINGS = [
   { prefix: '2026-07-04T01', home: '2D', away: '2G' },
 ];
 
+const GAMES_PER_GROUP = 6;
+
 function isPlaceholderTeam(name) {
   return !name || name === 'A definir';
 }
@@ -45,6 +45,25 @@ function parseSlot(slot) {
   const group = slot.slice(1).toUpperCase();
   if (!pos || !group) return null;
   return { type: 'position', group, pos };
+}
+
+function buildGroupProgress(matches) {
+  const progress = {};
+  for (const m of matches) {
+    if (m.stage !== 'GROUP_STAGE') continue;
+    const group = parseGroupKey(m.group);
+    if (!group) continue;
+    if (!progress[group]) progress[group] = { total: 0, finished: 0 };
+    progress[group].total++;
+    if (m.status === 'FINISHED') progress[group].finished++;
+  }
+  return progress;
+}
+
+function isGroupComplete(progress, group) {
+  const p = progress[group];
+  if (!p) return false;
+  return p.finished >= GAMES_PER_GROUP || (p.total >= GAMES_PER_GROUP && p.finished === p.total);
 }
 
 function buildGroupTables(matches) {
@@ -140,6 +159,36 @@ function resolveSlot(slotCode, tables, usedThirdGroups) {
   return team;
 }
 
+function slotLabel(slotCode) {
+  const slot = parseSlot(slotCode);
+  if (!slot) return slotCode;
+  if (slot.type === 'third') return `3º (${slot.groups.join(',')})`;
+  return `${slot.pos}º Gr. ${slot.group}`;
+}
+
+function isSlotConfirmed(slotCode, progress, fromApi) {
+  if (fromApi) return true;
+  const slot = parseSlot(slotCode);
+  if (!slot) return false;
+  if (slot.type === 'third') return false;
+  return isGroupComplete(progress, slot.group);
+}
+
+function computeMatchCertainty(pairing, { homeFromApi, awayFromApi, progress }) {
+  const homeSlot = parseSlot(pairing.home);
+  const awaySlot = parseSlot(pairing.away);
+
+  if (homeSlot?.type === 'third' || awaySlot?.type === 'third') {
+    return 'tentative';
+  }
+
+  const homeOk = isSlotConfirmed(pairing.home, progress, homeFromApi);
+  const awayOk = isSlotConfirmed(pairing.away, progress, awayFromApi);
+
+  if (homeOk && awayOk) return 'confirmed';
+  return 'tentative';
+}
+
 function findPairing(utcDate) {
   if (!utcDate) return null;
   const iso = new Date(utcDate).toISOString().slice(0, 13);
@@ -153,6 +202,7 @@ function enrichKnockoutMatches(matches) {
   if (!matches?.length) return matches;
 
   const tables = buildGroupTables(matches);
+  const progress = buildGroupProgress(matches);
   const usedThirdGroups = new Set();
 
   return matches.map((m) => {
@@ -162,27 +212,36 @@ function enrichKnockoutMatches(matches) {
     if (!pairing) return m;
 
     const enriched = { ...m };
-    let projected = false;
+    const homeFromApi = !isPlaceholderTeam(enriched.homeTeam);
+    const awayFromApi = !isPlaceholderTeam(enriched.awayTeam);
 
-    if (isPlaceholderTeam(enriched.homeTeam)) {
+    if (!homeFromApi) {
       const team = resolveSlot(pairing.home, tables, usedThirdGroups);
       if (team) {
         enriched.homeTeam = team;
         enriched.homeProjected = true;
-        projected = true;
       }
     }
 
-    if (isPlaceholderTeam(enriched.awayTeam)) {
+    if (!awayFromApi) {
       const team = resolveSlot(pairing.away, tables, usedThirdGroups);
       if (team) {
         enriched.awayTeam = team;
         enriched.awayProjected = true;
-        projected = true;
       }
     }
 
-    if (projected) enriched.bracketProjected = true;
+    if (homeFromApi || awayFromApi || enriched.homeProjected || enriched.awayProjected) {
+      enriched.bracketSlotHome = slotLabel(pairing.home);
+      enriched.bracketSlotAway = slotLabel(pairing.away);
+      enriched.bracketCertainty = computeMatchCertainty(pairing, {
+        homeFromApi,
+        awayFromApi,
+        progress,
+      });
+      enriched.bracketProjected = enriched.bracketCertainty === 'tentative';
+    }
+
     return enriched;
   });
 }
@@ -190,5 +249,7 @@ function enrichKnockoutMatches(matches) {
 module.exports = {
   enrichKnockoutMatches,
   buildGroupTables,
+  buildGroupProgress,
+  isGroupComplete,
   LAST_32_PAIRINGS,
 };

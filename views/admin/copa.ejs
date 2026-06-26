@@ -27,7 +27,10 @@
       </div>
       <a href="/admin/copa?refresh=1" class="btn btn-sm btn-outline">↻ Atualizar agora</a>
     </div>
-    <p class="copa-sync-hint">Mata-mata: quando a API não define os times, o sistema projeta o confronto pelo <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/knockout-stage-match-schedule-bracket" target="_blank" rel="noopener">chaveamento FIFA</a> e resultados dos grupos (ex.: 1º do Grupo C × 2º do Grupo F).</p>
+    <p class="copa-sync-hint">
+      <strong>Confirmado</strong> = grupos encerrados, confronto definido (ex.: Brasil × Japão).
+      <strong>Provável</strong> = ainda pode mudar (3º colocado ou jogos do grupo pendentes). Só crie bolão nos confirmados.
+    </p>
 
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
@@ -90,11 +93,12 @@
           <div class="copa-stage-list">
             <% stages[stage].forEach(function(m) { %>
               <label class="copa-match-item copa-match-selectable" data-stage="<%= stage %>">
-                <% if ((m.status === 'SCHEDULED' || m.status === 'TIMED') && m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir') { %>
+                <% var canCreateBolao = (m.status === 'SCHEDULED' || m.status === 'TIMED') && m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir' && m.bracketCertainty === 'confirmed'; %>
+                <% if (canCreateBolao) { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
                     value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
-                  <input type="checkbox" disabled style="opacity:0.3;">
+                  <input type="checkbox" disabled style="opacity:0.3;" title="<%= m.bracketCertainty === 'tentative' ? 'Confronto ainda provável — aguarde confirmação' : 'Indisponível' %>">
                 <% } %>
                 <div class="copa-match-info">
                   <div class="copa-match-teams">
@@ -112,7 +116,11 @@
                     <time><%= gameDateBR(m.date) %></time>
                     <span class="copa-match-status <%= m.status === 'FINISHED' || m.status === 'AWARDED' ? 'finished' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? 'live' : '' %>">
                       <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? '🔴 AO VIVO' : m.status === 'FINISHED' || m.status === 'AWARDED' ? 'Finalizado' : m.status %>
-                      <% if (m.bracketProjected) { %><span class="copa-projected-badge" title="Times definidos pelo chaveamento FIFA com base nos resultados da fase de grupos"> · projetado</span><% } %>
+                      <% if (m.bracketCertainty === 'confirmed') { %>
+                        <span class="copa-certainty-badge copa-certainty-badge--confirmed" title="<%= m.bracketSlotHome %> × <%= m.bracketSlotAway %>"> · ✓ confirmado</span>
+                      <% } else if (m.bracketCertainty === 'tentative') { %>
+                        <span class="copa-certainty-badge copa-certainty-badge--tentative" title="Pode mudar — <%= m.bracketSlotHome %> × <%= m.bracketSlotAway %>"> · ⚠ provável</span>
+                      <% } %>
                     </span>
                   </div>
                 </div>
