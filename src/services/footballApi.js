@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { translateTeamName } = require('../utils/teamNamesPt');
+const { enrichKnockoutMatches } = require('./worldCupBracket');
 
 // ═══ football-data.org (principal — gratuito, 10 req/min) ═══
 const FD_BASE = 'https://api.football-data.org/v4';
@@ -140,7 +141,7 @@ async function getWorldCupMatches(options = {}) {
         timeout: 10000,
       });
 
-      const matches = (res.data.matches || []).map(parseFootballDataMatch);
+      const matches = enrichKnockoutMatches((res.data.matches || []).map(parseFootballDataMatch));
       const result = { matches, error: null };
       const ttl = computeWorldCupCacheTtl(matches);
       worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
@@ -160,7 +161,7 @@ async function getWorldCupMatches(options = {}) {
             headers: { 'X-Auth-Token': FD_KEY },
             timeout: 10000,
           });
-          const matches = (res2.data.matches || []).map(parseFootballDataMatch);
+          const matches = enrichKnockoutMatches((res2.data.matches || []).map(parseFootballDataMatch));
           const result = { matches, error: null };
           const ttl = computeWorldCupCacheTtl(matches);
           worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
