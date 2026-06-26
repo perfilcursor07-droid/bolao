@@ -50,6 +50,8 @@
               <strong><%= bet.title %></strong>
               <% if (bet.is_winner) { %>
                 <span class="winner-badge">🏆 Ganhou!</span>
+              <% } else if (bet.game_status === 'finished' && bet.prize_amount_cents > 0) { %>
+                <span class="status-tag refund">Reembolso</span>
               <% } else if (bet.game_status === 'finished') { %>
                 <span class="status-tag lost">Não ganhou</span>
               <% } else { %>
@@ -75,6 +77,11 @@
               <% if (bet.is_winner) { %>
                 <div class="bet-prize">
                   <small>Prêmio</small>
+                  <strong class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></strong>
+                </div>
+              <% } else if (bet.game_status === 'finished' && bet.prize_amount_cents > 0) { %>
+                <div class="bet-prize">
+                  <small>Reembolso</small>
                   <strong class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></strong>
                 </div>
               <% } %>

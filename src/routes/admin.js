@@ -259,8 +259,8 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
       `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
         g.home_team, g.away_team, g.title as game_title
        FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
-       WHERE b.is_winner = TRUE AND b.prize_amount_cents > 0 AND b.prize_paid_at IS NULL
-       ORDER BY b.created_at DESC`
+       WHERE b.prize_amount_cents > 0 AND b.prize_paid_at IS NULL
+       ORDER BY b.is_winner DESC, b.created_at DESC`
     );
 
     // 4. Prêmios já pagos
@@ -268,7 +268,7 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
       `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
         g.home_team, g.away_team, g.title as game_title
        FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
-       WHERE b.is_winner = TRUE AND b.prize_paid_at IS NOT NULL
+       WHERE b.prize_amount_cents > 0 AND b.prize_paid_at IS NOT NULL
        ORDER BY b.prize_paid_at DESC`
     );
 
@@ -294,7 +294,7 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
 // Marcar prêmio como pago
 router.post('/pagamentos/:betId/pagar', requireAdmin, async (req, res) => {
   try {
-    await pool.query('UPDATE bets SET prize_paid_at = NOW() WHERE id = ? AND is_winner = TRUE', [req.params.betId]);
+    await pool.query('UPDATE bets SET prize_paid_at = NOW() WHERE id = ? AND prize_amount_cents > 0', [req.params.betId]);
     res.redirect('/admin/pagamentos');
   } catch (err) {
     res.redirect('/admin/pagamentos');

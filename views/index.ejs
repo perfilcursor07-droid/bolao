@@ -22,195 +22,24 @@
         <span class="hero-flow-sep" aria-hidden="true"></span>
         <span class="hero-flow-item hero-flow-item--accent"><span class="hero-flow-ico">🏆</span> Prêmio</span>
       </div>
+      <p id="home-refresh-status" class="home-refresh-status" aria-live="polite">
+        <span class="home-refresh-dot" aria-hidden="true"></span>
+        <span class="home-refresh-text">Atualização automática ativa</span>
+      </p>
     </div>
   </section>
 
   <div class="container home-container">
-
-    <!-- Jogo em Destaque -->
-    <% if (typeof featuredGames !== 'undefined' && featuredGames.length > 0) { %>
-      <% featuredGames.forEach(function(game) { %>
-        <article class="featured-card">
-          <div class="featured-card-inner">
-            <header class="featured-head">
-              <span class="featured-badge">⭐ DESTAQUE</span>
-              <time class="featured-date"><%= gameDateBR(game.game_date) %></time>
-            </header>
-
-            <div class="featured-match">
-              <span class="featured-team"><%= teamPt(game.home_team) %></span>
-              <span class="featured-x">×</span>
-              <span class="featured-team"><%= teamPt(game.away_team) %></span>
-            </div>
-
-            <div class="featured-chips">
-              <span class="featured-chip featured-chip--prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
-              <span class="featured-chip"><%= game.total_bets %> aposta<%= game.total_bets !== 1 ? 's' : '' %></span>
-              <span class="featured-chip featured-chip--fee"><%= formatCents(game.entry_fee_cents) %>/placar</span>
-            </div>
-
-            <footer class="featured-foot">
-              <% if (user) { %>
-                <% if (isBettingOpen(game)) { %>
-                  <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block featured-cta">Apostar</a>
-                <% } else { %>
-                  <span class="featured-betting-closed">Apostas encerradas</span>
-                  <% var featSnap = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
-                  <% if (featSnap && featSnap.bets && featSnap.bets.length > 0) { %>
-                    <div class="featured-closed-panel">
-                      <%- include('partials/closed-betting-panel', { breakdown: featSnap.breakdown, bets: featSnap.bets, compact: true }) %>
-                      <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
-                    </div>
-                  <% } %>
-                <% } %>
-              <% } else { %>
-                <% if (isBettingOpen(game)) { %>
-                  <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block featured-cta">Participar</a>
-                <% } else { %>
-                  <span class="featured-betting-closed">Apostas encerradas</span>
-                  <% var featSnapGuest = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
-                  <% if (featSnapGuest && featSnapGuest.bets && featSnapGuest.bets.length > 0) { %>
-                    <div class="featured-closed-panel">
-                      <%- include('partials/closed-betting-panel', { breakdown: featSnapGuest.breakdown, bets: featSnapGuest.bets, compact: true }) %>
-                      <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
-                    </div>
-                  <% } %>
-                <% } %>
-              <% } %>
-            </footer>
-          </div>
-        </article>
-      <% }); %>
-    <% } %>
-
-    <!-- Jogos em andamento -->
-    <% if (typeof liveGames !== 'undefined' && liveGames.length > 0) { %>
-      <div class="home-section-header" style="margin-top:1.5rem;">
-        <h2>Jogos em andamento</h2>
-        <span class="home-count live-count"><%= liveGames.length %></span>
-      </div>
-      <div class="games-list-compact">
-        <% liveGames.forEach(function(game) { %>
-          <a href="/games/<%= game.id %>" class="game-row game-row-link game-row-live">
-            <div class="game-row-main">
-              <div class="game-row-teams">
-                <strong><%= teamPt(game.home_team) %></strong>
-                <% if (game.home_score !== null && game.away_score !== null) { %>
-                  <span class="game-row-score live-score"><%= game.home_score %>×<%= game.away_score %></span>
-                <% } else { %>
-                  <span class="game-row-score">×</span>
-                <% } %>
-                <strong><%= teamPt(game.away_team) %></strong>
-              </div>
-              <div class="game-row-meta">
-                <time><%= gameDateBR(game.game_date) %></time>
-                <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
-              </div>
-            </div>
-            <span class="card-badge live">
-              <span class="live-dot"></span> AO VIVO
-            </span>
-          </a>
-        <% }); %>
-      </div>
-    <% } %>
-
-    <!-- Bolões encerrados -->
-    <% if (typeof finishedSummaries !== 'undefined' && finishedSummaries.length > 0) { %>
-      <div class="home-section-header" style="margin-top:1.5rem;">
-        <h2>Bolões encerrados</h2>
-        <div class="home-section-header-right">
-          <span class="home-count"><%= typeof totalFinishedCount !== 'undefined' ? totalFinishedCount : finishedSummaries.length %></span>
-          <% if (typeof hasMoreFinished !== 'undefined' && hasMoreFinished) { %>
-            <a href="/boloes-encerrados" class="home-link">Ver todos →</a>
-          <% } %>
-        </div>
-      </div>
-      <%- include('partials/finished-boloes-list', { finishedSummaries }) %>
-    <% } %>
-
-    <!-- Jogos abertos -->
-    <% var hasUpcoming = typeof upcomingGames !== 'undefined' && upcomingGames.length > 0; %>
-    <% var hasOtherOpen = typeof otherOpenGames !== 'undefined' && otherOpenGames.length > 0; %>
-    <% var totalOpen = (typeof upcomingGames !== 'undefined' ? upcomingGames.length : 0) + (typeof otherOpenGames !== 'undefined' ? otherOpenGames.length : 0); %>
-
-    <% if (totalOpen > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
-      <div class="home-section-header">
-        <h2>Jogos abertos</h2>
-        <% if (totalOpen > 0) { %>
-          <span class="home-count"><%= totalOpen %></span>
-        <% } %>
-      </div>
-    <% } %>
-
-    <% if (totalOpen === 0 && (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
-      <div class="empty-state">
-        <div class="empty-icon">🏟️</div>
-        <p>Nenhum jogo aberto.</p>
-        <small>Volte em breve!</small>
-      </div>
-    <% } else { %>
-
-      <% if (hasUpcoming) { %>
-        <div class="home-subsection-header">
-          <h3>Jogos próximos</h3>
-          <span class="home-subcount">próximas 24h · <%= upcomingGames.length %></span>
-        </div>
-        <div class="games-grid-twin">
-          <% upcomingGames.forEach(function(game) { %>
-            <%- include('partials/open-game-row', {
-              game,
-              user,
-              closedSnapshot: typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null,
-            }) %>
-          <% }); %>
-        </div>
-      <% } %>
-
-      <% if (hasOtherOpen) { %>
-        <div class="home-subsection-header<%= hasUpcoming ? ' home-subsection-header--spaced' : '' %>">
-          <h3>Outros jogos</h3>
-          <span class="home-subcount"><%= otherOpenGames.length %></span>
-        </div>
-        <div class="games-grid-twin">
-          <% otherOpenGames.forEach(function(game) { %>
-            <%- include('partials/open-game-row', {
-              game,
-              user,
-              closedSnapshot: typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null,
-            }) %>
-          <% }); %>
-        </div>
-      <% } %>
-
-    <% } %>
-
-    <!-- Minhas apostas -->
-    <% if (user && myBets.length > 0) { %>
-      <div class="home-section-header" style="margin-top:1.5rem;">
-        <h2>Minhas Apostas</h2>
-        <a href="/my-bets" class="home-link">Ver todas →</a>
-      </div>
-      <div class="games-list-compact">
-        <% myBets.slice(0, 3).forEach(function(bet) { %>
-          <div class="game-row">
-            <div class="game-row-main">
-              <div class="game-row-teams"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %> <small style="color:var(--text-muted);margin-left:0.35rem;"><%= bet.title %></small></div>
-            </div>
-            <% if (bet.is_winner) { %>
-              <span class="winner-badge">🏆</span>
-            <% } else if (bet.game_status === 'finished') { %>
-              <span class="status-tag lost">✗</span>
-            <% } else { %>
-              <span class="status-tag waiting">⏳</span>
-            <% } %>
-          </div>
-        <% }); %>
-      </div>
-    <% } %>
-
+    <div
+      id="home-dynamic"
+      class="home-dynamic"
+      data-has-live="<%= typeof hasLiveGames !== 'undefined' && hasLiveGames ? '1' : '0' %>"
+    >
+      <%- include('partials/home-dynamic') %>
+    </div>
   </div>
 
   <%- include('partials/footer') %>
+  <script src="/js/home-refresh.js" defer></script>
 </body>
 </html>

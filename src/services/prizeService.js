@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { isBettingOpen } = require('./bettingRules');
 
 const SYSTEM_FEE_RATE = 0.10;
+const NO_WINNER_FEE_RATE = 0.20;
 
 function calcPrizeBreakdown(prizePoolCents, winnerCount) {
   const totalPool = prizePoolCents || 0;
@@ -16,6 +17,26 @@ function calcPrizeBreakdown(prizePoolCents, winnerCount) {
     feePercent: Math.round(SYSTEM_FEE_RATE * 100),
     netPercent: Math.round((1 - SYSTEM_FEE_RATE) * 100),
     winnerCount,
+  };
+}
+
+function calcNoWinnerRefundCents(stakeCents) {
+  return Math.floor((stakeCents || 0) * (1 - NO_WINNER_FEE_RATE));
+}
+
+function calcNoWinnerBreakdown(prizePoolCents, betCount) {
+  const totalPool = prizePoolCents || 0;
+  const feeCents = Math.floor(totalPool * NO_WINNER_FEE_RATE);
+  const refundPool = Math.floor(totalPool * (1 - NO_WINNER_FEE_RATE));
+  const refundEach = betCount > 0 ? Math.floor(refundPool / betCount) : 0;
+  return {
+    totalPool,
+    feeCents,
+    refundPool,
+    refundEach,
+    feePercent: Math.round(NO_WINNER_FEE_RATE * 100),
+    refundPercent: Math.round((1 - NO_WINNER_FEE_RATE) * 100),
+    betCount,
   };
 }
 
@@ -57,12 +78,18 @@ async function processGameResults(gameId) {
     );
 
     if (winners.length === 0) {
+      const [allBets] = await connection.query('SELECT id FROM bets WHERE game_id = ?', [gameId]);
+      const refundEach = calcNoWinnerRefundCents(game.entry_fee_cents);
+
+      for (const bet of allBets) {
+        await connection.query('UPDATE bets SET prize_amount_cents = ? WHERE id = ?', [refundEach, bet.id]);
+      }
+
       await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
       await connection.commit();
-      return { winners: 0, prizeEach: 0 };
+      return { winners: 0, prizeEach: 0, refunds: allBets.length, refundEach };
     }
 
-    // Taxa do sistema (10%)
     const { netPool, prizeEach } = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
     for (const winner of winners) {
@@ -221,7 +248,10 @@ async function getUserGameStatus(userId, gameId) {
 
 module.exports = {
   SYSTEM_FEE_RATE,
+  NO_WINNER_FEE_RATE,
   calcPrizeBreakdown,
+  calcNoWinnerRefundCents,
+  calcNoWinnerBreakdown,
   processGameResults,
   confirmPayment,
   createPaymentWithPlacar,

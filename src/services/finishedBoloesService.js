@@ -1,6 +1,22 @@
 const pool = require('../config/database');
 const { calcPrizeBreakdown } = require('./prizeService');
 
+function firstName(name) {
+  if (!name || !String(name).trim()) return 'Participante';
+  return String(name).trim().split(/\s+/)[0];
+}
+
+function mapPublicBet(row) {
+  return {
+    game_id: row.game_id,
+    home_score_prediction: row.home_score_prediction,
+    away_score_prediction: row.away_score_prediction,
+    is_winner: row.is_winner,
+    prize_amount_cents: row.prize_amount_cents,
+    name: firstName(row.name),
+  };
+}
+
 async function loadFinishedBoloes({ includeAllBets = false } = {}) {
   const [games] = await pool.query(
     `SELECT g.*,
@@ -42,7 +58,7 @@ async function loadFinishedBoloes({ includeAllBets = false } = {}) {
     );
     for (const bet of allBets) {
       if (!betsByGame[bet.game_id]) betsByGame[bet.game_id] = [];
-      betsByGame[bet.game_id].push(bet);
+      betsByGame[bet.game_id].push(mapPublicBet(bet));
     }
   }
 
@@ -73,7 +89,7 @@ async function loadBetsForGames(games) {
   const betsByGame = {};
   for (const row of rows) {
     if (!betsByGame[row.game_id]) betsByGame[row.game_id] = [];
-    betsByGame[row.game_id].push(row);
+    betsByGame[row.game_id].push(mapPublicBet(row));
   }
 
   const result = {};

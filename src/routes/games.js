@@ -3,9 +3,10 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser, cleanPhone } = require('../services/guestService');
+const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
-const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches } = require('../services/gameStatusService');
 const { isBettingOpen } = require('../services/bettingRules');
+const { closeExpiredOpenGames } = require('../services/gameStatusService');
 
 const router = express.Router();
 
@@ -27,78 +28,27 @@ router.post('/api/lookup-phone', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    await closeExpiredOpenGames();
-    await syncGamesFromWorldCupMatches();
-    await finalizeClosedGamesWithScores();
-
-    const [games] = await pool.query(
-      `SELECT g.*,
-        (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as total_bets
-       FROM games g
-       WHERE g.status IN ('open', 'closed', 'finished')
-       ORDER BY
-         g.featured DESC,
-         CASE g.status WHEN 'open' THEN 0 WHEN 'closed' THEN 1 ELSE 2 END,
-         g.game_date ASC`
-    );
-
-    const openGames = games.filter((g) => g.status === 'open');
-    const liveGames = games.filter((g) => g.status === 'closed');
-    const featuredGames = openGames.filter((g) => g.featured);
-    const normalGames = openGames.filter((g) => !g.featured);
-
-    const now = Date.now();
-    const in24h = now + 24 * 60 * 60 * 1000;
-    const upcomingGames = normalGames.filter((g) => {
-      const t = new Date(g.game_date).getTime();
-      return t > now && t <= in24h;
-    });
-    const otherOpenGames = normalGames.filter((g) => {
-      const t = new Date(g.game_date).getTime();
-      return t > in24h;
-    });
-
-    const allFinishedSummaries = await loadFinishedBoloes();
-    const finishedSummaries = allFinishedSummaries.slice(0, 5);
-    const hasMoreFinished = allFinishedSummaries.length > 5;
-
-    const closedBettingGames = [...featuredGames, ...upcomingGames, ...otherOpenGames].filter((g) => !isBettingOpen(g));
-    const closedBettingMap = await loadBetsForGames(closedBettingGames);
-
-    let myBets = [];
-    let gameStatusMap = {};
-
-    if (req.session.user) {
-      const [bets] = await pool.query(
-        `SELECT b.*, g.title, g.home_team, g.away_team, g.home_score, g.away_score, g.status as game_status
-         FROM bets b JOIN games g ON g.id = b.game_id
-         WHERE b.user_id = ? ORDER BY b.created_at DESC`,
-        [req.session.user.id]
-      );
-      myBets = bets;
-
-      for (const game of openGames) {
-        gameStatusMap[game.id] = await getUserGameStatus(req.session.user.id, game.id);
-      }
-    }
+    const data = await loadHomeData(req.session.user?.id, { withApiSync: true });
 
     res.render('index', {
       title: 'Bolão Online',
-      upcomingGames,
-      otherOpenGames,
-      openGames: normalGames,
-      liveGames,
-      featuredGames,
-      finishedSummaries,
-      hasMoreFinished,
-      totalFinishedCount: allFinishedSummaries.length,
-      myBets,
-      gameStatusMap,
-      closedBettingMap,
+      ...data,
       user: req.session.user || null,
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user || null });
+  }
+});
+
+router.get('/api/home', async (req, res) => {
+  try {
+    const data = await loadHomeData(req.session.user?.id, { withApiSync: true });
+    res.render('partials/home-dynamic', {
+      ...data,
+      user: req.session.user || null,
+    });
+  } catch (err) {
+    res.status(500).send('');
   }
 });
 
@@ -280,11 +230,8 @@ router.get('/games/:id', async (req, res) => {
 
     const prizeBreakdown = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
-    let closedBetting = null;
-    if (!isBettingOpen(game) && game.status !== 'finished') {
-      const map = await loadBetsForGames([game]);
-      closedBetting = map[game.id] || { bets: [], breakdown: prizeBreakdown };
-    }
+    const betsMap = await loadBetsForGames([game]);
+    const publicBets = betsMap[game.id] || { bets: [], breakdown: prizeBreakdown };
 
     res.render('game-detail', {
       title: game.title,
@@ -292,7 +239,8 @@ router.get('/games/:id', async (req, res) => {
       userStatus,
       winners,
       prizeBreakdown,
-      closedBetting,
+      publicBets,
+      closedBetting: publicBets,
       user: req.session.user || null,
       success: req.query.success === '1',
       edited: req.query.edited === '1',

@@ -15,13 +15,15 @@
   </div>
 <% } %>
 
-<% if (typeof bets !== 'undefined' && bets.length > 0) { %>
-  <h4 class="closed-betting-bets-title"><%= typeof betsTitle !== 'undefined' ? betsTitle : '📋 Apostas realizadas' %> (<%= bets.length %>)</h4>
-  <div class="closed-bets-list<%= typeof compact !== 'undefined' && compact ? ' closed-bets-list--compact' : '' %>">
+<% if (typeof bets !== 'undefined' && bets && bets.length > 0) { %>
+  <% if (typeof betsTitle !== 'undefined' && betsTitle) { %>
+    <h4 class="closed-betting-bets-title"><%= betsTitle %> (<%= bets.length %>)</h4>
+  <% } %>
+  <div class="closed-bets-list<%= typeof compact !== 'undefined' && compact ? ' closed-bets-list--compact' : '' %><%= typeof listClass !== 'undefined' && listClass ? ' ' + listClass : '' %>">
     <% bets.forEach(function(bet) { %>
       <div class="closed-bet-row">
         <span class="closed-bet-name"><%= bet.name %></span>
-        <span class="closed-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+        <span class="closed-bet-score"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></span>
       </div>
     <% }); %>
   </div>

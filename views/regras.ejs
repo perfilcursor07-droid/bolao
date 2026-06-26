@@ -34,7 +34,7 @@
           <li>Se houver mais de um ganhador, o prêmio é dividido igualmente entre eles</li>
           <li><strong><%= prizeNetPercent %>% do valor total</strong> é distribuído aos ganhadores</li>
           <li><strong><%= systemFeePercent %>% é a taxa do sistema</strong> (manutenção, API de dados e processamento de pagamentos)</li>
-          <li><strong>Sem ganhador:</strong> se ninguém acertar o placar exato, o valor arrecadado é <strong>devolvido proporcionalmente</strong> a todos os apostadores da partida, descontada apenas a taxa de <strong><%= systemFeePercent %>%</strong> do sistema. Exemplo: se você apostou R$ 10,00 e não houve ganhador, recebe de volta R$ 9,00 (90% do valor pago).</li>
+          <li><strong>Sem ganhador:</strong> se ninguém acertar o placar exato, o valor arrecadado é <strong>devolvido proporcionalmente</strong> a todos os apostadores da partida, descontada a taxa de <strong><%= noWinnerFeePercent %>%</strong> do sistema. Exemplo: se você apostou R$ 10,00 e não houve ganhador, recebe de volta <%= formatCents(Math.floor(1000 * noWinnerRefundPercent / 100)) %> (<%= noWinnerRefundPercent %>% do valor pago).</li>
         </ul>
       </div>
 

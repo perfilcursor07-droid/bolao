@@ -45,6 +45,25 @@
         </div>
       </div>
 
+      <% const showPublicBets = typeof publicBets !== 'undefined' && publicBets && (publicBets.bets.length > 0 || game.status === 'closed' || !isBettingOpen(game)); %>
+      <% if (showPublicBets) { %>
+        <section class="public-bets-section" aria-label="Apostas realizadas neste bolão">
+          <div class="public-bets-head">
+            <h3 class="section-title public-bets-title">Apostas realizadas</h3>
+            <% if (publicBets.bets.length > 0) { %>
+              <span class="public-bets-count"><%= publicBets.bets.length %></span>
+            <% } %>
+          </div>
+          <%- include('partials/closed-betting-panel', {
+            breakdown: null,
+            bets: publicBets.bets,
+            showEmpty: true,
+            betsTitle: null,
+            listClass: 'public-bets-list',
+          }) %>
+        </section>
+      <% } %>
+
       <% if (success) { %>
         <div class="alert alert-success">
           🎉 Aposta confirmada! Pode fazer outra se quiser.
@@ -129,12 +148,12 @@
         </div>
 
         <% if (typeof closedBetting !== 'undefined' && closedBetting) { %>
-          <div class="closed-betting-section">
-            <h3 class="section-title">💰 Prêmio acumulado</h3>
+          <div class="closed-betting-section closed-betting-section--inline">
+            <h3 class="section-title">Distribuição do prêmio</h3>
             <%- include('partials/closed-betting-panel', {
               breakdown: closedBetting.breakdown,
-              bets: closedBetting.bets,
-              showEmpty: true,
+              bets: null,
+              showEmpty: false,
             }) %>
           </div>
         <% } %>
@@ -194,8 +213,8 @@
           <% }); %>
         </div>
       <% } else if (game.status === 'finished') { %>
-        <div class="alert" style="margin-top: 1.25rem; background: rgba(100,116,139,0.1); border: 1px solid var(--border); color: var(--text-secondary); text-align: center;">
-          Nenhum ganhador neste jogo.
+        <div class="alert alert-refund" style="margin-top: 1.25rem; text-align: center;">
+          Nenhum ganhador neste jogo. O valor foi <strong>devolvido proporcionalmente</strong> aos apostadores (<%= noWinnerRefundPercent %>% de cada aposta, taxa de <%= noWinnerFeePercent %>%).
         </div>
       <% } %>
     </div>

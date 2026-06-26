@@ -15,7 +15,7 @@ const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./util
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
-const { SYSTEM_FEE_RATE } = require('./services/prizeService');
+const { SYSTEM_FEE_RATE, NO_WINNER_FEE_RATE } = require('./services/prizeService');
 
 const app = express();
 
@@ -63,6 +63,8 @@ app.use(async (req, res, next) => {
   res.locals.bettingCloseMinutes = BETTING_CLOSE_MINUTES;
   res.locals.systemFeePercent = Math.round(SYSTEM_FEE_RATE * 100);
   res.locals.prizeNetPercent = 100 - res.locals.systemFeePercent;
+  res.locals.noWinnerFeePercent = Math.round(NO_WINNER_FEE_RATE * 100);
+  res.locals.noWinnerRefundPercent = 100 - res.locals.noWinnerFeePercent;
   res.locals.cartCount = 0;
   res.locals.pendingPaymentsCount = 0;
 

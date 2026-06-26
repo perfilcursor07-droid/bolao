@@ -111,14 +111,14 @@
     <!-- TAB 3: Prêmios a enviar -->
     <div class="tab-content" id="tab-payouts-pending" style="display:none;">
       <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">🏆 Prêmios a enviar via PIX</h3>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Ganhadores aguardando recebimento do prêmio</p>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Ganhadores e reembolsos (sem ganhador) aguardando PIX</p>
 
       <% if (pendingPayouts.length === 0) { %>
         <div class="alert alert-success" style="text-align:center;">✓ Nenhum prêmio pendente de envio!</div>
       <% } else { %>
         <div class="table-container">
           <table>
-            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Prêmio</th><th>Ação</th></tr></thead>
+            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Tipo</th><th>Valor</th><th>Ação</th></tr></thead>
             <tbody>
               <% pendingPayouts.forEach(p => { %>
                 <tr>
@@ -126,6 +126,7 @@
                   <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis;" title="<%= p.user_pix || '' %>"><%= p.user_pix || '—' %></td>
                   <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
                   <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td style="font-size:0.8rem;"><%= p.is_winner ? '🏆 Prêmio' : '↩ Reembolso' %></td>
                   <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
                   <td>
                     <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
@@ -156,13 +157,14 @@
       <% } else { %>
         <div class="table-container">
           <table>
-            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Jogo</th><th>Prêmio</th><th>Pago em</th></tr></thead>
+            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Jogo</th><th>Tipo</th><th>Valor</th><th>Pago em</th></tr></thead>
             <tbody>
               <% paidPayouts.forEach(p => { %>
                 <tr>
                   <td><%= p.user_name %></td>
                   <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
                   <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td style="font-size:0.8rem;"><%= p.is_winner ? '🏆 Prêmio' : '↩ Reembolso' %></td>
                   <td><%= formatCents(p.prize_amount_cents) %></td>
                   <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
                 </tr>

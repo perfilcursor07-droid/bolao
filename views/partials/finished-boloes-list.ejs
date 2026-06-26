@@ -2,7 +2,7 @@
   <div class="finished-boloes-list">
     <% finishedSummaries.forEach(function(item) { %>
       <% var game = item.game, winners = item.winners, breakdown = item.breakdown, bets = item.bets || []; %>
-      <details class="finished-bolao">
+      <details class="finished-bolao" data-game-id="<%= game.id %>">
         <summary class="finished-bolao-summary">
           <div class="finished-bolao-teams">
             <span class="finished-team"><%= teamPt(game.home_team) %></span>
