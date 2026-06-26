@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { getMatchResult, getWorldCupMatches } = require('./footballApi');
 const { processGameResults } = require('./prizeService');
 
-const BETTING_CLOSE_MINUTES = 30;
+const BETTING_CLOSE_MINUTES = 5;
 /** Tempo após o apito inicial para considerar o jogo encerrado (90min + intervalo + acréscimos). */
 const MATCH_END_MINUTES = 120;
 
@@ -33,7 +33,7 @@ function hasGameStarted(game) {
   return Date.now() >= kickoff.getTime();
 }
 
-/** Horário limite para apostar/editar (30 min antes do jogo). */
+/** Horário limite para apostar/editar (5 min antes do jogo). */
 function getBettingDeadline(game) {
   const kickoff = parseGameDate(game);
   if (!kickoff) return null;
