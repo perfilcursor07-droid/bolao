@@ -2228,6 +2228,99 @@ td { border-top: 1px solid var(--border); }
 .game-row-action { flex-shrink: 0; }
 .game-row-action .btn { padding: 0.45rem 0.75rem; font-size: 0.8rem; }
 
+/* Twin grid — dois jogos por linha (tablet+) */
+.games-grid-twin {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .games-grid-twin {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+}
+
+.home-subsection-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.home-subsection-header--spaced {
+  margin-top: 1.25rem;
+}
+
+.home-subsection-header h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.home-subcount {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #6ee7b7;
+  background: rgba(110, 231, 183, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* Home — verde claro no lugar do laranja */
+.page-home .btn-gold {
+  background: linear-gradient(135deg, #86efac, #34d399);
+  color: #064e3b;
+}
+
+.page-home .btn-gold:hover {
+  background: linear-gradient(135deg, #6ee7b7, #10b981);
+  color: #022c22;
+}
+
+.page-home .featured-card-inner {
+  background: linear-gradient(160deg, rgba(110, 231, 183, 0.14) 0%, var(--bg-card) 50%);
+  border-color: rgba(110, 231, 183, 0.38);
+  box-shadow: 0 6px 22px rgba(52, 211, 153, 0.12);
+}
+
+.page-home .featured-badge {
+  color: #064e3b;
+  background: linear-gradient(90deg, #86efac, #6ee7b7);
+}
+
+.page-home .featured-x,
+.page-home .featured-chip--prize,
+.page-home .game-row-prize {
+  color: #6ee7b7;
+}
+
+.page-home .featured-chip--prize {
+  background: rgba(110, 231, 183, 0.12);
+  border-color: rgba(110, 231, 183, 0.3);
+}
+
+.page-home .featured-cta {
+  box-shadow: 0 3px 12px rgba(52, 211, 153, 0.28);
+}
+
+.page-home .featured-cta:hover {
+  box-shadow: 0 5px 16px rgba(52, 211, 153, 0.38);
+}
+
+.page-home .hero-flow-item--accent {
+  color: #6ee7b7;
+}
+
+.page-home .prize-each-value {
+  color: #6ee7b7;
+}
+
 /* Open games — removed, using .games-list-compact now */
 
 .guest-hint {

@@ -20,7 +20,7 @@
         <span class="hero-flow-sep" aria-hidden="true"></span>
         <span class="hero-flow-item"><span class="hero-flow-ico">💳</span> PIX</span>
         <span class="hero-flow-sep" aria-hidden="true"></span>
-        <span class="hero-flow-item hero-flow-item--gold"><span class="hero-flow-ico">🏆</span> Prêmio</span>
+        <span class="hero-flow-item hero-flow-item--accent"><span class="hero-flow-ico">🏆</span> Prêmio</span>
       </div>
     </div>
   </section>
@@ -115,54 +115,52 @@
       <%- include('partials/finished-boloes-list', { finishedSummaries }) %>
     <% } %>
 
-    <!-- Jogos Abertos -->
-    <% if (openGames.length > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
+    <!-- Jogos abertos -->
+    <% var hasUpcoming = typeof upcomingGames !== 'undefined' && upcomingGames.length > 0; %>
+    <% var hasOtherOpen = typeof otherOpenGames !== 'undefined' && otherOpenGames.length > 0; %>
+    <% var totalOpen = (typeof upcomingGames !== 'undefined' ? upcomingGames.length : 0) + (typeof otherOpenGames !== 'undefined' ? otherOpenGames.length : 0); %>
+
+    <% if (totalOpen > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
       <div class="home-section-header">
         <h2>Jogos abertos</h2>
-        <% if (openGames.length > 0) { %>
-          <span class="home-count"><%= openGames.length %></span>
+        <% if (totalOpen > 0) { %>
+          <span class="home-count"><%= totalOpen %></span>
         <% } %>
       </div>
     <% } %>
 
-    <% if (openGames.length === 0 && (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
+    <% if (totalOpen === 0 && (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
       <div class="empty-state">
         <div class="empty-icon">🏟️</div>
         <p>Nenhum jogo aberto.</p>
         <small>Volte em breve!</small>
       </div>
-    <% } else if (openGames.length > 0) { %>
-      <div class="games-list-compact">
-        <% openGames.forEach(function(game) { %>
-          <article class="game-row">
-            <div class="game-row-main">
-              <div class="game-row-teams">
-                <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
-              </div>
-              <div class="game-row-meta">
-                <time><%= gameDateBR(game.game_date) %></time>
-                <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
-                <span><%= formatCents(game.entry_fee_cents) %></span>
-              </div>
-            </div>
-            <div class="game-row-action">
-              <% if (isBettingOpen(game)) { %>
-                <% if (user) { %>
-                  <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-sm">Apostar</a>
-                <% } else { %>
-                  <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Participar</a>
-                <% } %>
-              <% } else { %>
-                <% if (typeof hasGameStarted !== 'undefined' && hasGameStarted(game)) { %>
-                  <span class="betting-closed-tag">Em andamento</span>
-                <% } else { %>
-                  <span class="betting-closed-tag">Apostas encerradas</span>
-                <% } %>
-              <% } %>
-            </div>
-          </article>
-        <% }); %>
-      </div>
+    <% } else { %>
+
+      <% if (hasUpcoming) { %>
+        <div class="home-subsection-header">
+          <h3>Jogos próximos</h3>
+          <span class="home-subcount">próximas 24h · <%= upcomingGames.length %></span>
+        </div>
+        <div class="games-grid-twin">
+          <% upcomingGames.forEach(function(game) { %>
+            <%- include('partials/open-game-row', { game, user }) %>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (hasOtherOpen) { %>
+        <div class="home-subsection-header<%= hasUpcoming ? ' home-subsection-header--spaced' : '' %>">
+          <h3>Outros jogos</h3>
+          <span class="home-subcount"><%= otherOpenGames.length %></span>
+        </div>
+        <div class="games-grid-twin">
+          <% otherOpenGames.forEach(function(game) { %>
+            <%- include('partials/open-game-row', { game, user }) %>
+          <% }); %>
+        </div>
+      <% } %>
+
     <% } %>
 
     <!-- Minhas apostas -->

@@ -46,6 +46,17 @@ router.get('/', async (req, res) => {
     const featuredGames = openGames.filter((g) => g.featured);
     const normalGames = openGames.filter((g) => !g.featured);
 
+    const now = Date.now();
+    const in24h = now + 24 * 60 * 60 * 1000;
+    const upcomingGames = normalGames.filter((g) => {
+      const t = new Date(g.game_date).getTime();
+      return t > now && t <= in24h;
+    });
+    const otherOpenGames = normalGames.filter((g) => {
+      const t = new Date(g.game_date).getTime();
+      return t > in24h;
+    });
+
     const allFinishedSummaries = await loadFinishedBoloes();
     const finishedSummaries = allFinishedSummaries.slice(0, 5);
     const hasMoreFinished = allFinishedSummaries.length > 5;
@@ -69,6 +80,8 @@ router.get('/', async (req, res) => {
 
     res.render('index', {
       title: 'Bolão Online',
+      upcomingGames,
+      otherOpenGames,
       openGames: normalGames,
       liveGames,
       featuredGames,

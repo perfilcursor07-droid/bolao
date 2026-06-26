@@ -1,0 +1,27 @@
+<article class="game-row">
+  <div class="game-row-main">
+    <div class="game-row-teams">
+      <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
+    </div>
+    <div class="game-row-meta">
+      <time><%= gameDateBR(game.game_date) %></time>
+      <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+      <span><%= formatCents(game.entry_fee_cents) %></span>
+    </div>
+  </div>
+  <div class="game-row-action">
+    <% if (isBettingOpen(game)) { %>
+      <% if (user) { %>
+        <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-sm">Apostar</a>
+      <% } else { %>
+        <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Participar</a>
+      <% } %>
+    <% } else { %>
+      <% if (typeof hasGameStarted !== 'undefined' && hasGameStarted(game)) { %>
+        <span class="betting-closed-tag">Em andamento</span>
+      <% } else { %>
+        <span class="betting-closed-tag">Apostas encerradas</span>
+      <% } %>
+    <% } %>
+  </div>
+</article>
