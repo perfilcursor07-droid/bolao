@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const gamesRoutes = require('./routes/games');
 const cartRoutes = require('./routes/cart');
+const affiliateRoutes = require('./routes/affiliate');
 const paymentRoutes = require('./routes/payment');
 const { startCronJobs } = require('./services/cronJobs');
 const { formatCents } = require('./routes/games');
@@ -15,6 +16,7 @@ const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./util
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
+const { captureReferralCode, tryBindSessionReferral } = require('./services/affiliateService');
 const { SYSTEM_FEE_RATE, NO_WINNER_FEE_RATE } = require('./services/prizeService');
 
 const app = express();
@@ -52,6 +54,24 @@ app.use(
 );
 
 app.use(async (req, res, next) => {
+  if (req.query.ref) {
+    try {
+      await captureReferralCode(req, req.query.ref);
+    } catch {
+      /* ignora ref inválido */
+    }
+  }
+  if (req.session.user && req.session.affiliateRef) {
+    try {
+      await tryBindSessionReferral(req, req.session.user.id);
+    } catch {
+      /* ignora */
+    }
+  }
+  next();
+});
+
+app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.formatCents = formatCents;
   res.locals.teamPt = translateTeamName;
@@ -85,6 +105,7 @@ app.use('/', gamesRoutes);
 app.use('/', cartRoutes);
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/', affiliateRoutes);
 app.use('/payment', paymentRoutes);
 app.use('/api/payment', paymentRoutes);
 

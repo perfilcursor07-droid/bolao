@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch } = require('../services/guestService');
+const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
 const { isBettingOpen } = require('../services/bettingRules');
@@ -201,6 +202,7 @@ router.post('/games/:id/participar', async (req, res) => {
     }
 
     setSessionUser(req, result);
+    await tryBindSessionReferral(req, result.id);
 
     res.redirect(`/games/${game.id}/placar?novo=1`);
   } catch (err) {

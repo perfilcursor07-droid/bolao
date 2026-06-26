@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { isBettingOpen } = require('./bettingRules');
+const { processAffiliateCommissionOnPayment } = require('./affiliateService');
 
 const SYSTEM_FEE_RATE = 0.10;
 const NO_WINNER_FEE_RATE = 0.20;
@@ -78,11 +79,23 @@ async function processGameResults(gameId) {
     );
 
     if (winners.length === 0) {
-      const [allBets] = await connection.query('SELECT id FROM bets WHERE game_id = ?', [gameId]);
-      const refundEach = calcNoWinnerRefundCents(game.entry_fee_cents);
+      const [allBets] = await connection.query(
+        `SELECT b.id, b.payment_id, p.amount_cents,
+          (SELECT COUNT(*) FROM bets b2 WHERE b2.payment_id = b.payment_id) AS bets_in_payment
+         FROM bets b
+         JOIN payments p ON p.id = b.payment_id
+         WHERE b.game_id = ?`,
+        [gameId]
+      );
 
+      let refundEach = 0;
       for (const bet of allBets) {
-        await connection.query('UPDATE bets SET prize_amount_cents = ? WHERE id = ?', [refundEach, bet.id]);
+        const stakeCents = Math.floor(
+          bet.amount_cents / Math.max(1, parseInt(bet.bets_in_payment, 10) || 1)
+        );
+        const refund = calcNoWinnerRefundCents(stakeCents);
+        refundEach = refund;
+        await connection.query('UPDATE bets SET prize_amount_cents = ? WHERE id = ?', [refund, bet.id]);
       }
 
       await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
@@ -145,6 +158,7 @@ async function confirmPayment(paymentId) {
     }
 
     await connection.query('UPDATE payments SET status = ?, paid_at = NOW() WHERE id = ?', ['paid', paymentId]);
+    payment.status = 'paid';
 
     await connection.query(
       'UPDATE games SET prize_pool_cents = prize_pool_cents + ? WHERE id = ?',
@@ -152,6 +166,7 @@ async function confirmPayment(paymentId) {
     );
 
     await insertBetsFromPayment(connection, payment, placares);
+    await processAffiliateCommissionOnPayment(connection, payment);
 
     await connection.commit();
     return { paid: true, gameId: payment.game_id };
@@ -246,6 +261,103 @@ async function getUserGameStatus(userId, gameId) {
   return { step: 'placar', bets, pendingPayments, pendingPayment: pendingPayments[0] || null, placares: [] };
 }
 
+function enrichPayoutRow(row) {
+  const betsInPayment = Math.max(1, parseInt(row.bets_in_payment, 10) || 1);
+  const stakeCents = Math.floor((row.payment_amount_cents || 0) / betsInPayment);
+  const isWinner = Boolean(row.is_winner);
+
+  if (isWinner) {
+    return {
+      ...row,
+      stakeCents,
+      feeCents: null,
+      feeLabel: `${Math.round(SYSTEM_FEE_RATE * 100)}% do pote`,
+      payoutLabel: `Prêmio (${Math.round((1 - SYSTEM_FEE_RATE) * 100)}% do pote)`,
+    };
+  }
+
+  const feeCents = Math.max(0, stakeCents - row.prize_amount_cents);
+  return {
+    ...row,
+    stakeCents,
+    feeCents,
+    feeLabel: `${Math.round(NO_WINNER_FEE_RATE * 100)}%`,
+    payoutLabel: `Reembolso (${Math.round((1 - NO_WINNER_FEE_RATE) * 100)}%)`,
+  };
+}
+
+async function getPaymentFinanceSummary() {
+  const [receivedRows] = await pool.query(
+    `SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payments WHERE status = 'paid'`
+  );
+  const totalReceivedCents = parseInt(receivedRows[0].total, 10) || 0;
+
+  const [activePoolRows] = await pool.query(
+    `SELECT COALESCE(SUM(prize_pool_cents), 0) AS pool
+     FROM games WHERE status IN ('open', 'closed')`
+  );
+  const activePoolCents = parseInt(activePoolRows[0].pool, 10) || 0;
+
+  const [finishedGames] = await pool.query(
+    `SELECT g.prize_pool_cents,
+      (SELECT COALESCE(SUM(b.prize_amount_cents), 0) FROM bets b WHERE b.game_id = g.id) AS distributed_cents,
+      (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id AND b.is_winner = 1) AS winner_count
+     FROM games g WHERE g.status = 'finished'`
+  );
+
+  let realizedFeeCents = 0;
+  let realizedDistributedCents = 0;
+  let feeFromWinnersCents = 0;
+  let feeFromNoWinnerCents = 0;
+
+  for (const g of finishedGames) {
+    const pool = g.prize_pool_cents || 0;
+    const distributed = parseInt(g.distributed_cents, 10) || 0;
+    const fee = Math.max(0, pool - distributed);
+    realizedDistributedCents += distributed;
+    realizedFeeCents += fee;
+    if (parseInt(g.winner_count, 10) > 0) {
+      feeFromWinnersCents += fee;
+    } else if (pool > 0) {
+      feeFromNoWinnerCents += fee;
+    }
+  }
+
+  const [pendingPayoutSum] = await pool.query(
+    `SELECT COALESCE(SUM(prize_amount_cents), 0) AS total
+     FROM bets WHERE prize_amount_cents > 0 AND prize_paid_at IS NULL`
+  );
+  const pendingPayoutsCents = parseInt(pendingPayoutSum[0].total, 10) || 0;
+
+  const [paidPayoutSum] = await pool.query(
+    `SELECT COALESCE(SUM(prize_amount_cents), 0) AS total
+     FROM bets WHERE prize_amount_cents > 0 AND prize_paid_at IS NOT NULL`
+  );
+  const paidPayoutsCents = parseInt(paidPayoutSum[0].total, 10) || 0;
+
+  return {
+    totalReceivedCents,
+    activePoolCents,
+    realizedFeeCents,
+    realizedDistributedCents,
+    feeFromWinnersCents,
+    feeFromNoWinnerCents,
+    pendingPayoutsCents,
+    paidPayoutsCents,
+  };
+}
+
+const PAYOUT_SELECT = `
+  SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
+    g.home_team, g.away_team, g.title as game_title, g.prize_pool_cents as game_pool_cents,
+    p.amount_cents as payment_amount_cents,
+    (SELECT COUNT(*) FROM bets b2 WHERE b2.payment_id = b.payment_id) AS bets_in_payment
+  FROM bets b
+  JOIN users u ON u.id = b.user_id
+  JOIN games g ON g.id = b.game_id
+  LEFT JOIN payments p ON p.id = b.payment_id
+`;
+
 module.exports = {
   SYSTEM_FEE_RATE,
   NO_WINNER_FEE_RATE,
@@ -257,4 +369,7 @@ module.exports = {
   createPaymentWithPlacar,
   getUserGameStatus,
   parsePredictions,
+  enrichPayoutRow,
+  getPaymentFinanceSummary,
+  PAYOUT_SELECT,
 };

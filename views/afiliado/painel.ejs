@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-affiliate">
+  <%- include('../partials/header') %>
+
+  <div class="container home-container affiliate-page">
+    <a href="/afiliado" class="back-link">← Programa de afiliados</a>
+
+    <div class="affiliate-panel-head">
+      <div>
+        <h1>Painel do afiliado</h1>
+        <p class="affiliate-panel-status">
+          Status:
+          <% if (affiliate.status === 'active') { %>
+            <span class="card-badge open">Ativo</span>
+          <% } else if (affiliate.status === 'pending') { %>
+            <span class="card-badge closed">Aguardando aprovação</span>
+          <% } else { %>
+            <span class="card-badge finished"><%= affiliate.status %></span>
+          <% } %>
+          · Código <strong><%= affiliate.code %></strong>
+        </p>
+      </div>
+      <div class="affiliate-balance-card">
+        <span class="affiliate-balance-label">Saldo disponível</span>
+        <span class="affiliate-balance-value"><%= formatCents(affiliate.balance_cents) %></span>
+        <small>Saque mín. <%= formatCents(minPayoutCents) %> · pago via PIX pelo admin</small>
+      </div>
+    </div>
+
+    <% if (affiliate.status === 'active') { %>
+      <div class="card affiliate-card">
+        <h2>Seu link de indicação</h2>
+        <div class="affiliate-link-row">
+          <input type="text" class="form-control" id="affiliate-link" readonly value="<%= affiliateLink %>">
+          <button type="button" class="btn btn-gold" id="btn-copy-affiliate">Copiar</button>
+        </div>
+        <p class="affiliate-note">Compartilhe este link. A indicação vale quando a pessoa participar e pagar a primeira aposta.</p>
+      </div>
+    <% } %>
+
+    <div class="affiliate-grid-twin">
+      <div class="card affiliate-card">
+        <h2>Resumo</h2>
+        <div class="affiliate-stats">
+          <div class="affiliate-stat">
+            <span class="affiliate-stat-value"><%= affiliate.total_paid_referrals %></span>
+            <span class="affiliate-stat-label">Indicações pagas</span>
+          </div>
+          <div class="affiliate-stat">
+            <span class="affiliate-stat-value"><%= referrals.length %></span>
+            <span class="affiliate-stat-label">Total indicados</span>
+          </div>
+          <div class="affiliate-stat">
+            <span class="affiliate-stat-value"><%= formatCents(affiliate.total_earned_cents) %></span>
+            <span class="affiliate-stat-label">Total ganho</span>
+          </div>
+        </div>
+        <% if (nextMilestone) { %>
+          <p class="affiliate-note">Próxima meta: <strong><%= nextMilestone.count %> indicações pagas</strong> → bônus <%= formatCents(nextMilestone.bonusCents) %></p>
+        <% } else { %>
+          <p class="affiliate-note">Você atingiu todas as metas disponíveis. 🎉</p>
+        <% } %>
+      </div>
+
+      <div class="card affiliate-card">
+        <h2>Comissões</h2>
+        <ul class="affiliate-commission-list">
+          <li><%= formatCents(firstBetCommissionCents) %> por 1ª aposta PIX paga</li>
+          <% milestones.forEach(function(m) { %>
+            <li>Meta <%= m.count %> indicações: +<%= formatCents(m.bonusCents) %></li>
+          <% }); %>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card affiliate-card">
+      <h2>Indicados</h2>
+      <% if (referrals.length === 0) { %>
+        <p class="affiliate-empty">Nenhuma indicação ainda. Compartilhe seu link!</p>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Nome</th><th>Cadastro</th><th>1ª aposta paga</th><th>Apostas pagas</th></tr>
+            </thead>
+            <tbody>
+              <% referrals.forEach(function(r) { %>
+                <tr>
+                  <td><%= r.referred_name %></td>
+                  <td style="font-size:0.78rem;color:var(--text-muted);"><%= new Date(r.created_at).toLocaleDateString('pt-BR') %></td>
+                  <td>
+                    <% if (r.first_paid_at) { %>
+                      <span class="card-badge open">✓ <%= new Date(r.first_paid_at).toLocaleDateString('pt-BR') %></span>
+                    <% } else { %>
+                      <span class="card-badge closed">Aguardando PIX</span>
+                    <% } %>
+                  </td>
+                  <td><%= r.paid_count %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (commissions.length > 0) { %>
+      <div class="card affiliate-card">
+        <h2>Histórico de ganhos</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <% commissions.forEach(function(c) { %>
+                <tr>
+                  <td style="font-size:0.78rem;"><%= new Date(c.created_at).toLocaleString('pt-BR') %></td>
+                  <td><%= c.type === 'milestone' ? 'Meta ' + c.milestone_count : '1ª aposta' %></td>
+                  <td><strong><%= formatCents(c.amount_cents) %></strong></td>
+                  <td>
+                    <% if (c.status === 'paid') { %>
+                      <span class="card-badge finished">Pago</span>
+                    <% } else { %>
+                      <span class="card-badge open">Disponível</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script>
+    document.getElementById('btn-copy-affiliate')?.addEventListener('click', function () {
+      const input = document.getElementById('affiliate-link');
+      if (!input) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        this.textContent = '✓ Copiado';
+        setTimeout(() => { this.textContent = 'Copiar'; }, 2500);
+      });
+    });
+  </script>
+</body>
+</html>

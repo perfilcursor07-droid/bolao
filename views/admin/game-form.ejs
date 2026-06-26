@@ -60,7 +60,13 @@
             <label for="entry_fee">Valor da Aposta (R$)</label>
             <input type="number" id="entry_fee" name="entry_fee" class="form-control" required
               step="0.01" min="1"
-              value="<%= game ? (game.entry_fee_cents / 100).toFixed(2) : (typeof defaultEntryFee !== 'undefined' ? defaultEntryFee : '10.00') %>">
+              value="<%= game ? (game.entry_fee_cents / 100).toFixed(2) : (typeof defaultEntryFee !== 'undefined' ? defaultEntryFee : '10.00') %>"
+              <%= game && typeof betCount !== 'undefined' && betCount > 0 ? 'readonly' : '' %>>
+            <% if (game && typeof betCount !== 'undefined' && betCount > 0) { %>
+              <small style="color:var(--text-muted);font-size:0.75rem;">
+                Valor bloqueado — já existem <%= betCount %> aposta<%= betCount !== 1 ? 's' : '' %> neste jogo.
+              </small>
+            <% } %>
           </div>
         </div>
 

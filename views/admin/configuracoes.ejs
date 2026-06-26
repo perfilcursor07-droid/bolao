@@ -19,7 +19,7 @@
       <div class="admin-settings-head">
         <div>
           <h2>Valor do bolão</h2>
-          <p>Valor padrão por placar em novos jogos, na Copa e nos bolões abertos.</p>
+          <p>Valor padrão por placar em <strong>novos jogos</strong> e bolões abertos sem apostas.</p>
         </div>
         <div class="admin-settings-current">
           <span>Atual</span>
@@ -55,11 +55,11 @@
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
         <label class="admin-settings-check">
-          <input type="checkbox" name="apply_open" value="1" checked>
-          <span>Atualizar também todos os <strong>jogos abertos</strong> com este valor</span>
+          <input type="checkbox" name="apply_open" value="1">
+          <span>Atualizar jogos abertos <strong>sem apostas</strong> com este valor</span>
         </label>
         <small class="admin-settings-hint">
-          Jogos encerrados ou finalizados não são alterados. Pagamentos pendentes já gerados mantêm o valor antigo.
+          Jogos que já têm apostas ou PIX (pendente ou pago) <strong>não são alterados</strong> — o valor pago fica gravado no pagamento de cada apostador.
         </small>
       </form>
     </div>

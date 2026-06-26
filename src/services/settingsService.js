@@ -46,10 +46,30 @@ async function setDefaultEntryFeeFromReais(reais, options = {}) {
 
 async function applyEntryFeeToOpenGames(cents) {
   const [result] = await pool.query(
-    `UPDATE games SET entry_fee_cents = ? WHERE status = 'open'`,
+    `UPDATE games g SET g.entry_fee_cents = ?
+     WHERE g.status = 'open'
+       AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.game_id = g.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM payments p
+         WHERE p.game_id = g.id AND p.status IN ('pending', 'paid')
+       )`,
     [cents]
   );
   return result.affectedRows || 0;
+}
+
+/** Jogos abertos que ainda podem ter o valor por placar alterado (sem apostas). */
+async function countOpenGamesEligibleForFeeUpdate() {
+  const [rows] = await pool.query(
+    `SELECT COUNT(*) AS c FROM games g
+     WHERE g.status = 'open'
+       AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.game_id = g.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM payments p
+         WHERE p.game_id = g.id AND p.status IN ('pending', 'paid')
+       )`
+  );
+  return rows[0].c;
 }
 
 module.exports = {
@@ -58,5 +78,6 @@ module.exports = {
   getDefaultEntryFeeReais,
   setDefaultEntryFeeFromReais,
   applyEntryFeeToOpenGames,
+  countOpenGamesEligibleForFeeUpdate,
   centsToReaisInput,
 };

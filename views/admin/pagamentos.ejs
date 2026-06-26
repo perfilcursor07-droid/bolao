@@ -11,20 +11,38 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <p class="admin-page-intro">Gerencie pagamentos recebidos e prêmios a enviar.</p>
+    <p class="admin-page-intro">
+      Taxas conforme as <a href="/regras" target="_blank">regras</a>:
+      <strong><%= prizeNetPercent %>%</strong> aos ganhadores (taxa <%= systemFeePercent %>%)
+      · sem ganhador, reembolso de <strong><%= noWinnerRefundPercent %>%</strong> (taxa <%= noWinnerFeePercent %>%).
+    </p>
 
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem;">
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Total recebido (PIX)</div>
-        <div style="font-size:1.15rem; font-weight:800; color:var(--accent);"><%= formatCents(totalReceivedCents) %></div>
+    <div class="admin-pay-summary">
+      <div class="admin-pay-card">
+        <span class="admin-pay-card-label">PIX recebido</span>
+        <strong class="admin-pay-card-value admin-pay-card-value--accent"><%= formatCents(finance.totalReceivedCents) %></strong>
       </div>
-      <div style="background:var(--bg-card); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:0.85rem 1rem;">
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Taxa retida (<%= systemFeePercent %>%)</div>
-        <div style="font-size:1.15rem; font-weight:800; color:#10b981;"><%= formatCents(systemFeeRetainedCents) %></div>
+      <div class="admin-pay-card">
+        <span class="admin-pay-card-label">Em bolões ativos</span>
+        <strong class="admin-pay-card-value"><%= formatCents(finance.activePoolCents) %></strong>
+        <small>Aguardando resultado — taxa ainda não aplicada</small>
       </div>
-      <div style="background:var(--bg-card); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:0.85rem 1rem;">
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Prêmios a enviar</div>
-        <div style="font-size:1.15rem; font-weight:800; color:var(--gold);"><%= formatCents(pendingPayouts.reduce((s, p) => s + p.prize_amount_cents, 0)) %></div>
+      <div class="admin-pay-card admin-pay-card--fee">
+        <span class="admin-pay-card-label">Taxa retida (realizada)</span>
+        <strong class="admin-pay-card-value admin-pay-card-value--fee"><%= formatCents(finance.realizedFeeCents) %></strong>
+        <small>
+          <%= systemFeePercent %>% com ganhador: <%= formatCents(finance.feeFromWinnersCents) %>
+          · <%= noWinnerFeePercent %>% sem ganhador: <%= formatCents(finance.feeFromNoWinnerCents) %>
+        </small>
+      </div>
+      <div class="admin-pay-card admin-pay-card--gold">
+        <span class="admin-pay-card-label">A enviar (líquido)</span>
+        <strong class="admin-pay-card-value admin-pay-card-value--gold"><%= formatCents(finance.pendingPayoutsCents) %></strong>
+        <small>Já com taxa descontada</small>
+      </div>
+      <div class="admin-pay-card">
+        <span class="admin-pay-card-label">Já enviado aos jogadores</span>
+        <strong class="admin-pay-card-value"><%= formatCents(finance.paidPayoutsCents) %></strong>
       </div>
     </div>
 
@@ -111,22 +129,40 @@
     <!-- TAB 3: Prêmios a enviar -->
     <div class="tab-content" id="tab-payouts-pending" style="display:none;">
       <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">🏆 Prêmios a enviar via PIX</h3>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Ganhadores e reembolsos (sem ganhador) aguardando PIX</p>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Valores líquidos — taxa já descontada conforme regras (<%= systemFeePercent %>% ganhador · <%= noWinnerFeePercent %>% sem ganhador)</p>
 
       <% if (pendingPayouts.length === 0) { %>
         <div class="alert alert-success" style="text-align:center;">✓ Nenhum prêmio pendente de envio!</div>
       <% } else { %>
         <div class="table-container">
           <table>
-            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Telefone</th><th>Jogo</th><th>Tipo</th><th>Valor</th><th>Ação</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>Chave PIX</th>
+                <th>Jogo</th>
+                <th>Tipo</th>
+                <th>Apostado</th>
+                <th>Taxa</th>
+                <th>Líquido PIX</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
             <tbody>
               <% pendingPayouts.forEach(p => { %>
                 <tr>
-                  <td><strong><%= p.user_name %></strong></td>
-                  <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis;" title="<%= p.user_pix || '' %>"><%= p.user_pix || '—' %></td>
-                  <td style="font-size:0.8rem;"><%= p.user_phone || '—' %></td>
+                  <td><strong><%= p.user_name %></strong><br><small style="color:var(--text-muted);"><%= p.user_phone || '' %></small></td>
+                  <td style="font-size:0.78rem; max-width:130px; word-break:break-all;" title="<%= p.user_pix || '' %>"><%= p.user_pix || '—' %></td>
                   <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
-                  <td style="font-size:0.8rem;"><%= p.is_winner ? '🏆 Prêmio' : '↩ Reembolso' %></td>
+                  <td style="font-size:0.78rem;"><%= p.payoutLabel %></td>
+                  <td><%= p.stakeCents > 0 ? formatCents(p.stakeCents) : '—' %></td>
+                  <td style="font-size:0.8rem; color:var(--text-muted);">
+                    <% if (p.is_winner) { %>
+                      <%= p.feeLabel %>
+                    <% } else { %>
+                      <%= formatCents(p.feeCents) %> <small>(<%= p.feeLabel %>)</small>
+                    <% } %>
+                  </td>
                   <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
                   <td>
                     <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
@@ -141,7 +177,7 @@
           </table>
         </div>
         <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
-          Total a enviar: <strong><%= formatCents(pendingPayouts.reduce((s, p) => s + p.prize_amount_cents, 0)) %></strong>
+          Total líquido a enviar: <strong><%= formatCents(finance.pendingPayoutsCents) %></strong>
         </p>
       <% } %>
     </div>
@@ -157,14 +193,33 @@
       <% } else { %>
         <div class="table-container">
           <table>
-            <thead><tr><th>Jogador</th><th>Chave PIX</th><th>Jogo</th><th>Tipo</th><th>Valor</th><th>Pago em</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>Chave PIX</th>
+                <th>Jogo</th>
+                <th>Tipo</th>
+                <th>Apostado</th>
+                <th>Taxa</th>
+                <th>Líquido PIX</th>
+                <th>Pago em</th>
+              </tr>
+            </thead>
             <tbody>
               <% paidPayouts.forEach(p => { %>
                 <tr>
                   <td><%= p.user_name %></td>
-                  <td style="font-size:0.8rem;"><%= p.user_pix || '—' %></td>
+                  <td style="font-size:0.78rem;"><%= p.user_pix || '—' %></td>
                   <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
-                  <td style="font-size:0.8rem;"><%= p.is_winner ? '🏆 Prêmio' : '↩ Reembolso' %></td>
+                  <td style="font-size:0.78rem;"><%= p.payoutLabel %></td>
+                  <td><%= p.stakeCents > 0 ? formatCents(p.stakeCents) : '—' %></td>
+                  <td style="font-size:0.8rem; color:var(--text-muted);">
+                    <% if (p.is_winner) { %>
+                      <%= p.feeLabel %>
+                    <% } else { %>
+                      <%= formatCents(p.feeCents) %> <small>(<%= p.feeLabel %>)</small>
+                    <% } %>
+                  </td>
                   <td><%= formatCents(p.prize_amount_cents) %></td>
                   <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
                 </tr>
@@ -190,6 +245,53 @@ function showTab(tabId, btn) {
 .tab-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.8rem; }
 .tab-btn.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 600; }
 .tab-btn:hover:not(.active) { border-color: var(--text-muted); }
+
+.admin-pay-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1.35rem;
+}
+
+.admin-pay-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-pay-card--fee {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.admin-pay-card--gold {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.admin-pay-card-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.admin-pay-card-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.admin-pay-card-value--accent { color: var(--accent); }
+.admin-pay-card-value--fee { color: #10b981; }
+.admin-pay-card-value--gold { color: var(--gold); }
+
+.admin-pay-card small {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
 </style>
 </body>
 </html>

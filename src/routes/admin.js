@@ -13,6 +13,18 @@ const {
   centsToReaisInput,
 } = require('../services/settingsService');
 
+const {
+  getPaymentFinanceSummary,
+  enrichPayoutRow,
+  PAYOUT_SELECT,
+} = require('../services/prizeService');
+
+const {
+  listAffiliatesForAdmin,
+  setAffiliateStatus,
+  markAffiliatePayoutPaid,
+} = require('../services/affiliateService');
+
 const router = express.Router();
 
 router.use(async (req, res, next) => {
@@ -275,26 +287,21 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
        ORDER BY p.paid_at DESC`
     );
 
-    // 3. Prêmios a enviar (ganhadores)
-    const [pendingPayouts] = await pool.query(
-      `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
-        g.home_team, g.away_team, g.title as game_title
-       FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
+    const [pendingPayoutRows] = await pool.query(
+      `${PAYOUT_SELECT}
        WHERE b.prize_amount_cents > 0 AND b.prize_paid_at IS NULL
        ORDER BY b.is_winner DESC, b.created_at DESC`
     );
 
-    // 4. Prêmios já pagos
-    const [paidPayouts] = await pool.query(
-      `SELECT b.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
-        g.home_team, g.away_team, g.title as game_title
-       FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
+    const [paidPayoutRows] = await pool.query(
+      `${PAYOUT_SELECT}
        WHERE b.prize_amount_cents > 0 AND b.prize_paid_at IS NOT NULL
        ORDER BY b.prize_paid_at DESC`
     );
 
-    const totalReceivedCents = confirmedPayments.reduce((s, p) => s + p.amount_cents, 0);
-    const systemFeeRetainedCents = Math.floor(totalReceivedCents * (res.locals.systemFeePercent || 10) / 100);
+    const pendingPayouts = pendingPayoutRows.map(enrichPayoutRow);
+    const paidPayouts = paidPayoutRows.map(enrichPayoutRow);
+    const finance = await getPaymentFinanceSummary();
 
     res.render('admin/pagamentos', {
       title: 'Pagamentos',
@@ -302,8 +309,7 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
       confirmedPayments,
       pendingPayouts,
       paidPayouts,
-      totalReceivedCents,
-      systemFeeRetainedCents,
+      finance,
       user: req.session.user,
       activePage: 'pagamentos',
     });
@@ -516,9 +522,11 @@ router.get('/games/:id/edit', requireAdmin, async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0) return res.redirect('/admin');
     const defaultEntryFee = await getDefaultEntryFeeReais();
+    const [betRows] = await pool.query('SELECT COUNT(*) AS c FROM bets WHERE game_id = ?', [req.params.id]);
     res.render('admin/game-form', {
       title: 'Editar Jogo',
       game: games[0],
+      betCount: betRows[0].c,
       error: null,
       defaultEntryFee,
       user: req.session.user,
@@ -530,11 +538,24 @@ router.get('/games/:id/edit', requireAdmin, async (req, res) => {
 
 router.post('/games/:id', requireAdmin, async (req, res) => {
   const { title, description, home_team, away_team, game_date, entry_fee, api_match_id, status } = req.body;
-  const entryFeeCents = Math.round(parseFloat(entry_fee || 0) * 100);
+  let entryFeeCents = Math.round(parseFloat(entry_fee || 0) * 100);
   const home = translateTeamName(home_team);
   const away = translateTeamName(away_team);
 
   try {
+    const [betRows] = await pool.query(
+      'SELECT COUNT(*) AS c FROM bets WHERE game_id = ?',
+      [req.params.id]
+    );
+    const hasBets = betRows[0].c > 0;
+
+    if (hasBets) {
+      const [current] = await pool.query('SELECT entry_fee_cents FROM games WHERE id = ?', [req.params.id]);
+      if (current.length > 0) {
+        entryFeeCents = current[0].entry_fee_cents;
+      }
+    }
+
     await pool.query(
       `UPDATE games SET title=?, description=?, home_team=?, away_team=?, game_date=?,
        entry_fee_cents=?, api_match_id=?, status=? WHERE id=?`,
@@ -582,6 +603,46 @@ router.get('/games/:id', requireAdmin, async (req, res) => {
     });
   } catch (err) {
     res.redirect('/admin');
+  }
+});
+
+// Afiliados
+router.get('/afiliados', requireAdmin, async (req, res) => {
+  try {
+    const affiliates = await listAffiliatesForAdmin();
+    res.render('admin/afiliados', {
+      title: 'Afiliados',
+      affiliates,
+      user: req.session.user,
+      activePage: 'afiliados',
+      paid: req.query.paid ? parseInt(req.query.paid, 10) : null,
+      updated: req.query.updated || null,
+      error: req.query.error || null,
+    });
+  } catch (err) {
+    res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/afiliados/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const status = req.body.status;
+    await setAffiliateStatus(req.params.id, status);
+    res.redirect('/admin/afiliados?updated=' + encodeURIComponent(status));
+  } catch (err) {
+    res.redirect('/admin/afiliados?error=' + encodeURIComponent(err.message));
+  }
+});
+
+router.post('/afiliados/:id/pagar', requireAdmin, async (req, res) => {
+  try {
+    const result = await markAffiliatePayoutPaid(req.params.id);
+    if (result.error) {
+      return res.redirect('/admin/afiliados?error=' + encodeURIComponent(result.error));
+    }
+    res.redirect(`/admin/afiliados?paid=${result.paid}`);
+  } catch (err) {
+    res.redirect('/admin/afiliados?error=' + encodeURIComponent(err.message));
   }
 });
 
