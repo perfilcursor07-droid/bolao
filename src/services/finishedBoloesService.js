@@ -57,4 +57,34 @@ async function loadFinishedBoloes({ includeAllBets = false } = {}) {
   });
 }
 
-module.exports = { loadFinishedBoloes };
+/** Apostas + breakdown para jogos com bolão fechado (ainda sem resultado). */
+async function loadBetsForGames(games) {
+  if (!games.length) return {};
+
+  const gameIds = games.map((g) => g.id);
+  const [rows] = await pool.query(
+    `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction, u.name
+     FROM bets b JOIN users u ON u.id = b.user_id
+     WHERE b.game_id IN (?)
+     ORDER BY b.game_id, b.created_at ASC`,
+    [gameIds]
+  );
+
+  const betsByGame = {};
+  for (const row of rows) {
+    if (!betsByGame[row.game_id]) betsByGame[row.game_id] = [];
+    betsByGame[row.game_id].push(row);
+  }
+
+  const result = {};
+  for (const game of games) {
+    const bets = betsByGame[game.id] || [];
+    result[game.id] = {
+      bets,
+      breakdown: calcPrizeBreakdown(game.prize_pool_cents, 0),
+    };
+  }
+  return result;
+}
+
+module.exports = { loadFinishedBoloes, loadBetsForGames };

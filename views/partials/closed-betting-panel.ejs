@@ -1,0 +1,30 @@
+<% if (typeof breakdown !== 'undefined' && breakdown) { %>
+  <div class="prize-breakdown<%= typeof compact !== 'undefined' && compact ? ' prize-breakdown--compact' : '' %>">
+    <div class="prize-breakdown-row">
+      <span>Total arrecadado</span>
+      <strong><%= formatCents(breakdown.totalPool) %></strong>
+    </div>
+    <div class="prize-breakdown-row prize-breakdown-fee">
+      <span>Taxa da plataforma (<%= breakdown.feePercent %>%)</span>
+      <strong>− <%= formatCents(breakdown.feeCents) %></strong>
+    </div>
+    <div class="prize-breakdown-row prize-breakdown-net">
+      <span>Prêmio líquido (<%= breakdown.netPercent %>% aos ganhadores)</span>
+      <strong><%= formatCents(breakdown.netPool) %></strong>
+    </div>
+  </div>
+<% } %>
+
+<% if (typeof bets !== 'undefined' && bets.length > 0) { %>
+  <h4 class="closed-betting-bets-title"><%= typeof betsTitle !== 'undefined' ? betsTitle : '📋 Apostas realizadas' %> (<%= bets.length %>)</h4>
+  <div class="closed-bets-list<%= typeof compact !== 'undefined' && compact ? ' closed-bets-list--compact' : '' %>">
+    <% bets.forEach(function(bet) { %>
+      <div class="closed-bet-row">
+        <span class="closed-bet-name"><%= bet.name %></span>
+        <span class="closed-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+      </div>
+    <% }); %>
+  </div>
+<% } else if (typeof showEmpty !== 'undefined' && showEmpty) { %>
+  <p class="closed-betting-empty">Nenhuma aposta neste bolão ainda.</p>
+<% } %>

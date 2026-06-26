@@ -1,4 +1,9 @@
-<article class="game-row">
+<% var snapshot = typeof closedSnapshot !== 'undefined' ? closedSnapshot : null; %>
+<% var bettingClosed = typeof isBettingOpen !== 'undefined' && !isBettingOpen(game); %>
+<% var hasBets = snapshot && snapshot.bets && snapshot.bets.length > 0; %>
+<% var showClosedPanel = bettingClosed && (hasBets || (game.total_bets && Number(game.total_bets) > 0)); %>
+
+<article class="game-row<%= showClosedPanel ? ' game-row--closed-info' : '' %>">
   <div class="game-row-main">
     <div class="game-row-teams">
       <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
@@ -7,6 +12,9 @@
       <time><%= gameDateBR(game.game_date) %></time>
       <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
       <span><%= formatCents(game.entry_fee_cents) %></span>
+      <% if (game.total_bets && Number(game.total_bets) > 0) { %>
+        <span class="game-row-bets-count"><%= game.total_bets %> aposta<%= Number(game.total_bets) !== 1 ? 's' : '' %></span>
+      <% } %>
     </div>
   </div>
   <div class="game-row-action">
@@ -17,11 +25,23 @@
         <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-sm">Participar</a>
       <% } %>
     <% } else { %>
-      <% if (typeof hasGameStarted !== 'undefined' && hasGameStarted(game)) { %>
-        <span class="betting-closed-tag">Em andamento</span>
-      <% } else { %>
-        <span class="betting-closed-tag">Apostas encerradas</span>
-      <% } %>
+      <a href="/games/<%= game.id %>" class="betting-closed-tag betting-closed-tag--link">
+        <% if (typeof hasGameStarted !== 'undefined' && hasGameStarted(game)) { %>
+          Em andamento →
+        <% } else { %>
+          Apostas encerradas →
+        <% } %>
+      </a>
     <% } %>
   </div>
+
+  <% if (showClosedPanel && snapshot) { %>
+    <div class="game-row-closed-panel">
+      <%- include('closed-betting-panel', {
+        breakdown: snapshot.breakdown,
+        bets: snapshot.bets,
+        compact: true,
+      }) %>
+    </div>
+  <% } %>
 </article>

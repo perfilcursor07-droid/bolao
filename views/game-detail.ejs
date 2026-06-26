@@ -127,6 +127,18 @@
             <% } %>
           </p>
         </div>
+
+        <% if (typeof closedBetting !== 'undefined' && closedBetting) { %>
+          <div class="closed-betting-section">
+            <h3 class="section-title">💰 Prêmio acumulado</h3>
+            <%- include('partials/closed-betting-panel', {
+              breakdown: closedBetting.breakdown,
+              bets: closedBetting.bets,
+              showEmpty: true,
+            }) %>
+          </div>
+        <% } %>
+
         <% if (user && userStatus.bets && userStatus.bets.length > 0) { %>
           <h3 class="section-title" style="margin-top: 1.25rem;">✅ Suas apostas neste jogo</h3>
           <div class="my-bets-inline">

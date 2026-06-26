@@ -3,8 +3,9 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
 const { findOrCreateParticipant, setSessionUser, cleanPhone } = require('../services/guestService');
-const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, isBettingOpen } = require('../services/gameStatusService');
-const { loadFinishedBoloes } = require('../services/finishedBoloesService');
+const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches } = require('../services/gameStatusService');
+const { isBettingOpen } = require('../services/bettingRules');
 
 const router = express.Router();
 
@@ -61,6 +62,9 @@ router.get('/', async (req, res) => {
     const finishedSummaries = allFinishedSummaries.slice(0, 5);
     const hasMoreFinished = allFinishedSummaries.length > 5;
 
+    const closedBettingGames = [...featuredGames, ...upcomingGames, ...otherOpenGames].filter((g) => !isBettingOpen(g));
+    const closedBettingMap = await loadBetsForGames(closedBettingGames);
+
     let myBets = [];
     let gameStatusMap = {};
 
@@ -90,6 +94,7 @@ router.get('/', async (req, res) => {
       totalFinishedCount: allFinishedSummaries.length,
       myBets,
       gameStatusMap,
+      closedBettingMap,
       user: req.session.user || null,
     });
   } catch (err) {
@@ -275,12 +280,19 @@ router.get('/games/:id', async (req, res) => {
 
     const prizeBreakdown = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
 
+    let closedBetting = null;
+    if (!isBettingOpen(game) && game.status !== 'finished') {
+      const map = await loadBetsForGames([game]);
+      closedBetting = map[game.id] || { bets: [], breakdown: prizeBreakdown };
+    }
+
     res.render('game-detail', {
       title: game.title,
       game,
       userStatus,
       winners,
       prizeBreakdown,
+      closedBetting,
       user: req.session.user || null,
       success: req.query.success === '1',
       edited: req.query.edited === '1',
