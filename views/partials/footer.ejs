@@ -1,3 +1,30 @@
-<footer class="footer">
-  Bolão Online &copy; <%= new Date().getFullYear() %> — Aposte, pague via PIX e concorra ao prêmio!
+<footer class="footer site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-top">
+      <a href="/" class="site-footer-logo" aria-label="Bolão Online — início">
+        <%- include('logo') %>
+        <span>Bolão <strong>Online</strong></span>
+      </a>
+
+      <nav class="site-footer-nav" aria-label="Links do rodapé">
+        <a href="/regras">Regras</a>
+        <a href="/consultar">Consultar</a>
+      </nav>
+    </div>
+
+    <div class="site-footer-badges" aria-label="Selos de confiança">
+      <span class="site-footer-badge site-footer-badge--pix">
+        <span class="site-footer-pix-mark">PIX</span>
+        Pagamento instantâneo
+      </span>
+      <span class="site-footer-badge">Dados protegidos</span>
+      <span class="site-footer-badge">Prêmio via PIX</span>
+      <span class="site-footer-badge">Regras transparentes</span>
+    </div>
+
+    <div class="site-footer-bottom">
+      <p class="site-footer-copy">&copy; <%= new Date().getFullYear() %> Bolão Online</p>
+      <p class="site-footer-credit">Desenvolvido por <strong>Erick Vinicius</strong></p>
+    </div>
+  </div>
 </footer>
