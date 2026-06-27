@@ -65,15 +65,7 @@
       <% } %>
 
       <% if (success) { %>
-        <div class="alert alert-success">
-          🎉 Aposta confirmada! Pode fazer outra se quiser.
-          <% if (userStatus.bets && userStatus.bets.length > 0 && isBettingOpen(game)) { %>
-            <a href="/games/<%= game.id %>/bets/<%= userStatus.bets[0].id %>/edit" class="alert-action-link">✏️ Editar palpite</a>
-          <% } %>
-        </div>
-      <% } %>
-      <% if (typeof edited !== 'undefined' && edited) { %>
-        <div class="alert alert-success">✅ Palpite atualizado com sucesso!</div>
+        <div class="alert alert-success">🎉 Aposta confirmada! Pode fazer outra se quiser.</div>
       <% } %>
       <% if (error) { %>
         <div class="alert alert-error"><%= error %></div>
@@ -128,9 +120,6 @@
                     <span class="status-tag waiting" style="font-size:0.7rem;">Aguardando</span>
                   <% } %>
                 </div>
-                <% if (isBettingOpen(game)) { %>
-                  <a href="/games/<%= game.id %>/bets/<%= bet.id %>/edit" class="btn btn-outline btn-sm bet-inline-edit">✏️ Editar</a>
-                <% } %>
               </div>
             <% }); %>
           </div>
@@ -140,9 +129,9 @@
           <strong>Apostas encerradas</strong>
           <p style="margin:0.35rem 0 0; font-size:0.85rem;">
             <% if (hasGameStarted(game)) { %>
-              O jogo já começou. Não é mais possível apostar nem editar palpites.
+              O jogo já começou. Não é mais possível apostar.
             <% } else { %>
-              O bolão fecha <%= bettingCloseMinutes %> minutos antes do jogo. Não é mais possível apostar nem editar palpites.
+              O bolão fecha <%= bettingCloseMinutes %> minutos antes do jogo. Não é mais possível apostar.
             <% } %>
           </p>
         </div>

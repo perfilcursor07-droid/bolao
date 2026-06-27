@@ -33,7 +33,6 @@
         <% userStatus.bets.forEach(function(bet) { %>
           <div class="placar-existing-row">
             <span><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong> <span class="status-tag waiting">confirmado</span></span>
-            <a href="/games/<%= game.id %>/bets/<%= bet.id %>/edit" class="btn btn-outline btn-sm">✏️ Editar</a>
           </div>
         <% }); %>
         <p class="placar-existing-hint">Para apostar de novo, adicione outro palpite abaixo e pague.</p>
