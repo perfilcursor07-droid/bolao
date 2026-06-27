@@ -225,9 +225,58 @@ router.get('/apostas', requireAdmin, async (req, res) => {
       stats,
       user: req.session.user,
       activePage: 'apostas',
+      updated: req.query.updated === '1',
+      error: req.query.error || null,
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/apostas/:betId/palpite', requireAdmin, async (req, res) => {
+  const betId = parseInt(req.params.betId, 10);
+  const home = parseInt(req.body.home_score, 10);
+  const away = parseInt(req.body.away_score, 10);
+  const returnGame = req.body.return_game ? parseInt(req.body.return_game, 10) : null;
+
+  function redirectApostas(extra = {}) {
+    const q = new URLSearchParams();
+    if (returnGame) q.set('game', String(returnGame));
+    if (extra.error) q.set('error', extra.error);
+    if (extra.updated) q.set('updated', '1');
+    const qs = q.toString();
+    return res.redirect(`/admin/apostas${qs ? `?${qs}` : ''}`);
+  }
+
+  if (!Number.isFinite(betId) || !Number.isFinite(home) || !Number.isFinite(away)) {
+    return redirectApostas({ error: 'Placar inválido' });
+  }
+  if (home < 0 || away < 0 || home > 20 || away > 20) {
+    return redirectApostas({ error: 'Use placares entre 0 e 20' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT b.id, g.status as game_status, g.title
+       FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ?`,
+      [betId]
+    );
+    if (rows.length === 0) {
+      return redirectApostas({ error: 'Aposta não encontrada' });
+    }
+    if (rows[0].game_status === 'finished') {
+      return redirectApostas({ error: 'Jogo já finalizado — não é possível editar palpite' });
+    }
+
+    await pool.query(
+      `UPDATE bets SET home_score_prediction = ?, away_score_prediction = ?,
+       is_winner = FALSE, prize_amount_cents = 0 WHERE id = ?`,
+      [home, away, betId]
+    );
+
+    return redirectApostas({ updated: true });
+  } catch (err) {
+    return redirectApostas({ error: 'Erro ao salvar palpite' });
   }
 });
 

@@ -6835,6 +6835,42 @@ body.admin-nav-open {
   color: var(--text-muted);
 }
 
+.admin-palpite-actions {
+  min-width: 140px;
+  vertical-align: middle;
+}
+
+.admin-palpite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 160px;
+}
+
+.admin-palpite-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-palpite-input {
+  width: 3.25rem !important;
+  padding: 0.35rem 0.4rem !important;
+  text-align: center;
+  font-size: 0.85rem !important;
+}
+
+.admin-palpite-x {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.admin-palpite-form-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .admin-tag-guest {
   display: inline-block;
   margin-left: 0.35rem;
