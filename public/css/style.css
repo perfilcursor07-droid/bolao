@@ -7395,6 +7395,13 @@ tr.row-winner {
   margin: 0 0 0.75rem;
 }
 
+.wa-connecting-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: #fbbf24;
+  text-align: center;
+}
+
 .wa-actions {
   margin-top: 1rem;
   display: flex;

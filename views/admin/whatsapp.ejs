@@ -59,15 +59,15 @@
         </div>
 
         <div class="wa-actions">
-          <% if (status.status !== 'connected') { %>
-            <form method="POST" action="/admin/whatsapp/connect" id="wa-connect-form">
-              <button type="submit" class="btn btn-gold" id="wa-connect-btn">Conectar WhatsApp</button>
-            </form>
-          <% } else { %>
-            <form method="POST" action="/admin/whatsapp/disconnect" onsubmit="return confirm('Desconectar WhatsApp? Será necessário escanear o QR novamente.');">
-              <button type="submit" class="btn btn-outline">Desconectar</button>
-            </form>
-          <% } %>
+          <form method="POST" action="/admin/whatsapp/connect" id="wa-connect-form" style="<%= (status.status === 'connected' || status.status === 'connecting' || status.status === 'qr') ? 'display:none;' : '' %>">
+            <button type="submit" class="btn btn-gold" id="wa-connect-btn">Conectar WhatsApp</button>
+          </form>
+          <form method="POST" action="/admin/whatsapp/disconnect" id="wa-disconnect-form" style="<%= status.status === 'connected' ? '' : 'display:none;' %>" onsubmit="return confirm('Desconectar WhatsApp? Será necessário escanear o QR novamente.');">
+            <button type="submit" class="btn btn-outline">Desconectar</button>
+          </form>
+          <p id="wa-connecting-hint" class="wa-connecting-hint" style="<%= (status.status === 'connecting' || (status.hasSession && status.status !== 'connected' && status.status !== 'qr')) ? '' : 'display:none;' %>">
+            Aguarde… reconectando ao WhatsApp (normal após escanear o QR).
+          </p>
         </div>
       </div>
 
@@ -152,6 +152,22 @@
         disconnected: 'Desconectado',
       };
 
+      function renderActions(data) {
+        const connectForm = document.getElementById('wa-connect-form');
+        const disconnectForm = document.getElementById('wa-disconnect-form');
+        if (!connectForm || !disconnectForm) return;
+        if (data.status === 'connected') {
+          connectForm.style.display = 'none';
+          disconnectForm.style.display = '';
+        } else if (data.status === 'connecting' || data.status === 'qr') {
+          connectForm.style.display = 'none';
+          disconnectForm.style.display = 'none';
+        } else {
+          connectForm.style.display = '';
+          disconnectForm.style.display = 'none';
+        }
+      }
+
       async function pollStatus() {
         try {
           const res = await fetch('/admin/whatsapp/status');
@@ -170,6 +186,7 @@
             badge.textContent = data.status;
           }
           if (text) text.textContent = statusLabels[data.status] || data.status;
+          renderActions(data);
 
           if (data.qrDataUrl && qrWrap && qrImg) {
             qrWrap.style.display = '';
@@ -190,6 +207,11 @@
             } else {
               errEl.style.display = 'none';
             }
+          }
+
+          const hint = document.getElementById('wa-connecting-hint');
+          if (hint) {
+            hint.style.display = (data.status === 'connecting' || (data.hasSession && data.status !== 'connected' && data.status !== 'qr')) ? '' : 'none';
           }
 
           if (data.outbox) {

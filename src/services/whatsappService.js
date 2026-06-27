@@ -19,11 +19,29 @@ async function setNotificationsEnabled(enabled) {
 }
 
 async function getFullStatus() {
+  if (connection.hasSavedSession() && !connection.isConnected() && !connection.isConnecting()) {
+    connection.ensureConnected().catch((err) => {
+      console.error('[whatsapp] ensureConnected:', err.message);
+    });
+  }
+
   const conn = connection.getPublicState();
   const enabled = await getNotificationsEnabled();
   const { stats, recent } = await outbox.getOutboxStats();
+
+  let persistedPhone = null;
+  try {
+    const [rows] = await pool.query(
+      "SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_last_phone' LIMIT 1"
+    );
+    persistedPhone = rows[0]?.setting_value || null;
+  } catch {
+    /* ignora */
+  }
+
   return {
     ...conn,
+    phone: conn.phone || persistedPhone || null,
     notificationsEnabled: enabled,
     outbox: stats,
     recentMessages: recent,
@@ -35,8 +53,8 @@ async function initWhatsAppModule() {
   outbox.startOutboxWorker();
   if (connection.hasSavedSession()) {
     try {
+      console.log('[whatsapp] Sessão encontrada, reconectando…');
       await connection.startConnection();
-      console.log('[whatsapp] Reconectando sessão salva…');
     } catch (err) {
       console.error('[whatsapp] Falha ao reconectar:', err.message);
     }
