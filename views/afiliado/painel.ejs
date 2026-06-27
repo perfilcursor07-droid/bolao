@@ -8,10 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="page-affiliate">
+<body class="page-affiliate page-green">
   <%- include('../partials/header') %>
 
-  <div class="container home-container affiliate-page">
+  <div class="container home-container affiliate-page page-green-content">
     <a href="/afiliado" class="back-link">← Programa de afiliados</a>
 
     <div class="affiliate-panel-head">
@@ -141,18 +141,38 @@
         </div>
       </div>
     <% } %>
+    <div class="page-sticky-spacer" aria-hidden="true"></div>
   </div>
+
+  <% if (affiliate.status === 'active') { %>
+    <div class="page-sticky-foot page-sticky-foot--dual">
+      <button type="button" class="btn btn-gold page-sticky-btn page-sticky-btn--half" id="btn-copy-affiliate-sticky">Copiar link</button>
+      <a href="/" class="btn btn-outline page-sticky-btn page-sticky-btn--half">Ver jogos</a>
+    </div>
+  <% } else { %>
+    <div class="page-sticky-foot page-sticky-foot--dual">
+      <a href="/afiliado" class="btn btn-outline page-sticky-btn page-sticky-btn--half">Voltar</a>
+      <a href="/" class="btn btn-gold page-sticky-btn page-sticky-btn--half">Ver jogos</a>
+    </div>
+  <% } %>
 
   <%- include('../partials/footer') %>
 
   <script>
-    document.getElementById('btn-copy-affiliate')?.addEventListener('click', function () {
+    function copyAffiliateLink(btn) {
       const input = document.getElementById('affiliate-link');
       if (!input) return;
       navigator.clipboard.writeText(input.value).then(() => {
-        this.textContent = '✓ Copiado';
-        setTimeout(() => { this.textContent = 'Copiar'; }, 2500);
+        const prev = btn.textContent;
+        btn.textContent = '✓ Copiado';
+        setTimeout(() => { btn.textContent = prev; }, 2500);
       });
+    }
+    document.getElementById('btn-copy-affiliate')?.addEventListener('click', function () {
+      copyAffiliateLink(this);
+    });
+    document.getElementById('btn-copy-affiliate-sticky')?.addEventListener('click', function () {
+      copyAffiliateLink(this);
     });
   </script>
 </body>
