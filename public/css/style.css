@@ -6835,42 +6835,6 @@ body.admin-nav-open {
   color: var(--text-muted);
 }
 
-.admin-palpite-actions {
-  min-width: 140px;
-  vertical-align: middle;
-}
-
-.admin-palpite-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  min-width: 160px;
-}
-
-.admin-palpite-inputs {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.admin-palpite-input {
-  width: 3.25rem !important;
-  padding: 0.35rem 0.4rem !important;
-  text-align: center;
-  font-size: 0.85rem !important;
-}
-
-.admin-palpite-x {
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.admin-palpite-form-btns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
 .admin-tag-guest {
   display: inline-block;
   margin-left: 0.35rem;
@@ -6898,6 +6862,118 @@ tr.row-winner {
   .admin-apostas-filter select {
     min-width: 100%;
   }
+}
+
+/* Modal editar palpite — admin apostas */
+body.admin-modal-open {
+  overflow: hidden;
+}
+
+.admin-bet-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.admin-bet-modal[hidden] {
+  display: none !important;
+}
+
+.admin-bet-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.admin-bet-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 1px solid rgba(45, 58, 82, 0.65);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.admin-bet-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid rgba(45, 58, 82, 0.55);
+}
+
+.admin-bet-modal-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.admin-bet-modal-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin-bet-modal-match {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-bet-modal-close {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-bet-modal-close:hover {
+  color: var(--text-primary);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.admin-bet-modal-body {
+  padding: 1rem;
+}
+
+.admin-bet-score-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.admin-bet-score-row .form-group {
+  flex: 1;
+  margin: 0;
+}
+
+.admin-bet-score-x {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #4ade80;
+  padding-bottom: 0.55rem;
+}
+
+.admin-bet-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ── Afiliados ── */

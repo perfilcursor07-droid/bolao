@@ -225,7 +225,7 @@ router.get('/apostas', requireAdmin, async (req, res) => {
       stats,
       user: req.session.user,
       activePage: 'apostas',
-      updated: req.query.updated === '1',
+      saved: req.query.saved === '1',
       error: req.query.error || null,
     });
   } catch (err) {
@@ -233,50 +233,52 @@ router.get('/apostas', requireAdmin, async (req, res) => {
   }
 });
 
-router.post('/apostas/:betId/palpite', requireAdmin, async (req, res) => {
-  const betId = parseInt(req.params.betId, 10);
-  const home = parseInt(req.body.home_score, 10);
-  const away = parseInt(req.body.away_score, 10);
-  const returnGame = req.body.return_game ? parseInt(req.body.return_game, 10) : null;
-
-  function redirectApostas(extra = {}) {
-    const q = new URLSearchParams();
-    if (returnGame) q.set('game', String(returnGame));
-    if (extra.error) q.set('error', extra.error);
-    if (extra.updated) q.set('updated', '1');
-    const qs = q.toString();
-    return res.redirect(`/admin/apostas${qs ? `?${qs}` : ''}`);
-  }
-
-  if (!Number.isFinite(betId) || !Number.isFinite(home) || !Number.isFinite(away)) {
-    return redirectApostas({ error: 'Placar inválido' });
-  }
-  if (home < 0 || away < 0 || home > 20 || away > 20) {
-    return redirectApostas({ error: 'Use placares entre 0 e 20' });
-  }
+router.post('/apostas/:id/editar', requireAdmin, async (req, res) => {
+  const appendQuery = (gameId, params) => {
+    const parts = [];
+    if (gameId) parts.push(`game=${gameId}`);
+    Object.entries(params).forEach(([k, v]) => parts.push(`${k}=${encodeURIComponent(v)}`));
+    return parts.length ? `/admin/apostas?${parts.join('&')}` : '/admin/apostas';
+  };
 
   try {
+    const betId = parseInt(req.params.id, 10);
+    const home = parseInt(req.body.home_score, 10);
+    const away = parseInt(req.body.away_score, 10);
+    const returnGameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+
+    if (!Number.isFinite(betId) || !Number.isFinite(home) || !Number.isFinite(away)) {
+      return res.redirect(appendQuery(returnGameId, { error: 'Placar inválido' }));
+    }
+    if (home < 0 || away < 0 || home > 20 || away > 20) {
+      return res.redirect(appendQuery(returnGameId, { error: 'Use placares entre 0 e 20' }));
+    }
+
     const [rows] = await pool.query(
-      `SELECT b.id, g.status as game_status, g.title
+      `SELECT b.id, b.game_id, g.status as game_status
        FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ?`,
       [betId]
     );
     if (rows.length === 0) {
-      return redirectApostas({ error: 'Aposta não encontrada' });
+      return res.redirect(appendQuery(returnGameId, { error: 'Aposta não encontrada' }));
     }
-    if (rows[0].game_status === 'finished') {
-      return redirectApostas({ error: 'Jogo já finalizado — não é possível editar palpite' });
+
+    const bet = rows[0];
+    if (bet.game_status === 'finished') {
+      return res.redirect(
+        appendQuery(returnGameId || bet.game_id, { error: 'Não é possível editar palpite de jogo finalizado' })
+      );
     }
 
     await pool.query(
-      `UPDATE bets SET home_score_prediction = ?, away_score_prediction = ?,
-       is_winner = FALSE, prize_amount_cents = 0 WHERE id = ?`,
+      'UPDATE bets SET home_score_prediction = ?, away_score_prediction = ? WHERE id = ?',
       [home, away, betId]
     );
 
-    return redirectApostas({ updated: true });
+    res.redirect(appendQuery(returnGameId || bet.game_id, { saved: '1' }));
   } catch (err) {
-    return redirectApostas({ error: 'Erro ao salvar palpite' });
+    const gid = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    res.redirect(appendQuery(gid, { error: err.message }));
   }
 });
 

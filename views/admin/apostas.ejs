@@ -11,14 +11,14 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
-    <% } %>
-    <% if (updated) { %>
+    <p class="admin-page-intro">Todas as apostas confirmadas, agrupadas por jogo — quem apostou, palpite e status.</p>
+
+    <% if (typeof saved !== 'undefined' && saved) { %>
       <div class="alert alert-success">Palpite atualizado com sucesso.</div>
     <% } %>
-
-    <p class="admin-page-intro">Todas as apostas confirmadas, agrupadas por jogo — quem apostou, palpite e status. Jogos não finalizados permitem <strong>editar palpite</strong>.</p>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
 
     <div class="admin-apostas-toolbar">
       <form method="GET" action="/admin/apostas" class="admin-apostas-filter">
@@ -90,11 +90,11 @@
                   <th>WhatsApp</th>
                   <th>Chave PIX</th>
                   <th>Palpite</th>
-                  <th>Ações</th>
                   <th>PIX entrada</th>
                   <th>Status aposta</th>
                   <th>Prêmio</th>
                   <th>Data</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,28 +108,7 @@
                     </td>
                     <td class="admin-cell-muted"><%= bet.phone || '—' %></td>
                     <td class="admin-cell-muted" style="font-size:0.78rem; max-width:140px; word-break:break-all;"><%= bet.cpf || '—' %></td>
-                    <td>
-                      <strong class="admin-palpite-value"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong>
-                    </td>
-                    <td class="admin-palpite-actions">
-                      <% if (group.game.status !== 'finished') { %>
-                        <button type="button" class="btn btn-outline btn-sm admin-palpite-edit-btn" data-bet-id="<%= bet.id %>">Editar</button>
-                        <form method="POST" action="/admin/apostas/<%= bet.id %>/palpite" class="admin-palpite-form" id="palpite-form-<%= bet.id %>" hidden>
-                          <input type="hidden" name="return_game" value="<%= selectedGameId || '' %>">
-                          <div class="admin-palpite-inputs">
-                            <input type="number" name="home_score" min="0" max="20" value="<%= bet.home_score_prediction %>" class="form-control admin-palpite-input" required aria-label="Gols casa">
-                            <span class="admin-palpite-x">×</span>
-                            <input type="number" name="away_score" min="0" max="20" value="<%= bet.away_score_prediction %>" class="form-control admin-palpite-input" required aria-label="Gols visitante">
-                          </div>
-                          <div class="admin-palpite-form-btns">
-                            <button type="submit" class="btn btn-accent btn-sm">Salvar</button>
-                            <button type="button" class="btn btn-outline btn-sm admin-palpite-cancel" data-bet-id="<%= bet.id %>">Cancelar</button>
-                          </div>
-                        </form>
-                      <% } else { %>
-                        <span class="admin-cell-muted">—</span>
-                      <% } %>
-                    </td>
+                    <td><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong></td>
                     <td>
                       <% if (bet.payment_status === 'paid') { %>
                         <span class="card-badge finished">Pago</span>
@@ -158,6 +137,23 @@
                       <% } else { %>—<% } %>
                     </td>
                     <td class="admin-cell-muted"><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
+                    <td>
+                      <% if (bet.game_status !== 'finished') { %>
+                        <button
+                          type="button"
+                          class="btn btn-outline btn-sm btn-edit-bet"
+                          data-bet-id="<%= bet.id %>"
+                          data-game-id="<%= bet.game_id %>"
+                          data-user-name="<%= bet.user_name %>"
+                          data-game-title="<%= bet.game_title %>"
+                          data-match="<%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %>"
+                          data-home="<%= bet.home_score_prediction %>"
+                          data-away="<%= bet.away_score_prediction %>"
+                        >Editar</button>
+                      <% } else { %>
+                        <span class="admin-cell-muted">—</span>
+                      <% } %>
+                    </td>
                   </tr>
                 <% }); %>
               </tbody>
@@ -167,35 +163,85 @@
       <% }); %>
     <% } %>
 
-  <script>
-    (function () {
-      function showForm(betId) {
-        const form = document.getElementById('palpite-form-' + betId);
-        const row = form?.closest('tr');
-        if (!form || !row) return;
-        row.querySelectorAll('.admin-palpite-edit-btn').forEach((b) => { b.hidden = true; });
-        row.querySelector('.admin-palpite-value')?.setAttribute('hidden', '');
-        form.hidden = false;
-        form.querySelector('.admin-palpite-input')?.focus();
-      }
+    <div class="admin-bet-modal" id="admin-bet-modal" hidden>
+      <div class="admin-bet-modal-backdrop" id="admin-bet-modal-backdrop"></div>
+      <div class="admin-bet-modal-dialog" role="dialog" aria-labelledby="admin-bet-modal-title" aria-modal="true">
+        <header class="admin-bet-modal-header">
+          <div>
+            <h2 class="admin-bet-modal-title" id="admin-bet-modal-title">Editar palpite</h2>
+            <p class="admin-bet-modal-sub" id="admin-bet-modal-user"></p>
+            <p class="admin-bet-modal-match" id="admin-bet-modal-match"></p>
+          </div>
+          <button type="button" class="admin-bet-modal-close" id="admin-bet-modal-close" aria-label="Fechar">×</button>
+        </header>
+        <form method="POST" action="" id="admin-bet-edit-form" class="admin-bet-modal-body">
+          <input type="hidden" name="game_id" id="admin-bet-game-id" value="<%= selectedGameId || '' %>">
+          <div class="admin-bet-score-row">
+            <div class="form-group">
+              <label for="admin-bet-home">Casa</label>
+              <input type="number" id="admin-bet-home" name="home_score" class="form-control" min="0" max="20" required>
+            </div>
+            <span class="admin-bet-score-x">×</span>
+            <div class="form-group">
+              <label for="admin-bet-away">Visitante</label>
+              <input type="number" id="admin-bet-away" name="away_score" class="form-control" min="0" max="20" required>
+            </div>
+          </div>
+          <div class="admin-bet-modal-actions">
+            <button type="button" class="btn btn-outline" id="admin-bet-cancel">Cancelar</button>
+            <button type="submit" class="btn btn-gold">Salvar palpite</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-      function hideForm(betId) {
-        const form = document.getElementById('palpite-form-' + betId);
-        const row = form?.closest('tr');
-        if (!form || !row) return;
-        form.hidden = true;
-        row.querySelectorAll('.admin-palpite-edit-btn').forEach((b) => { b.hidden = false; });
-        row.querySelector('.admin-palpite-value')?.removeAttribute('hidden');
-      }
+    <script>
+      (function () {
+        const modal = document.getElementById('admin-bet-modal');
+        const form = document.getElementById('admin-bet-edit-form');
+        const backdrop = document.getElementById('admin-bet-modal-backdrop');
+        const closeBtn = document.getElementById('admin-bet-modal-close');
+        const cancelBtn = document.getElementById('admin-bet-cancel');
+        const userEl = document.getElementById('admin-bet-modal-user');
+        const matchEl = document.getElementById('admin-bet-modal-match');
+        const homeInput = document.getElementById('admin-bet-home');
+        const awayInput = document.getElementById('admin-bet-away');
+        const gameIdInput = document.getElementById('admin-bet-game-id');
 
-      document.querySelectorAll('.admin-palpite-edit-btn').forEach((btn) => {
-        btn.addEventListener('click', () => showForm(btn.dataset.betId));
-      });
-      document.querySelectorAll('.admin-palpite-cancel').forEach((btn) => {
-        btn.addEventListener('click', () => hideForm(btn.dataset.betId));
-      });
-    })();
-  </script>
+        function closeModal() {
+          modal.hidden = true;
+          document.body.classList.remove('admin-modal-open');
+        }
+
+        function openModal(btn) {
+          const betId = btn.dataset.betId;
+          form.action = '/admin/apostas/' + betId + '/editar';
+          userEl.textContent = btn.dataset.userName;
+          matchEl.textContent = btn.dataset.gameTitle + ' — ' + btn.dataset.match;
+          homeInput.value = btn.dataset.home;
+          awayInput.value = btn.dataset.away;
+          if (btn.dataset.gameId) {
+            gameIdInput.value = btn.dataset.gameId;
+          }
+          modal.hidden = false;
+          document.body.classList.add('admin-modal-open');
+          homeInput.focus();
+          homeInput.select();
+        }
+
+        document.querySelectorAll('.btn-edit-bet').forEach((btn) => {
+          btn.addEventListener('click', () => openModal(btn));
+        });
+
+        backdrop.addEventListener('click', closeModal);
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !modal.hidden) closeModal();
+        });
+      })();
+    </script>
 
   <%- include('layout-close') %>
 </body>
