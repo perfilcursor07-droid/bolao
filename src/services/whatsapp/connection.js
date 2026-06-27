@@ -32,7 +32,22 @@ let baileysModule = null;
 
 async function loadBaileys() {
   if (!baileysModule) {
-    baileysModule = await import('@whiskeysockets/baileys');
+    try {
+      baileysModule = await import('@whiskeysockets/baileys');
+    } catch (err) {
+      const missing =
+        err.code === 'ERR_MODULE_NOT_FOUND' ||
+        err.code === 'MODULE_NOT_FOUND' ||
+        /Cannot find package '@whiskeysockets\/baileys'/.test(err.message || '');
+      if (missing) {
+        const hint = new Error(
+          'Dependência @whiskeysockets/baileys não instalada. No servidor: cd ~/htdocs/bolaopix.site && npm install && pm2 restart bolaopix'
+        );
+        hint.code = 'BAILEYS_NOT_INSTALLED';
+        throw hint;
+      }
+      throw err;
+    }
   }
   return baileysModule;
 }

@@ -11,6 +11,7 @@ git push origin main
 su - bolaopix
 cd ~/htdocs/bolaopix.site
 git pull origin main
+npm install
 npm run migrate
 pm2 restart bolaopix || npm run pm2:start
 pm2 save
