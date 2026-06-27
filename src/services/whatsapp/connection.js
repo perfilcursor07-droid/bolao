@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 const pool = require('../../config/database');
+const { resolveRecipientJid } = require('./resolve');
 
 const AUTH_DIR = path.join(__dirname, '..', '..', '..', 'data', 'whatsapp-auth');
 
@@ -235,7 +236,6 @@ async function createSocketInternal() {
       printQRInTerminal: false,
       logger: noopLogger,
       browser: ['Bolao Online', 'Chrome', '120.0.0'],
-      syncFullHistory: false,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
       keepAliveIntervalMs: 30000,
@@ -378,11 +378,20 @@ async function disconnect(logout = true) {
   clearAuthFiles();
 }
 
-async function sendTextMessage(jid, text) {
+async function sendTextMessage(phone, text) {
   if (!sock || state.status !== 'connected') {
     throw new Error('WhatsApp não conectado');
   }
-  await sock.sendMessage(jid, { text });
+
+  const { jid, normalized } = await resolveRecipientJid(sock, phone);
+  const sent = await sock.sendMessage(jid, { text });
+
+  if (!sent?.key?.id) {
+    throw new Error('WhatsApp não confirmou o envio da mensagem');
+  }
+
+  console.log('[whatsapp] Enviado para', normalized, '→', jid, 'msg', sent.key.id);
+  return { jid, normalized, messageId: sent.key.id };
 }
 
 function getPublicState() {

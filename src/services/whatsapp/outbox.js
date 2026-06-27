@@ -1,5 +1,5 @@
 const pool = require('../../config/database');
-const { phoneToJid } = require('./phone');
+const { normalizeBrazilPhone } = require('./phone');
 const { isConnected, sendTextMessage } = require('./connection');
 
 /** Limites conservadores para evitar bloqueio do número. */
@@ -46,13 +46,17 @@ function getWaitMs() {
 }
 
 async function enqueueMessage({ userId, phone, messageType, referenceKey, body }) {
+  const normalized = normalizeBrazilPhone(phone);
+  if (!normalized) {
+    throw new Error('Telefone inválido para WhatsApp');
+  }
   try {
     await pool.query(
       `INSERT INTO whatsapp_outbox (user_id, phone, message_type, reference_key, body, status)
        VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [userId || null, phone, messageType, referenceKey, body]
+      [userId || null, normalized, messageType, referenceKey, body]
     );
-    return { queued: true };
+    return { queued: true, phone: normalized };
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       return { queued: false, duplicate: true };
@@ -102,21 +106,29 @@ async function processOne() {
   if (rows.length === 0) return false;
 
   const msg = rows[0];
-  const jid = phoneToJid(msg.phone);
-  if (!jid) {
+  const normalized = normalizeBrazilPhone(msg.phone);
+  if (!normalized) {
     await markSkipped(msg.id, 'Telefone inválido');
     return true;
   }
 
-  await pool.query(`UPDATE whatsapp_outbox SET status = 'processing' WHERE id = ?`, [msg.id]);
+  await pool.query(`UPDATE whatsapp_outbox SET status = 'processing', phone = ? WHERE id = ?`, [
+    normalized,
+    msg.id,
+  ]);
 
   const wait = getWaitMs();
   if (wait > 0) await sleep(wait);
 
   try {
-    await sendTextMessage(jid, msg.body);
+    const result = await sendTextMessage(normalized, msg.body);
     lastSendAt = Date.now();
     sendHistory.push(lastSendAt);
+    await pool.query(`UPDATE whatsapp_outbox SET phone = ?, error_message = ? WHERE id = ?`, [
+      result.normalized,
+      `→ ${result.jid}`,
+      msg.id,
+    ]);
     await markSent(msg.id);
     return true;
   } catch (err) {

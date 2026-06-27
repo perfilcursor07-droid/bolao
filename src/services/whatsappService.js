@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const connection = require('./whatsapp/connection');
 const outbox = require('./whatsapp/outbox');
-const { cleanPhone } = require('./whatsapp/phone');
+const { cleanPhone, normalizeBrazilPhone } = require('./whatsapp/phone');
 
 async function getNotificationsEnabled() {
   const [rows] = await pool.query(
@@ -64,9 +64,9 @@ async function disconnect() {
 }
 
 async function sendTestMessage(phone, text) {
-  const cleaned = cleanPhone(phone);
-  if (cleaned.length < 10) {
-    throw new Error('Telefone inválido');
+  const cleaned = normalizeBrazilPhone(phone) || cleanPhone(phone);
+  if (!cleaned || cleaned.length < 12) {
+    throw new Error('Telefone inválido — use DDD + número (ex: 62981013083)');
   }
   return outbox.enqueueMessage({
     userId: null,

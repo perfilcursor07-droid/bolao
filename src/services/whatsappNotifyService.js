@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const { formatCents } = require('../routes/games');
 const { translateTeamName } = require('../utils/teamNamesPt');
-const { cleanPhone } = require('./whatsapp/phone');
+const { cleanPhone, normalizeBrazilPhone } = require('./whatsapp/phone');
 const { enqueueMessage } = require('./whatsapp/outbox');
 
 async function isNotificationsEnabled() {
@@ -38,7 +38,7 @@ async function notifyPaymentConfirmed(paymentId) {
 
   const payment = rows[0];
   const phone = cleanPhone(payment.phone);
-  if (phone.length < 10) return;
+  if (!normalizeBrazilPhone(phone)) return;
 
   let placares = [];
   try {
@@ -74,7 +74,7 @@ async function notifyPaymentConfirmed(paymentId) {
 
   await enqueueMessage({
     userId: payment.user_id,
-    phone,
+    phone: normalizeBrazilPhone(phone),
     messageType: 'payment_confirmed',
     referenceKey: `payment_${paymentId}`,
     body,
@@ -103,9 +103,9 @@ async function notifyGameResults(gameId) {
   const byUser = {};
   for (const bet of bets) {
     const phone = cleanPhone(bet.phone);
-    if (phone.length < 10) continue;
+    if (!normalizeBrazilPhone(phone)) continue;
     if (!byUser[bet.user_id]) {
-      byUser[bet.user_id] = { name: bet.name, phone, bets: [] };
+      byUser[bet.user_id] = { name: bet.name, phone: normalizeBrazilPhone(phone), bets: [] };
     }
     byUser[bet.user_id].bets.push(bet);
   }

@@ -104,7 +104,8 @@
       <form method="POST" action="/admin/whatsapp/test" class="wa-test-form">
         <div class="form-group">
           <label for="test-phone">Telefone (com DDD)</label>
-          <input type="tel" id="test-phone" name="phone" class="form-control" placeholder="11999998888" required>
+          <input type="tel" id="test-phone" name="phone" class="form-control" placeholder="62981013083" required>
+          <small style="color:var(--text-muted);font-size:0.72rem;">Use o WhatsApp do destinatário (DDD + número, ex: 62981013083)</small>
         </div>
         <div class="form-group">
           <label for="test-message">Mensagem</label>
@@ -126,7 +127,7 @@
       <div class="table-container" style="margin-top:0.75rem;">
         <table>
           <thead>
-            <tr><th>Data</th><th>Telefone</th><th>Tipo</th><th>Status</th><th>Erro</th></tr>
+                  <tr><th>Data</th><th>Telefone</th><th>Tipo</th><th>Status</th><th>Destino / Erro</th></tr>
           </thead>
           <tbody id="wa-recent-body">
             <% if (!status.recentMessages || status.recentMessages.length === 0) { %>
