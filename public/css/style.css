@@ -7314,3 +7314,148 @@ tr.row-winner {
 .dashboard-share-row {
   margin-top: 0.5rem;
 }
+
+/* ── Admin WhatsApp ── */
+.wa-admin-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .wa-admin-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.wa-connect-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.wa-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wa-status-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.wa-status-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.wa-status-badge--connected {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.wa-status-badge--qr,
+.wa-status-badge--connecting {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.wa-status-badge--disconnected {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.wa-phone-row {
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.wa-qr-wrap {
+  margin-top: 1rem;
+  text-align: center;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(45, 58, 82, 0.55);
+}
+
+.wa-qr-wrap p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.wa-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.wa-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.wa-toggle input {
+  margin-top: 0.15rem;
+}
+
+.wa-limits {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(45, 58, 82, 0.45);
+}
+
+.wa-limits h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+}
+
+.wa-limits ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.wa-test-form {
+  max-width: 420px;
+}
+
+.wa-outbox-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.wa-outbox-stat {
+  text-align: center;
+  padding: 0.55rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(45, 58, 82, 0.45);
+}
+
+.wa-outbox-stat span {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+
+.wa-outbox-stat strong {
+  font-size: 1.1rem;
+}

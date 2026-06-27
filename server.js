@@ -14,6 +14,11 @@ const server = app.listen(PORT, () => {
   console.log(`   Admin: admin@bolao.com / admin123`);
   console.log(`   PagBank: ${pixEnv}${tokenLen ? ` (token ${tokenLen} chars)` : ' ⚠️ PAGBANK_TOKEN vazio'}\n`);
   startCronJobs();
+
+  const { initWhatsAppModule } = require('./src/services/whatsappService');
+  initWhatsAppModule().catch((err) => {
+    console.error('[whatsapp] init:', err.message);
+  });
 });
 
 server.on('error', (err) => {

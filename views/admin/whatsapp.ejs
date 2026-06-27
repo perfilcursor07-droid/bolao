@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Bolão Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-admin">
+  <%- include('layout') %>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+    <% if (saved) { %>
+      <div class="alert alert-success">Configuração salva com sucesso.</div>
+    <% } %>
+
+    <p class="admin-page-intro">
+      Conecte um número WhatsApp para enviar confirmações de pagamento e resultados de apostas automaticamente.
+      As mensagens são enviadas com <strong>intervalo seguro</strong> para evitar bloqueio do número.
+    </p>
+
+    <div class="wa-admin-grid">
+      <div class="admin-settings-card wa-connect-card">
+        <div class="wa-status-row">
+          <div>
+            <h2>Conexão</h2>
+            <p id="wa-status-text" class="wa-status-text">
+              <% if (status.status === 'connected') { %>
+                Conectado
+              <% } else if (status.status === 'qr') { %>
+                Escaneie o QR Code
+              <% } else if (status.status === 'connecting') { %>
+                Conectando…
+              <% } else { %>
+                Desconectado
+              <% } %>
+            </p>
+          </div>
+          <span id="wa-status-badge" class="wa-status-badge wa-status-badge--<%= status.status %>">
+            <%= status.status %>
+          </span>
+        </div>
+
+        <div id="wa-phone-row" class="wa-phone-row" style="<%= status.phone ? '' : 'display:none;' %>">
+          Número conectado: <strong id="wa-phone"><%= status.phone || '' %></strong>
+        </div>
+
+        <div id="wa-error" class="alert alert-error" style="<%= status.lastError ? '' : 'display:none;' %>margin-top:0.75rem;">
+          <%= status.lastError || '' %>
+        </div>
+
+        <div id="wa-qr-wrap" class="wa-qr-wrap" style="<%= status.qrDataUrl ? '' : 'display:none;' %>">
+          <p>Abra o WhatsApp no celular → <strong>Aparelhos conectados</strong> → Conectar aparelho</p>
+          <img id="wa-qr-img" src="<%= status.qrDataUrl || '' %>" alt="QR Code WhatsApp" width="280" height="280">
+        </div>
+
+        <div class="wa-actions">
+          <% if (status.status !== 'connected') { %>
+            <form method="POST" action="/admin/whatsapp/connect" id="wa-connect-form">
+              <button type="submit" class="btn btn-gold" id="wa-connect-btn">Conectar WhatsApp</button>
+            </form>
+          <% } else { %>
+            <form method="POST" action="/admin/whatsapp/disconnect" onsubmit="return confirm('Desconectar WhatsApp? Será necessário escanear o QR novamente.');">
+              <button type="submit" class="btn btn-outline">Desconectar</button>
+            </form>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="admin-settings-card">
+        <h2>Notificações automáticas</h2>
+        <p>Ative somente após conectar o WhatsApp. Mensagens enfileiradas são enviadas aos poucos (6/min, intervalo 6–12s).</p>
+
+        <form method="POST" action="/admin/whatsapp/settings" class="wa-settings-form">
+          <label class="wa-toggle">
+            <input type="checkbox" name="notifications_enabled" value="1" <%= status.notificationsEnabled ? 'checked' : '' %>>
+            <span>Enviar mensagens automáticas (pagamento + resultado)</span>
+          </label>
+          <button type="submit" class="btn btn-accent btn-sm" style="margin-top:0.75rem;">Salvar</button>
+        </form>
+
+        <div class="wa-limits">
+          <h3>Proteção anti-bloqueio</h3>
+          <ul>
+            <li>Máx. <%= status.rateLimits.maxPerMinute %> mensagens por minuto</li>
+            <li>Máx. <%= status.rateLimits.maxPerHour %> por hora</li>
+            <li>Intervalo entre envios: <%= Math.round(status.rateLimits.minDelayMs / 1000) %>–<%= Math.round((status.rateLimits.minDelayMs + status.rateLimits.maxJitterMs) / 1000) %> segundos</li>
+            <li>Fila persistente — mensagens aguardam se o WhatsApp estiver offline</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-settings-card" style="margin-top:1rem;">
+      <h2>Enviar teste</h2>
+      <form method="POST" action="/admin/whatsapp/test" class="wa-test-form">
+        <div class="form-group">
+          <label for="test-phone">Telefone (com DDD)</label>
+          <input type="tel" id="test-phone" name="phone" class="form-control" placeholder="11999998888" required>
+        </div>
+        <div class="form-group">
+          <label for="test-message">Mensagem</label>
+          <textarea id="test-message" name="message" class="form-control" rows="3">✅ Teste — Bolão Online</textarea>
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm">Enfileirar teste</button>
+      </form>
+    </div>
+
+    <div class="admin-settings-card" style="margin-top:1rem;">
+      <h2>Fila de mensagens</h2>
+      <div class="wa-outbox-stats">
+        <div class="wa-outbox-stat"><span>Pendentes</span><strong id="stat-pending"><%= status.outbox.pending || 0 %></strong></div>
+        <div class="wa-outbox-stat"><span>Enviadas</span><strong id="stat-sent"><%= status.outbox.sent || 0 %></strong></div>
+        <div class="wa-outbox-stat"><span>Falhas</span><strong id="stat-failed"><%= status.outbox.failed || 0 %></strong></div>
+        <div class="wa-outbox-stat"><span>Ignoradas</span><strong id="stat-skipped"><%= status.outbox.skipped || 0 %></strong></div>
+      </div>
+
+      <div class="table-container" style="margin-top:0.75rem;">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Telefone</th><th>Tipo</th><th>Status</th><th>Erro</th></tr>
+          </thead>
+          <tbody id="wa-recent-body">
+            <% if (!status.recentMessages || status.recentMessages.length === 0) { %>
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Nenhuma mensagem ainda</td></tr>
+            <% } %>
+            <% (status.recentMessages || []).forEach(function(m) { %>
+              <tr>
+                <td style="font-size:0.75rem;"><%= new Date(m.created_at).toLocaleString('pt-BR') %></td>
+                <td><%= m.phone %></td>
+                <td><%= m.message_type %></td>
+                <td><span class="card-badge <%= m.status === 'sent' ? 'open' : m.status === 'failed' ? 'finished' : 'closed' %>"><%= m.status %></span></td>
+                <td style="font-size:0.72rem;color:var(--text-muted);"><%= m.error_message || '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  <%- include('layout-close') %>
+  <script>
+    (function () {
+      const statusLabels = {
+        connected: 'Conectado',
+        qr: 'Escaneie o QR Code',
+        connecting: 'Conectando…',
+        disconnected: 'Desconectado',
+      };
+
+      async function pollStatus() {
+        try {
+          const res = await fetch('/admin/whatsapp/status');
+          const data = await res.json();
+
+          const badge = document.getElementById('wa-status-badge');
+          const text = document.getElementById('wa-status-text');
+          const qrWrap = document.getElementById('wa-qr-wrap');
+          const qrImg = document.getElementById('wa-qr-img');
+          const phoneRow = document.getElementById('wa-phone-row');
+          const phoneEl = document.getElementById('wa-phone');
+          const errEl = document.getElementById('wa-error');
+
+          if (badge) {
+            badge.className = 'wa-status-badge wa-status-badge--' + data.status;
+            badge.textContent = data.status;
+          }
+          if (text) text.textContent = statusLabels[data.status] || data.status;
+
+          if (data.qrDataUrl && qrWrap && qrImg) {
+            qrWrap.style.display = '';
+            qrImg.src = data.qrDataUrl;
+          } else if (qrWrap) {
+            qrWrap.style.display = 'none';
+          }
+
+          if (data.phone && phoneRow && phoneEl) {
+            phoneRow.style.display = '';
+            phoneEl.textContent = data.phone;
+          }
+
+          if (errEl) {
+            if (data.lastError) {
+              errEl.style.display = '';
+              errEl.textContent = data.lastError;
+            } else {
+              errEl.style.display = 'none';
+            }
+          }
+
+          if (data.outbox) {
+            const map = { pending: 'stat-pending', sent: 'stat-sent', failed: 'stat-failed', skipped: 'stat-skipped' };
+            Object.keys(map).forEach((k) => {
+              const el = document.getElementById(map[k]);
+              if (el) el.textContent = data.outbox[k] || 0;
+            });
+          }
+        } catch {
+          /* ignora */
+        }
+      }
+
+      setInterval(pollStatus, 2500);
+      pollStatus();
+    })();
+  </script>
+</body>
+</html>

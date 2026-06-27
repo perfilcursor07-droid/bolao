@@ -17,6 +17,7 @@
     "pm2:logs": "pm2 logs bolaopix"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.7",

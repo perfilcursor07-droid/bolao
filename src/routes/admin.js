@@ -25,6 +25,8 @@ const {
   markAffiliatePayoutPaid,
 } = require('../services/affiliateService');
 
+const adminWhatsAppRoutes = require('./adminWhatsApp');
+
 const router = express.Router();
 
 router.use(async (req, res, next) => {
@@ -645,5 +647,7 @@ router.post('/afiliados/:id/pagar', requireAdmin, async (req, res) => {
     res.redirect('/admin/afiliados?error=' + encodeURIComponent(err.message));
   }
 });
+
+router.use('/whatsapp', adminWhatsAppRoutes);
 
 module.exports = router;

@@ -100,6 +100,13 @@ async function processGameResults(gameId) {
 
       await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
       await connection.commit();
+
+      setImmediate(() => {
+        require('./whatsappNotifyService')
+          .notifyGameResults(gameId)
+          .catch((err) => console.error('[whatsapp] resultado:', err.message));
+      });
+
       return { winners: 0, prizeEach: 0, refunds: allBets.length, refundEach };
     }
 
@@ -114,6 +121,12 @@ async function processGameResults(gameId) {
 
     await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
     await connection.commit();
+
+    setImmediate(() => {
+      require('./whatsappNotifyService')
+        .notifyGameResults(gameId)
+        .catch((err) => console.error('[whatsapp] resultado:', err.message));
+    });
 
     return { winners: winners.length, prizeEach, totalPool: game.prize_pool_cents, netPool };
   } catch (err) {
@@ -169,6 +182,13 @@ async function confirmPayment(paymentId) {
     await processAffiliateCommissionOnPayment(connection, payment);
 
     await connection.commit();
+
+    setImmediate(() => {
+      require('./whatsappNotifyService')
+        .notifyPaymentConfirmed(paymentId)
+        .catch((err) => console.error('[whatsapp] pagamento:', err.message));
+    });
+
     return { paid: true, gameId: payment.game_id };
   } catch (err) {
     await connection.rollback();
