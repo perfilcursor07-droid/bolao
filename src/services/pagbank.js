@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { normalizeBrazilPhone } = require('./whatsapp/phone');
 
 const BASE_URL =
   process.env.PIX_ENVIRONMENT === 'production'
@@ -50,6 +51,22 @@ function resolveCustomerEmail(user) {
   return email;
 }
 
+function parsePhoneForPagBank(phone) {
+  const normalized = normalizeBrazilPhone(phone);
+  let local = normalized ? normalized.slice(2) : digitsOnly(phone);
+  if (local.startsWith('55') && local.length > 11) {
+    local = local.slice(2);
+  }
+  if (local.length < 10 || local.length > 11) return null;
+
+  return {
+    country: '55',
+    area: local.slice(0, 2),
+    number: local.slice(2),
+    type: 'MOBILE',
+  };
+}
+
 /**
  * Monta customer para a API PagBank.
  * tax_id = CPF do comprador (11 dígitos). Chave PIX fica só no cadastro do usuário (prêmio).
@@ -61,16 +78,9 @@ function buildPagBankCustomer(user) {
     tax_id: resolveTaxId(user),
   };
 
-  const phone = digitsOnly(user.phone);
-  if (phone.length >= 10) {
-    customer.phones = [
-      {
-        country: '55',
-        area: phone.slice(0, 2),
-        number: phone.slice(2),
-        type: 'MOBILE',
-      },
-    ];
+  const parsed = parsePhoneForPagBank(user.phone);
+  if (parsed) {
+    customer.phones = [parsed];
   }
 
   return customer;
