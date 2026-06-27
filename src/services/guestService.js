@@ -1,7 +1,10 @@
 const pool = require('../config/database');
+const { normalizeBrazilPhone, cleanPhone: cleanPhoneDigits } = require('./whatsapp/phone');
 
 function cleanPhone(phone) {
-  return (phone || '').replace(/\D/g, '');
+  const normalized = normalizeBrazilPhone(phone);
+  if (normalized) return normalized;
+  return cleanPhoneDigits(phone);
 }
 
 function guestEmail(pixKey) {

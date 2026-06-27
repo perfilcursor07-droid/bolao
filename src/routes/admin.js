@@ -24,6 +24,7 @@ const {
   setAffiliateStatus,
   markAffiliatePayoutPaid,
 } = require('../services/affiliateService');
+const { normalizeBrazilPhone, formatPhoneDisplay, isWhatsAppReadyPhone } = require('../services/whatsapp/phone');
 
 const adminWhatsAppRoutes = require('./adminWhatsApp');
 
@@ -292,14 +293,90 @@ router.get('/usuarios', requireAdmin, async (req, res) => {
        FROM users u
        ORDER BY u.created_at DESC`
     );
+    const usersWithPhone = users.map((u) => ({
+      ...u,
+      phone_display: u.phone ? formatPhoneDisplay(u.phone) : '—',
+      phone_whatsapp_ok: u.phone ? isWhatsAppReadyPhone(u.phone) : false,
+      phone_normalized: u.phone ? normalizeBrazilPhone(u.phone) : null,
+    }));
+
     res.render('admin/usuarios', {
       title: 'Usuários',
-      users,
+      users: usersWithPhone,
       user: req.session.user,
       activePage: 'usuarios',
+      saved: req.query.saved === '1',
+      error: req.query.error || null,
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/usuarios/:id/editar', requireAdmin, async (req, res) => {
+  const appendQuery = (params) => {
+    const qs = Object.entries(params)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join('&');
+    return `/admin/usuarios?${qs}`;
+  };
+
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const name = String(req.body.name || '').trim();
+    const phoneRaw = String(req.body.phone || '').trim();
+    const cpf = String(req.body.cpf || '').trim();
+
+    if (!Number.isFinite(userId) || !name || name.length < 2) {
+      return res.redirect(appendQuery({ error: 'Nome inválido' }));
+    }
+
+    const phone = normalizeBrazilPhone(phoneRaw);
+    if (!phone) {
+      return res.redirect(appendQuery({ error: 'Telefone inválido — use DDD + número (ex: 63981013083)' }));
+    }
+
+    if (!cpf || cpf.length < 5) {
+      return res.redirect(appendQuery({ error: 'Chave PIX inválida' }));
+    }
+
+    const cpfStored = cpf.includes('@')
+      ? cpf
+      : (() => {
+          const digits = cpf.replace(/\D/g, '');
+          return digits.length >= 5 ? digits : cpf;
+        })();
+
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.redirect(appendQuery({ error: 'Usuário não encontrado' }));
+    }
+
+    const target = rows[0];
+    if (target.role === 'admin' && target.id !== req.session.user.id) {
+      return res.redirect(appendQuery({ error: 'Não é permitido editar outro administrador' }));
+    }
+
+    const [phoneDup] = await pool.query('SELECT id FROM users WHERE phone = ? AND id != ?', [phone, userId]);
+    if (phoneDup.length > 0) {
+      return res.redirect(appendQuery({ error: 'Telefone já usado por outro usuário' }));
+    }
+
+    const [cpfDup] = await pool.query('SELECT id FROM users WHERE cpf = ? AND id != ?', [cpfStored, userId]);
+    if (cpfDup.length > 0) {
+      return res.redirect(appendQuery({ error: 'Chave PIX já usada por outro usuário' }));
+    }
+
+    await pool.query('UPDATE users SET name = ?, phone = ?, cpf = ? WHERE id = ?', [
+      name,
+      phone,
+      cpfStored,
+      userId,
+    ]);
+
+    res.redirect(appendQuery({ saved: '1' }));
+  } catch (err) {
+    res.redirect(appendQuery({ error: err.message }));
   }
 });
 

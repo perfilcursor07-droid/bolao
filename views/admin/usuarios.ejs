@@ -11,7 +11,17 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <p class="admin-page-intro">Todos os usuários cadastrados no sistema — participantes, convidados e administradores.</p>
+    <p class="admin-page-intro">
+      Todos os usuários cadastrados no sistema — participantes, convidados e administradores.
+      Telefones no formato <strong>DDD + número</strong> (ex: 63981013083) recebem WhatsApp corretamente.
+    </p>
+
+    <% if (typeof saved !== 'undefined' && saved) { %>
+      <div class="alert alert-success">Usuário atualizado com sucesso.</div>
+    <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
 
     <% if (users.length === 0) { %>
       <div class="empty-state">
@@ -31,6 +41,7 @@
               <th>Apostas</th>
               <th>Pagamentos</th>
               <th>Cadastro</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -41,18 +52,119 @@
               <tr>
                 <td><strong><%= u.name %></strong></td>
                 <td style="font-size:0.8rem; color:var(--text-muted);"><%= u.email || '—' %></td>
-                <td style="font-size:0.8rem;"><%= u.phone || '—' %></td>
+                <td style="font-size:0.8rem;">
+                  <% if (u.phone) { %>
+                    <span><%= u.phone_display %></span>
+                    <% if (u.phone_whatsapp_ok) { %>
+                      <span class="card-badge open" style="display:inline-block;margin-top:0.2rem;font-size:0.62rem;">WhatsApp OK</span>
+                    <% } else { %>
+                      <span class="card-badge finished" style="display:inline-block;margin-top:0.2rem;font-size:0.62rem;" title="Corrija o telefone (DDD+número completo)">WhatsApp?</span>
+                    <% } %>
+                    <% if (u.phone_normalized && u.phone !== u.phone_normalized) { %>
+                      <small class="admin-cell-muted" style="display:block;">Salvo: <%= u.phone %></small>
+                    <% } %>
+                  <% } else { %>
+                    —
+                  <% } %>
+                </td>
                 <td style="font-size:0.75rem; color:var(--text-muted);"><%= u.cpf || '—' %></td>
                 <td><span class="card-badge <%= roleClass %>"><%= roleLabel %></span></td>
                 <td><%= u.total_bets %></td>
                 <td><%= u.paid_payments %></td>
                 <td style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap;"><%= new Date(u.created_at).toLocaleString('pt-BR') %></td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-outline btn-sm btn-edit-user"
+                    data-user-id="<%= u.id %>"
+                    data-user-name="<%= u.name %>"
+                    data-user-phone="<%= u.phone || '' %>"
+                    data-user-cpf="<%= u.cpf || '' %>"
+                    data-user-role="<%= u.role %>"
+                  >Editar</button>
+                </td>
               </tr>
             <% }); %>
           </tbody>
         </table>
       </div>
     <% } %>
+
+    <div class="admin-bet-modal" id="admin-user-modal" hidden>
+      <div class="admin-bet-modal-backdrop" id="admin-user-modal-backdrop"></div>
+      <div class="admin-bet-modal-dialog" role="dialog" aria-labelledby="admin-user-modal-title" aria-modal="true">
+        <header class="admin-bet-modal-header">
+          <div>
+            <h2 class="admin-bet-modal-title" id="admin-user-modal-title">Editar usuário</h2>
+            <p class="admin-bet-modal-sub" id="admin-user-modal-role"></p>
+          </div>
+          <button type="button" class="admin-bet-modal-close" id="admin-user-modal-close" aria-label="Fechar">×</button>
+        </header>
+        <form method="POST" action="" id="admin-user-edit-form" class="admin-bet-modal-body">
+          <div class="form-group">
+            <label for="admin-user-name">Nome</label>
+            <input type="text" id="admin-user-name" name="name" class="form-control" required minlength="2">
+          </div>
+          <div class="form-group">
+            <label for="admin-user-phone">Telefone (WhatsApp)</label>
+            <input type="tel" id="admin-user-phone" name="phone" class="form-control" placeholder="63981013083" required>
+            <small class="admin-cell-muted">Somente números — DDD + celular, ex: 63981013083</small>
+          </div>
+          <div class="form-group">
+            <label for="admin-user-cpf">Chave PIX / CPF</label>
+            <input type="text" id="admin-user-cpf" name="cpf" class="form-control" required minlength="5">
+          </div>
+          <div class="admin-bet-modal-actions">
+            <button type="button" class="btn btn-outline" id="admin-user-cancel">Cancelar</button>
+            <button type="submit" class="btn btn-gold">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const modal = document.getElementById('admin-user-modal');
+        const form = document.getElementById('admin-user-edit-form');
+        const backdrop = document.getElementById('admin-user-modal-backdrop');
+        const closeBtn = document.getElementById('admin-user-modal-close');
+        const cancelBtn = document.getElementById('admin-user-cancel');
+        const roleEl = document.getElementById('admin-user-modal-role');
+        const nameInput = document.getElementById('admin-user-name');
+        const phoneInput = document.getElementById('admin-user-phone');
+        const cpfInput = document.getElementById('admin-user-cpf');
+
+        const roleLabels = { admin: 'Administrador', guest: 'Convidado', user: 'Usuário' };
+
+        function closeModal() {
+          modal.hidden = true;
+          document.body.classList.remove('admin-modal-open');
+        }
+
+        function openModal(btn) {
+          form.action = '/admin/usuarios/' + btn.dataset.userId + '/editar';
+          nameInput.value = btn.dataset.userName || '';
+          phoneInput.value = btn.dataset.userPhone || '';
+          cpfInput.value = btn.dataset.userCpf || '';
+          roleEl.textContent = roleLabels[btn.dataset.userRole] || btn.dataset.userRole;
+          modal.hidden = false;
+          document.body.classList.add('admin-modal-open');
+          nameInput.focus();
+        }
+
+        document.querySelectorAll('.btn-edit-user').forEach((btn) => {
+          btn.addEventListener('click', () => openModal(btn));
+        });
+
+        backdrop.addEventListener('click', closeModal);
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !modal.hidden) closeModal();
+        });
+      })();
+    </script>
 
   <%- include('layout-close') %>
 </body>
