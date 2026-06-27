@@ -1,28 +1,58 @@
 (function () {
   const root = document.querySelector('.home-container');
-  if (!root) return;
+  const modal = document.getElementById('featured-bets-modal');
+  if (!root || !modal) return;
+
+  const backdrop = modal.querySelector('.bets-modal-backdrop');
+  const closeBtn = modal.querySelector('.bets-modal-close');
+  const matchEl = modal.querySelector('.bets-modal-match');
+  const countEl = modal.querySelector('.bets-modal-count');
+  const bodyEl = modal.querySelector('.bets-modal-body');
+  let lastFocus = null;
+
+  function openModal(btn) {
+    const gameId = btn.dataset.gameId;
+    const tpl = gameId ? document.getElementById('featured-bets-data-' + gameId) : null;
+    if (!tpl || !bodyEl) return;
+
+    lastFocus = btn;
+    if (matchEl) matchEl.textContent = btn.dataset.match || '';
+    if (countEl) countEl.textContent = btn.textContent.trim();
+    bodyEl.innerHTML = tpl.innerHTML;
+
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    closeBtn?.focus();
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (bodyEl) bodyEl.innerHTML = '';
+    lastFocus?.focus();
+    lastFocus = null;
+  }
 
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('.featured-bets-btn');
     if (!btn) return;
-
     e.preventDefault();
     e.stopPropagation();
-
-    const panelId = btn.getAttribute('aria-controls');
-    const panel = panelId ? document.getElementById(panelId) : null;
-    if (!panel) return;
-
-    const willOpen = btn.getAttribute('aria-expanded') !== 'true';
-
-    document.querySelectorAll('.featured-bets-btn[aria-expanded="true"]').forEach((other) => {
-      if (other === btn) return;
-      other.setAttribute('aria-expanded', 'false');
-      const otherPanel = document.getElementById(other.getAttribute('aria-controls'));
-      if (otherPanel) otherPanel.hidden = true;
-    });
-
-    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    panel.hidden = !willOpen;
+    openModal(btn);
   });
+
+  backdrop?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
+
+  window.closeFeaturedBetsModal = closeModal;
 })();

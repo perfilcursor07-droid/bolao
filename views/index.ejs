@@ -47,6 +47,21 @@
     </div>
   </div>
 
+  <div id="featured-bets-modal" class="bets-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bets-modal-title">
+    <div class="bets-modal-backdrop"></div>
+    <div class="bets-modal-dialog">
+      <header class="bets-modal-header">
+        <div>
+          <h2 id="bets-modal-title" class="bets-modal-title">Apostas registradas</h2>
+          <p class="bets-modal-match"></p>
+          <p class="bets-modal-count"></p>
+        </div>
+        <button type="button" class="bets-modal-close" aria-label="Fechar">✕</button>
+      </header>
+      <div class="bets-modal-body"></div>
+    </div>
+  </div>
+
   <%- include('partials/footer') %>
   <script src="/js/featured-bets.js" defer></script>
   <script src="/js/home-refresh.js" defer></script>

@@ -22,29 +22,26 @@
         <button
           type="button"
           class="featured-stat-bets featured-bets-btn"
-          aria-expanded="false"
-          aria-controls="featured-bets-<%= game.id %>"
           data-game-id="<%= game.id %>"
+          data-match="<%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %>"
+          aria-haspopup="dialog"
         >
           <%= game.total_bets %> aposta<%= Number(game.total_bets) !== 1 ? 's' : '' %>
         </button>
+        <template id="featured-bets-data-<%= game.id %>">
+          <ul class="featured-bets-list">
+            <% featBets.forEach(function(bet) { %>
+              <li class="featured-bet-item">
+                <span class="featured-bet-name"><%= firstName(bet.name) %></span>
+                <span class="featured-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+              </li>
+            <% }); %>
+          </ul>
+        </template>
       <% } else { %>
         <span class="featured-stat-bets featured-stat-bets--empty">0 apostas</span>
       <% } %>
     </div>
-
-    <% if (Number(game.total_bets) > 0) { %>
-      <div id="featured-bets-<%= game.id %>" class="featured-bets-panel" hidden>
-        <ul class="featured-bets-list">
-          <% featBets.forEach(function(bet) { %>
-            <li class="featured-bet-item">
-              <span class="featured-bet-name"><%= firstName(bet.name) %></span>
-              <span class="featured-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
-            </li>
-          <% }); %>
-        </ul>
-      </div>
-    <% } %>
 
     <footer class="featured-foot">
       <% if (user) { %>
