@@ -234,7 +234,9 @@ async function getAffiliateDashboard(userId) {
 
   const [referrals] = await pool.query(
     `SELECT ar.*, u.name as referred_name,
-      (SELECT COUNT(*) FROM payments p WHERE p.user_id = ar.referred_user_id AND p.status = 'paid') as paid_count
+      (SELECT COUNT(*) FROM payments p WHERE p.user_id = ar.referred_user_id AND p.status = 'paid') as paid_count,
+      (SELECT COALESCE(SUM(ac.amount_cents), 0) FROM affiliate_commissions ac
+       WHERE ac.affiliate_id = ar.affiliate_id AND ac.referred_user_id = ar.referred_user_id) as earned_cents
      FROM affiliate_referrals ar
      JOIN users u ON u.id = ar.referred_user_id
      WHERE ar.affiliate_id = ?
@@ -264,6 +266,44 @@ async function getAffiliateDashboard(userId) {
     nextMilestone,
     minPayoutCents: MIN_PAYOUT_CENTS,
     firstBetCommissionCents: FIRST_BET_COMMISSION_CENTS,
+  };
+}
+
+async function getUserDashboard(userId) {
+  const [betStats] = await pool.query(
+    `SELECT COUNT(*) as total_bets,
+            SUM(CASE WHEN is_winner THEN 1 ELSE 0 END) as wins,
+            COALESCE(SUM(CASE WHEN is_winner THEN prize_amount_cents ELSE 0 END), 0) as total_prizes
+     FROM bets WHERE user_id = ?`,
+    [userId]
+  );
+
+  const [pendingPayments] = await pool.query(
+    `SELECT COUNT(*) as c FROM payments
+     WHERE user_id = ? AND status = 'pending' AND qr_code_text IS NOT NULL AND qr_code_text != ''`,
+    [userId]
+  );
+
+  const [recentBets] = await pool.query(
+    `SELECT b.*, g.title, g.home_team, g.away_team, g.status as game_status
+     FROM bets b JOIN games g ON g.id = b.game_id
+     WHERE b.user_id = ? ORDER BY b.created_at DESC LIMIT 5`,
+    [userId]
+  );
+
+  const affiliate = await getAffiliateByUserId(userId);
+  const affiliateDashboard = affiliate ? await getAffiliateDashboard(userId) : null;
+
+  return {
+    stats: {
+      totalBets: betStats[0]?.total_bets || 0,
+      wins: betStats[0]?.wins || 0,
+      totalPrizes: betStats[0]?.total_prizes || 0,
+      pendingPayments: pendingPayments[0]?.c || 0,
+    },
+    recentBets,
+    affiliate,
+    affiliateDashboard,
   };
 }
 
@@ -339,6 +379,7 @@ module.exports = {
   applyForAffiliate,
   processAffiliateCommissionOnPayment,
   getAffiliateDashboard,
+  getUserDashboard,
   listAffiliatesForAdmin,
   setAffiliateStatus,
   markAffiliatePayoutPaid,

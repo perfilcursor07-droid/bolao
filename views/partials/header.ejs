@@ -36,8 +36,10 @@
         <%- include('nav-tools') %>
       </div>
       <div class="nav-user" title="<%= user.name %>">
-        <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-        <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
+        <a href="/painel" class="nav-user-link">
+          <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+          <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
+        </a>
       </div>
       <a href="/logout" class="nav-link-quiet">Sair</a>
     <% } else { %>
@@ -54,13 +56,16 @@
 <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
   <% if (typeof user !== 'undefined' && user) { %>
     <div class="nav-mobile-user">
-      <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-      <div>
-        <strong><%= user.name.split(' ')[0] %></strong>
-        <small>Minha conta</small>
-      </div>
+      <a href="/painel" class="nav-mobile-user-link">
+        <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+        <div>
+          <strong><%= user.name.split(' ')[0] %></strong>
+          <small>Minha conta</small>
+        </div>
+      </a>
     </div>
     <nav class="nav-mobile-links">
+      <a href="/painel" class="nav-mobile-link"><span class="nav-mobile-link-label">Minha conta</span></a>
       <a href="/" class="nav-mobile-link"><span class="nav-mobile-link-label">Jogos</span></a>
       <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
       <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
@@ -78,6 +83,7 @@
         <% } %>
       </a>
       <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
+      <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">Afiliados</span></a>
       <% if (user.role === 'admin') { %>
         <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">Admin</span></a>
       <% } %>

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> | Bolão Online</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,15 +11,15 @@
 <body class="page-affiliate page-green">
   <%- include('../partials/header') %>
 
-  <section class="hero-twin hero-twin--compact" aria-label="Programa de afiliados">
-    <div class="hero-twin-inner">
-      <p class="hero-twin-kicker">Programa de afiliados</p>
-      <h1 class="hero-twin-title">Indique amigos.<br><span class="hero-twin-win">Ganhe comissão.</span></h1>
-      <p class="hero-twin-sub">Compartilhe seu link — na <strong>1ª aposta PIX</strong> paga você recebe, sem tirar do prêmio.</p>
-    </div>
-  </section>
+  <div class="container home-container affiliate-page">
+    <a href="/" class="back-link">← Voltar</a>
 
-  <div class="container home-container affiliate-page page-green-content">
+    <div class="affiliate-hero">
+      <p class="affiliate-kicker">Programa de afiliados</p>
+      <h1>Indique amigos.<br><span class="affiliate-highlight">Ganhe em cada aposta paga.</span></h1>
+      <p class="affiliate-lead">Compartilhe seu link. Quando alguém entrar e pagar a <strong>primeira aposta via PIX</strong>, você recebe comissão — sem tirar do prêmio dos jogadores.</p>
+    </div>
+
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
     <% } %>
@@ -28,7 +28,7 @@
     <% } %>
 
     <div class="affiliate-grid-twin">
-      <div class="card affiliate-card affiliate-card--green">
+      <div class="card affiliate-card">
         <h2>Como funciona</h2>
         <ol class="affiliate-steps-list">
           <li>Cadastre-se como afiliado (aprovação rápida)</li>
@@ -38,7 +38,7 @@
         </ol>
       </div>
 
-      <div class="card affiliate-card affiliate-card--green">
+      <div class="card affiliate-card">
         <h2>Metas e bônus</h2>
         <ul class="affiliate-milestones">
           <% milestones.forEach(function(m) { %>
@@ -52,47 +52,45 @@
       </div>
     </div>
 
-    <div class="card affiliate-card affiliate-card--green affiliate-info-card">
+    <div class="card affiliate-card affiliate-cta-card">
       <% if (!user) { %>
-        <h2>Quer participar?</h2>
-        <p>Faça login ou participe de um bolão para ter conta e solicitar o cadastro de afiliado.</p>
+        <h2>Cadastre-se agora</h2>
+        <p>Crie sua conta gratuita, aposte nos bolões e compartilhe seu link de afiliado para ganhar em cada indicação que pagar via PIX.</p>
+        <p class="affiliate-note">Você pode apostar normalmente e ser afiliado ao mesmo tempo.</p>
+        <div class="btn-center-wrap">
+          <a href="/register" class="btn btn-gold">Cadastre-se agora</a>
+          <a href="/login?returnTo=/afiliado" class="btn btn-outline">Já tenho conta</a>
+        </div>
       <% } else if (affiliate && affiliate.status === 'active') { %>
         <h2>Você já é afiliado</h2>
         <p>Acesse seu painel para copiar o link e acompanhar ganhos.</p>
+        <div class="btn-center-wrap">
+          <a href="/painel#afiliados" class="btn btn-gold">Abrir meu painel</a>
+        </div>
       <% } else if (affiliate && affiliate.status === 'pending') { %>
         <h2>Solicitação em análise</h2>
         <p>Seu código <strong><%= affiliate.code %></strong> será liberado após aprovação.</p>
+        <div class="btn-center-wrap">
+          <a href="/painel#afiliados" class="btn btn-outline">Ver status</a>
+        </div>
       <% } else if (affiliate && affiliate.status === 'rejected') { %>
         <h2>Cadastro não aprovado</h2>
         <p>Entre em contato com o administrador para mais informações.</p>
       <% } else { %>
         <h2>Solicitar cadastro de afiliado</h2>
         <p>Conta: <strong><%= user.name %></strong>. A chave PIX do seu cadastro será usada para pagamentos.</p>
-        <form method="POST" action="/afiliado/cadastro" id="affiliate-apply-form" class="affiliate-apply-form">
+        <form method="POST" action="/afiliado/cadastro" class="affiliate-apply-form">
           <div class="form-group">
             <label for="code">Código do link <small>(opcional)</small></label>
             <input type="text" id="code" name="code" class="form-control" placeholder="Ex: ERICK10" maxlength="20" pattern="[A-Za-z0-9]+">
           </div>
+          <button type="submit" class="btn btn-gold btn-block">Quero ser afiliado</button>
         </form>
+        <div class="btn-center-wrap" style="margin-top:0.75rem;">
+          <a href="/" class="btn btn-outline btn-sm">Ver jogos abertos</a>
+        </div>
       <% } %>
     </div>
-
-    <div class="page-sticky-spacer" aria-hidden="true"></div>
-  </div>
-
-  <div class="page-sticky-foot<%= !user ? ' page-sticky-foot--dual' : '' %>">
-    <% if (!user) { %>
-      <a href="/login" class="btn btn-outline page-sticky-btn page-sticky-btn--half">Entrar</a>
-      <a href="/" class="btn btn-gold page-sticky-btn page-sticky-btn--half">Ver jogos</a>
-    <% } else if (affiliate && affiliate.status === 'active') { %>
-      <a href="/afiliado/painel" class="btn btn-gold page-sticky-btn">Abrir painel</a>
-    <% } else if (affiliate && affiliate.status === 'pending') { %>
-      <a href="/afiliado/painel" class="btn btn-gold page-sticky-btn">Ver status</a>
-    <% } else if (affiliate && affiliate.status === 'rejected') { %>
-      <a href="/" class="btn btn-gold page-sticky-btn">Ver jogos</a>
-    <% } else { %>
-      <button type="submit" form="affiliate-apply-form" class="btn btn-gold page-sticky-btn">Quero ser afiliado</button>
-    <% } %>
   </div>
 
   <%- include('../partials/footer') %>

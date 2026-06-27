@@ -11,33 +11,32 @@
 <body class="page-ganhadores page-green">
   <%- include('partials/header') %>
 
-  <section class="hero-twin hero-twin--compact" aria-label="Ganhadores">
-    <div class="hero-twin-inner">
-      <p class="hero-twin-kicker">🏆 Resultados oficiais</p>
-      <h1 class="hero-twin-title">Ganhadores</h1>
-      <p class="hero-twin-sub">Quem acertou o placar e levou o prêmio em cada bolão</p>
-    </div>
-  </section>
+  <div class="container home-container">
+    <a href="/" class="back-link">← Voltar aos jogos</a>
 
-  <div class="container home-container page-green-content">
-    <p class="ganhadores-hint">Participou sem conta? <a href="/consultar">Consulte pelo WhatsApp</a> se você ganhou.</p>
+    <header class="page-head page-head-green">
+      <p class="page-head-kicker">Hall da fama</p>
+      <h1>🏆 Ganhadores</h1>
+      <p>Quem acertou o placar e levou o prêmio em cada bolão</p>
+      <p class="ganhadores-hint">Participou sem conta? <a href="/consultar">Consulte pelo WhatsApp</a> se você ganhou.</p>
+    </header>
 
     <% if (winnerSummaries.length === 0) { %>
-      <div class="empty-state empty-state--green">
+      <div class="empty-state empty-state-green">
         <div class="empty-icon">🏆</div>
         <p>Nenhum ganhador ainda</p>
         <small>Os ganhadores aparecem aqui quando um bolão é finalizado com acertos.</small>
+        <div class="btn-center-wrap">
+          <a href="/" class="btn btn-gold">Ver jogos abertos</a>
+        </div>
       </div>
     <% } else { %>
       <p class="ganhadores-count"><%= winnerSummaries.length %> bolão<%= winnerSummaries.length !== 1 ? 'ões' : '' %> com ganhador<%= winnerSummaries.length !== 1 ? 'es' : '' %></p>
       <%- include('partials/finished-boloes-list', { finishedSummaries: winnerSummaries }) %>
+      <div class="btn-center-wrap" style="margin-top:1.25rem;">
+        <a href="/" class="btn btn-gold">Ver jogos abertos</a>
+      </div>
     <% } %>
-
-    <div class="page-sticky-spacer" aria-hidden="true"></div>
-  </div>
-
-  <div class="page-sticky-foot">
-    <a href="/" class="btn btn-gold page-sticky-btn">Ver jogos abertos</a>
   </div>
 
   <%- include('partials/footer') %>

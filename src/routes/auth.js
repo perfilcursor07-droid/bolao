@@ -6,6 +6,9 @@ const { requireGuest } = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/login', requireGuest, (req, res) => {
+  if (req.query.returnTo && String(req.query.returnTo).startsWith('/')) {
+    req.session.returnTo = req.query.returnTo;
+  }
   res.render('login', { title: 'Entrar', error: null });
 });
 

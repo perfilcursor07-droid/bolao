@@ -2,8 +2,8 @@ const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const {
   applyForAffiliate,
-  getAffiliateDashboard,
   getAffiliateByUserId,
+  getUserDashboard,
   MILESTONES,
   FIRST_BET_COMMISSION_CENTS,
   MIN_PAYOUT_CENTS,
@@ -40,37 +40,44 @@ router.post('/afiliado/cadastro', requireAuth, async (req, res) => {
     const result = await applyForAffiliate(req.session.user.id, preferredCode || null);
 
     if (result.error === 'already_applied') {
-      return res.redirect('/afiliado/painel');
+      return res.redirect('/painel#afiliados');
     }
     if (result.error === 'pix_required') {
       return res.redirect('/afiliado?error=' + encodeURIComponent('Cadastre sua chave PIX antes (participe de um bolão ou atualize seu perfil).'));
     }
 
-    res.redirect('/afiliado?applied=1');
+    res.redirect('/painel?applied=1#afiliados');
   } catch (err) {
     res.redirect('/afiliado?error=' + encodeURIComponent('Erro ao solicitar cadastro. Tente novamente.'));
   }
 });
 
-router.get('/afiliado/painel', requireAuth, async (req, res) => {
+router.get('/painel', requireAuth, async (req, res) => {
   try {
-    const dashboard = await getAffiliateDashboard(req.session.user.id);
-    if (!dashboard) {
-      return res.redirect('/afiliado');
-    }
-
+    const data = await getUserDashboard(req.session.user.id);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const affiliateLink =
+      data.affiliate && data.affiliate.status === 'active'
+        ? `${baseUrl}/?ref=${data.affiliate.code}`
+        : null;
 
-    res.render('afiliado/painel', {
-      title: 'Painel do Afiliado',
-      ...dashboard,
-      affiliateLink: `${baseUrl}/?ref=${dashboard.affiliate.code}`,
+    res.render('painel', {
+      title: 'Minha conta',
+      ...data,
+      affiliateLink,
+      milestones: MILESTONES,
+      firstBetCommissionCents: FIRST_BET_COMMISSION_CENTS,
+      minPayoutCents: MIN_PAYOUT_CENTS,
       user: req.session.user,
-      copied: req.query.copied === '1',
+      applied: req.query.applied === '1',
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
   }
+});
+
+router.get('/afiliado/painel', requireAuth, (req, res) => {
+  res.redirect('/painel#afiliados');
 });
 
 module.exports = router;
