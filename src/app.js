@@ -76,6 +76,11 @@ app.use(async (req, res, next) => {
   res.locals.formatCents = formatCents;
   res.locals.teamPt = translateTeamName;
   res.locals.gameDateBR = formatGameDateBR;
+  res.locals.firstName = (name) => {
+    if (!name || typeof name !== 'string') return '—';
+    const part = name.trim().split(/\s+/)[0];
+    return part || '—';
+  };
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
   res.locals.isBettingOpen = isBettingOpen;

@@ -1,56 +1,7 @@
     <!-- Jogo em Destaque -->
     <% if (typeof featuredGames !== 'undefined' && featuredGames.length > 0) { %>
       <% featuredGames.forEach(function(game) { %>
-        <article class="featured-card">
-          <div class="featured-card-inner">
-            <header class="featured-head">
-              <span class="featured-badge">⭐ DESTAQUE</span>
-              <time class="featured-date"><%= gameDateBR(game.game_date) %></time>
-            </header>
-
-            <div class="featured-match">
-              <span class="featured-team"><%= teamPt(game.home_team) %></span>
-              <span class="featured-x">×</span>
-              <span class="featured-team"><%= teamPt(game.away_team) %></span>
-            </div>
-
-            <div class="featured-chips">
-              <span class="featured-chip featured-chip--prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
-              <span class="featured-chip"><%= game.total_bets %> aposta<%= game.total_bets !== 1 ? 's' : '' %></span>
-              <span class="featured-chip featured-chip--fee"><%= formatCents(game.entry_fee_cents) %>/placar</span>
-            </div>
-
-            <footer class="featured-foot">
-              <% if (user) { %>
-                <% if (isBettingOpen(game)) { %>
-                  <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block featured-cta">Apostar</a>
-                <% } else { %>
-                  <span class="featured-betting-closed">Apostas encerradas</span>
-                  <% var featSnap = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
-                  <% if (featSnap && featSnap.bets && featSnap.bets.length > 0) { %>
-                    <div class="featured-closed-panel">
-                      <%- include('closed-betting-panel', { breakdown: featSnap.breakdown, bets: featSnap.bets, compact: true }) %>
-                      <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
-                    </div>
-                  <% } %>
-                <% } %>
-              <% } else { %>
-                <% if (isBettingOpen(game)) { %>
-                  <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block featured-cta">Participar</a>
-                <% } else { %>
-                  <span class="featured-betting-closed">Apostas encerradas</span>
-                  <% var featSnapGuest = typeof closedBettingMap !== 'undefined' ? closedBettingMap[game.id] : null; %>
-                  <% if (featSnapGuest && featSnapGuest.bets && featSnapGuest.bets.length > 0) { %>
-                    <div class="featured-closed-panel">
-                      <%- include('closed-betting-panel', { breakdown: featSnapGuest.breakdown, bets: featSnapGuest.bets, compact: true }) %>
-                      <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
-                    </div>
-                  <% } %>
-                <% } %>
-              <% } %>
-            </footer>
-          </div>
-        </article>
+        <%- include('featured-game-card', { game, user, featuredBetsMap }) %>
       <% }); %>
     <% } %>
 

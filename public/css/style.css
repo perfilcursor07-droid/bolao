@@ -2356,6 +2356,163 @@ td { border-top: 1px solid var(--border); }
   flex-wrap: wrap;
 }
 
+/* Destaque — prêmio centro, apostas direita */
+.featured-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.featured-stat-fee {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  white-space: nowrap;
+}
+
+.featured-stat-prize {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.featured-prize-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.featured-prize-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #4ade80;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.featured-bets-btn {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  position: relative;
+  z-index: 2;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.featured-bets-btn[aria-expanded="true"]::after {
+  content: '▴';
+}
+
+.featured-bets-panel {
+  margin-top: 0.35rem;
+}
+
+.featured-bets-panel[hidden] {
+  display: none !important;
+}
+
+.featured-stat-bets {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #bbf7d0;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.featured-stat-bets::after {
+  content: '▾';
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+
+.featured-bets-btn[aria-expanded="true"]::after {
+  content: '▴';
+}
+
+.featured-stat-bets:hover {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.featured-stat-bets--empty {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.35rem 0.55rem;
+}
+
+.featured-bets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  max-height: 160px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 10px;
+}
+
+.featured-bet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.25rem;
+  font-size: 0.78rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.featured-bet-item:last-child {
+  border-bottom: none;
+}
+
+.featured-bet-name {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.featured-bet-score {
+  font-weight: 800;
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.featured-foot .featured-closed-link {
+  display: block;
+  text-align: center;
+  margin-top: 0.45rem;
+}
+
 .featured-chip {
   flex: 1 1 0;
   min-width: 72px;
@@ -2615,6 +2772,9 @@ td { border-top: 1px solid var(--border); }
 @media (max-width: 380px) {
   .featured-team { font-size: 0.98rem; }
   .featured-chip { font-size: 0.7rem; min-width: 64px; }
+  .featured-prize-value { font-size: 1.15rem; }
+  .featured-stat-fee { font-size: 0.65rem; padding: 0.3rem 0.4rem; }
+  .featured-stat-bets { font-size: 0.68rem; padding: 0.35rem 0.5rem; }
 }
 
 /* Game rows — compact list */
@@ -2744,6 +2904,14 @@ td { border-top: 1px solid var(--border); }
   color: #f0fdf4;
   background: linear-gradient(90deg, #22c55e, #16a34a);
   border: 1px solid rgba(74, 222, 128, 0.4);
+}
+
+.page-home .featured-prize-value {
+  color: #4ade80;
+}
+
+.page-home .featured-stat-bets {
+  color: #bbf7d0;
 }
 
 .page-home .featured-x,

@@ -1,0 +1,67 @@
+<article class="featured-card">
+  <% var featBets = typeof featuredBetsMap !== 'undefined' && featuredBetsMap[game.id] ? featuredBetsMap[game.id].bets : []; %>
+  <div class="featured-card-inner">
+    <header class="featured-head">
+      <span class="featured-badge">⭐ DESTAQUE</span>
+      <time class="featured-date"><%= gameDateBR(game.game_date) %></time>
+    </header>
+
+    <div class="featured-match">
+      <span class="featured-team"><%= teamPt(game.home_team) %></span>
+      <span class="featured-x">×</span>
+      <span class="featured-team"><%= teamPt(game.away_team) %></span>
+    </div>
+
+    <div class="featured-stats-grid">
+      <span class="featured-stat-fee"><%= formatCents(game.entry_fee_cents) %>/placar</span>
+      <div class="featured-stat-prize">
+        <span class="featured-prize-label">🏆 Prêmio</span>
+        <strong class="featured-prize-value"><%= formatCents(game.prize_pool_cents) %></strong>
+      </div>
+      <% if (Number(game.total_bets) > 0) { %>
+        <button
+          type="button"
+          class="featured-stat-bets featured-bets-btn"
+          aria-expanded="false"
+          aria-controls="featured-bets-<%= game.id %>"
+          data-game-id="<%= game.id %>"
+        >
+          <%= game.total_bets %> aposta<%= Number(game.total_bets) !== 1 ? 's' : '' %>
+        </button>
+      <% } else { %>
+        <span class="featured-stat-bets featured-stat-bets--empty">0 apostas</span>
+      <% } %>
+    </div>
+
+    <% if (Number(game.total_bets) > 0) { %>
+      <div id="featured-bets-<%= game.id %>" class="featured-bets-panel" hidden>
+        <ul class="featured-bets-list">
+          <% featBets.forEach(function(bet) { %>
+            <li class="featured-bet-item">
+              <span class="featured-bet-name"><%= firstName(bet.name) %></span>
+              <span class="featured-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+            </li>
+          <% }); %>
+        </ul>
+      </div>
+    <% } %>
+
+    <footer class="featured-foot">
+      <% if (user) { %>
+        <% if (isBettingOpen(game)) { %>
+          <a href="/games/<%= game.id %>/placar" class="btn btn-gold btn-block featured-cta">Apostar</a>
+        <% } else { %>
+          <span class="featured-betting-closed">Apostas encerradas</span>
+          <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
+        <% } %>
+      <% } else { %>
+        <% if (isBettingOpen(game)) { %>
+          <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block featured-cta">Participar</a>
+        <% } else { %>
+          <span class="featured-betting-closed">Apostas encerradas</span>
+          <a href="/games/<%= game.id %>" class="featured-closed-link">Ver bolão →</a>
+        <% } %>
+      <% } %>
+    </footer>
+  </div>
+</article>

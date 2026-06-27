@@ -16,13 +16,27 @@
   }
 
   function saveOpenDetails() {
-    return [...container.querySelectorAll('details[open][data-game-id]')].map((d) => d.dataset.gameId);
+    const gameIds = [...container.querySelectorAll('details[open][data-game-id]')].map((d) => d.dataset.gameId);
+    const featuredBets = [...container.querySelectorAll('.featured-bets-btn[aria-expanded="true"]')].map(
+      (b) => b.getAttribute('aria-controls')
+    );
+    return { gameIds, featuredBets };
   }
 
-  function restoreOpenDetails(ids) {
-    ids.forEach((id) => {
+  function restoreOpenDetails(state) {
+    const ids = state && state.gameIds ? state.gameIds : state;
+    const featuredBets = state && state.featuredBets ? state.featuredBets : [];
+    (Array.isArray(ids) ? ids : []).forEach((id) => {
       const el = container.querySelector(`details[data-game-id="${id}"]`);
       if (el) el.open = true;
+    });
+    featuredBets.forEach((panelId) => {
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const btn = panelId ? container.querySelector(`.featured-bets-btn[aria-controls="${panelId}"]`) : null;
+      if (panel && btn) {
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      }
     });
   }
 
@@ -53,13 +67,13 @@
       });
       if (!res.ok) return;
 
-      const openIds = saveOpenDetails();
+      const openState = saveOpenDetails();
       const html = await res.text();
       if (!html.trim()) return;
 
       container.innerHTML = html;
       container.dataset.hasLive = container.querySelector('.game-row-live') ? '1' : '0';
-      restoreOpenDetails(openIds);
+      restoreOpenDetails(openState);
 
       const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       setStatus('Atualizado às ' + now, true);

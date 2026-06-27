@@ -56,6 +56,7 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
 
   const closedBettingGames = [...featuredGames, ...upcomingGames, ...otherOpenGames].filter((g) => !isBettingOpen(g));
   const closedBettingMap = await loadBetsForGames(closedBettingGames);
+  const featuredBetsMap = featuredGames.length > 0 ? await loadBetsForGames(featuredGames) : {};
 
   let myBets = [];
   const gameStatusMap = {};
@@ -86,6 +87,7 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
     myBets,
     gameStatusMap,
     closedBettingMap,
+    featuredBetsMap,
     hasLiveGames: liveGames.length > 0,
   };
 }
