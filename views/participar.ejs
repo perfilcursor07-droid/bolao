@@ -314,8 +314,8 @@
               if (data.found) {
                 const nameEl = document.getElementById('name');
                 const cpfEl = document.getElementById('cpf');
-                if (!nameEl.value) nameEl.value = data.name;
-                if (!cpfEl.value && data.cpf) {
+                nameEl.value = data.name || '';
+                if (data.cpf) {
                   cpfEl.value = data.cpf;
                   cpfConfirmInput.value = '';
                 }

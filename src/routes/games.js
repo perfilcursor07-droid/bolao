@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
-const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch } = require('../services/guestService');
+const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch, findUserByPhone } = require('../services/guestService');
 const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
@@ -17,9 +17,9 @@ router.post('/api/lookup-phone', async (req, res) => {
   if (phone.length < 10) return res.json({ found: false });
 
   try {
-    const [users] = await pool.query('SELECT name, cpf FROM users WHERE phone = ? LIMIT 1', [phone]);
-    if (users.length > 0) {
-      return res.json({ found: true, name: users[0].name, cpf: users[0].cpf || '' });
+    const user = await findUserByPhone(phone);
+    if (user) {
+      return res.json({ found: true, name: user.name, cpf: user.cpf || '' });
     }
     res.json({ found: false });
   } catch (err) {

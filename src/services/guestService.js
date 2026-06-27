@@ -29,6 +29,37 @@ function pixKeysMatch(a, b) {
   return left.length > 0 && left === right;
 }
 
+/** Variantes do telefone para busca (com/sem 55, normalizado). */
+function phoneLookupVariants(phone) {
+  const digits = cleanPhoneDigits(phone);
+  if (digits.length < 10) return [];
+
+  const variants = new Set([digits]);
+  const normalized = normalizeBrazilPhone(digits);
+  if (normalized) {
+    variants.add(normalized);
+    if (normalized.startsWith('55')) {
+      variants.add(normalized.slice(2));
+    }
+  }
+  if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+    variants.add(`55${digits}`);
+  }
+  return [...variants];
+}
+
+async function findUserByPhone(phone) {
+  const variants = phoneLookupVariants(phone);
+  if (variants.length === 0) return null;
+
+  const placeholders = variants.map(() => '?').join(', ');
+  const [rows] = await pool.query(
+    `SELECT * FROM users WHERE phone IN (${placeholders}) LIMIT 1`,
+    variants
+  );
+  return rows[0] || null;
+}
+
 async function findOrCreateParticipant({ name, phone, cpf }) {
   const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
@@ -38,10 +69,10 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
   }
 
   // Buscar primeiro pelo telefone (identificador principal)
-  const [byPhone] = await pool.query('SELECT * FROM users WHERE phone = ?', [phoneClean]);
+  const userByPhone = await findUserByPhone(phone);
 
-  if (byPhone.length > 0) {
-    const user = byPhone[0];
+  if (userByPhone) {
+    const user = userByPhone;
 
     if (user.role === 'admin') {
       return { error: 'admin_cpf' };
@@ -55,6 +86,10 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
     if (Object.keys(updates).length > 0) {
       const sets = Object.entries(updates).map(([k]) => `${k} = ?`).join(', ');
       await pool.query(`UPDATE users SET ${sets} WHERE id = ?`, [...Object.values(updates), user.id]);
+    }
+
+    if (user.phone !== phoneClean) {
+      await pool.query('UPDATE users SET phone = ? WHERE id = ?', [phoneClean, user.id]);
     }
 
     return {
@@ -120,4 +155,12 @@ function setSessionUser(req, user) {
   };
 }
 
-module.exports = { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch, normalizePixKey };
+module.exports = {
+  findOrCreateParticipant,
+  findUserByPhone,
+  phoneLookupVariants,
+  setSessionUser,
+  cleanPhone,
+  pixKeysMatch,
+  normalizePixKey,
+};
