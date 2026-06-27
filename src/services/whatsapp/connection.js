@@ -62,6 +62,17 @@ function ensureAuthDir() {
   }
 }
 
+function clearAuthFiles() {
+  try {
+    if (fs.existsSync(AUTH_DIR)) {
+      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+    }
+    fs.mkdirSync(AUTH_DIR, { recursive: true });
+  } catch (err) {
+    console.error('[whatsapp] Erro ao limpar sessão:', err.message);
+  }
+}
+
 function hasSavedSession() {
   ensureAuthDir();
   try {
@@ -270,12 +281,25 @@ async function createSocketInternal() {
         destroySocket();
         state.connecting = false;
 
-        if (state.manualLogout || loggedOut) {
+        if (state.manualLogout) {
           state.status = 'disconnected';
           state.phone = null;
           releaseSocketBusy();
           await persistMeta({ status: 'disconnected', phone: '' });
-          console.log('[whatsapp] Desconectado (logout)');
+          console.log('[whatsapp] Desconectado pelo admin');
+          return;
+        }
+
+        if (loggedOut || statusCode === DisconnectReason.badSession) {
+          clearReconnectTimer();
+          clearAuthFiles();
+          state.status = 'disconnected';
+          state.phone = null;
+          state.lastError =
+            'Sessão inválida ou expirada. Clique em Desconectar (se ainda conectando) e depois Conectar para escanear um novo QR.';
+          releaseSocketBusy();
+          await persistMeta({ status: 'disconnected', phone: '' });
+          console.log('[whatsapp] Sessão inválida removida — código', statusCode);
           return;
         }
 
@@ -339,7 +363,7 @@ async function disconnect(logout = true) {
     try {
       await sock.logout();
     } catch {
-      /* ignora */
+      /* ignora — socket pode já estar morto */
     }
   }
 
@@ -348,11 +372,10 @@ async function disconnect(logout = true) {
   state.qrRaw = null;
   state.qrDataUrl = null;
   state.phone = null;
+  state.lastError = null;
   await persistMeta({ status: 'disconnected', phone: '' });
 
-  if (logout && fs.existsSync(AUTH_DIR)) {
-    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-  }
+  clearAuthFiles();
 }
 
 async function sendTextMessage(jid, text) {

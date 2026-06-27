@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
       activePage: 'whatsapp',
       status,
       saved: req.query.saved === '1',
+      disconnected: req.query.disconnected === '1',
       error: req.query.error || null,
     });
   } catch (err) {
@@ -53,7 +54,7 @@ router.post('/connect', async (req, res) => {
 router.post('/disconnect', async (req, res) => {
   try {
     await whatsappService.disconnect();
-    res.redirect('/admin/whatsapp');
+    res.redirect('/admin/whatsapp?disconnected=1');
   } catch (err) {
     res.redirect('/admin/whatsapp?error=' + encodeURIComponent(err.message));
   }

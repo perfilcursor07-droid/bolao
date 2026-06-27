@@ -19,12 +19,6 @@ async function setNotificationsEnabled(enabled) {
 }
 
 async function getFullStatus() {
-  if (connection.hasSavedSession() && !connection.isConnected() && !connection.isConnecting()) {
-    connection.ensureConnected().catch((err) => {
-      console.error('[whatsapp] ensureConnected:', err.message);
-    });
-  }
-
   const conn = connection.getPublicState();
   const enabled = await getNotificationsEnabled();
   const { stats, recent } = await outbox.getOutboxStats();

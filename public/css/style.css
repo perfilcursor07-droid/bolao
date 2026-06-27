@@ -7395,6 +7395,23 @@ tr.row-winner {
   margin: 0 0 0.75rem;
 }
 
+.wa-actions-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.wa-btn-disconnect {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.wa-btn-disconnect:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+
 .wa-connecting-hint {
   margin: 0.5rem 0 0;
   font-size: 0.78rem;

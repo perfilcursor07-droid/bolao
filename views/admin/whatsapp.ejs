@@ -17,6 +17,9 @@
     <% if (saved) { %>
       <div class="alert alert-success">Configuração salva com sucesso.</div>
     <% } %>
+    <% if (typeof disconnected !== 'undefined' && disconnected) { %>
+      <div class="alert alert-success">WhatsApp desconectado. Sessão limpa — clique em Conectar para escanear um novo QR.</div>
+    <% } %>
 
     <p class="admin-page-intro">
       Conecte um número WhatsApp para enviar confirmações de pagamento e resultados de apostas automaticamente.
@@ -58,15 +61,16 @@
           <img id="wa-qr-img" src="<%= status.qrDataUrl || '' %>" alt="QR Code WhatsApp" width="280" height="280">
         </div>
 
-        <div class="wa-actions">
+        <div class="wa-actions wa-actions-row">
           <form method="POST" action="/admin/whatsapp/connect" id="wa-connect-form" style="<%= (status.status === 'connected' || status.status === 'connecting' || status.status === 'qr') ? 'display:none;' : '' %>">
             <button type="submit" class="btn btn-gold" id="wa-connect-btn">Conectar WhatsApp</button>
           </form>
-          <form method="POST" action="/admin/whatsapp/disconnect" id="wa-disconnect-form" style="<%= status.status === 'connected' ? '' : 'display:none;' %>" onsubmit="return confirm('Desconectar WhatsApp? Será necessário escanear o QR novamente.');">
-            <button type="submit" class="btn btn-outline">Desconectar</button>
+          <form method="POST" action="/admin/whatsapp/disconnect" id="wa-disconnect-form" style="<%= (status.status === 'connected' || status.status === 'connecting' || status.status === 'qr' || status.hasSession) ? '' : 'display:none;' %>" onsubmit="return confirm('Limpar sessão e parar reconexão? Será necessário escanear o QR novamente.');">
+            <button type="submit" class="btn btn-outline wa-btn-disconnect">Desconectar</button>
           </form>
           <p id="wa-connecting-hint" class="wa-connecting-hint" style="<%= (status.status === 'connecting' || (status.hasSession && status.status !== 'connected' && status.status !== 'qr')) ? '' : 'display:none;' %>">
             Aguarde… reconectando ao WhatsApp (normal após escanear o QR).
+            <strong>Travou?</strong> Clique em <strong>Desconectar</strong> para limpar e conectar de novo.
           </p>
         </div>
       </div>
@@ -159,9 +163,9 @@
         if (data.status === 'connected') {
           connectForm.style.display = 'none';
           disconnectForm.style.display = '';
-        } else if (data.status === 'connecting' || data.status === 'qr') {
+        } else if (data.status === 'connecting' || data.status === 'qr' || data.hasSession) {
           connectForm.style.display = 'none';
-          disconnectForm.style.display = 'none';
+          disconnectForm.style.display = '';
         } else {
           connectForm.style.display = '';
           disconnectForm.style.display = 'none';
