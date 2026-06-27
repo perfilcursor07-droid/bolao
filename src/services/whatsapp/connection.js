@@ -31,7 +31,8 @@ const state = {
 let sock = null;
 let baileysModule = null;
 let reconnectTimer = null;
-let socketPromise = null;
+/** Evita abrir vários sockets ao mesmo tempo (causa connectionReplaced). */
+let socketBusy = false;
 
 async function loadBaileys() {
   if (!baileysModule) {
@@ -64,7 +65,11 @@ function ensureAuthDir() {
 function hasSavedSession() {
   ensureAuthDir();
   try {
-    return fs.readdirSync(AUTH_DIR).some((f) => f.startsWith('creds'));
+    const credsPath = path.join(AUTH_DIR, 'creds.json');
+    if (!fs.existsSync(credsPath)) return false;
+    const raw = fs.readFileSync(credsPath, 'utf8');
+    const creds = JSON.parse(raw);
+    return Boolean(creds?.me?.id || creds?.registered);
   } catch {
     return false;
   }
@@ -87,7 +92,7 @@ async function persistMeta(partial) {
       );
     }
   } catch {
-    /* ignora se settings indisponível */
+    /* ignora */
   }
 }
 
@@ -119,6 +124,10 @@ function clearReconnectTimer() {
   }
 }
 
+function releaseSocketBusy() {
+  socketBusy = false;
+}
+
 function destroySocket() {
   if (!sock) return;
   try {
@@ -146,13 +155,16 @@ function shouldAutoReconnect(statusCode, DisconnectReason) {
 }
 
 function reconnectDelayMs(statusCode, DisconnectReason) {
-  if (statusCode === DisconnectReason.restartRequired) return 500;
-  if (statusCode === DisconnectReason.connectionClosed) return 1500;
-  return 4000;
+  if (statusCode === DisconnectReason.restartRequired) return 800;
+  if (statusCode === DisconnectReason.connectionClosed) return 2000;
+  return 5000;
 }
 
 function scheduleReconnect(statusCode, DisconnectReason) {
-  if (!shouldAutoReconnect(statusCode, DisconnectReason)) return;
+  if (!shouldAutoReconnect(statusCode, DisconnectReason)) {
+    releaseSocketBusy();
+    return;
+  }
 
   clearReconnectTimer();
   state.status = 'connecting';
@@ -165,15 +177,23 @@ function scheduleReconnect(statusCode, DisconnectReason) {
     createSocketInternal().catch((err) => {
       state.connecting = false;
       state.lastError = err.message;
+      releaseSocketBusy();
       console.error('[whatsapp] Reconexão falhou:', err.message);
     });
   }, delay);
 }
 
 async function createSocketInternal() {
-  if (socketPromise) return socketPromise;
+  if (state.status === 'connected' && sock) {
+    return getPublicState();
+  }
+  if (socketBusy) {
+    return getPublicState();
+  }
 
-  socketPromise = (async () => {
+  socketBusy = true;
+
+  try {
     const {
       default: makeWASocket,
       useMultiFileAuthState,
@@ -193,6 +213,8 @@ async function createSocketInternal() {
     state.lastError = null;
     await persistMeta({ status: 'connecting' });
 
+    console.log('[whatsapp] Abrindo socket…');
+
     sock = makeWASocket({
       version,
       auth: {
@@ -205,7 +227,10 @@ async function createSocketInternal() {
       syncFullHistory: false,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
-      keepAliveIntervalMs: 25000,
+      keepAliveIntervalMs: 30000,
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      getMessage: async () => undefined,
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -214,7 +239,9 @@ async function createSocketInternal() {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        releaseSocketBusy();
         await updateQrDataUrl(qr);
+        console.log('[whatsapp] QR Code gerado — escaneie no celular');
       }
 
       if (connection === 'connecting') {
@@ -231,6 +258,7 @@ async function createSocketInternal() {
         state.lastError = null;
         state.manualLogout = false;
         clearReconnectTimer();
+        releaseSocketBusy();
         await persistMeta({ status: 'connected', phone: state.phone || '' });
         console.log('[whatsapp] Conectado:', state.phone || '(sem número)');
       }
@@ -245,31 +273,35 @@ async function createSocketInternal() {
         if (state.manualLogout || loggedOut) {
           state.status = 'disconnected';
           state.phone = null;
+          releaseSocketBusy();
           await persistMeta({ status: 'disconnected', phone: '' });
+          console.log('[whatsapp] Desconectado (logout)');
           return;
         }
 
         const reasonMsg = lastDisconnect?.error?.message || `Código ${statusCode || '?'}`;
-        console.log('[whatsapp] Conexão fechada, reconectando…', statusCode || reasonMsg);
+        console.log('[whatsapp] Conexão fechada — código', statusCode, '—', reasonMsg);
 
         if (shouldAutoReconnect(statusCode, DisconnectReason)) {
           state.lastError = null;
+          releaseSocketBusy();
           scheduleReconnect(statusCode, DisconnectReason);
         } else {
           state.status = 'disconnected';
-          state.lastError = reasonMsg;
+          state.lastError = `Falha ${statusCode}: ${reasonMsg}. Desconecte e escaneie o QR novamente.`;
+          releaseSocketBusy();
           await persistMeta({ status: 'disconnected' });
         }
       }
     });
 
     return getPublicState();
-  })();
-
-  try {
-    return await socketPromise;
-  } finally {
-    socketPromise = null;
+  } catch (err) {
+    state.status = 'disconnected';
+    state.connecting = false;
+    state.lastError = err.message;
+    releaseSocketBusy();
+    throw err;
   }
 }
 
@@ -286,7 +318,7 @@ async function startConnection() {
 
 async function ensureConnected() {
   if (state.status === 'connected' && sock) return true;
-  if (state.connecting || socketPromise || reconnectTimer) return false;
+  if (socketBusy || reconnectTimer) return false;
   if (!hasSavedSession() || state.manualLogout) return false;
 
   try {
@@ -301,6 +333,7 @@ async function disconnect(logout = true) {
   state.manualLogout = true;
   clearReconnectTimer();
   state.connecting = false;
+  releaseSocketBusy();
 
   if (sock && logout) {
     try {
@@ -337,7 +370,7 @@ function getPublicState() {
     hasSavedSession() &&
     !state.manualLogout &&
     !state.lastError &&
-    (state.connecting || reconnectTimer || socketPromise)
+    (state.connecting || reconnectTimer || socketBusy)
   ) {
     displayStatus = 'connecting';
   }
@@ -349,7 +382,7 @@ function getPublicState() {
     phone: state.phone,
     lastError: state.lastError,
     hasSession: hasSavedSession(),
-    connecting: state.connecting || Boolean(reconnectTimer) || Boolean(socketPromise),
+    connecting: state.connecting || Boolean(reconnectTimer) || socketBusy,
   };
 }
 
@@ -358,7 +391,7 @@ function isConnected() {
 }
 
 function isConnecting() {
-  return state.connecting || Boolean(reconnectTimer) || Boolean(socketPromise);
+  return state.connecting || Boolean(reconnectTimer) || socketBusy;
 }
 
 module.exports = {
