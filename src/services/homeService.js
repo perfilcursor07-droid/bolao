@@ -3,6 +3,8 @@ const { loadFinishedBoloes, loadBetsForGames } = require('./finishedBoloesServic
 const { getUserGameStatus } = require('./prizeService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches } = require('./gameStatusService');
 const { isBettingOpen } = require('./bettingRules');
+const { gameBetCountSubquery, marketingPoolSubquery, enrichGamesForDisplay } = require('./marketingBetService');
+const { dedupeGamesForDisplay } = require('./gameDuplicateService');
 
 let lastHomeApiSync = 0;
 const HOME_API_SYNC_MS = 3 * 60 * 1000;
@@ -23,9 +25,10 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
     }
   }
 
-  const [games] = await pool.query(
+  const [gameRows] = await pool.query(
     `SELECT g.*,
-      (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as total_bets
+      ${gameBetCountSubquery('g')} as total_bets,
+      ${marketingPoolSubquery('g')} as marketing_pool_cents
      FROM games g
      WHERE g.status IN ('open', 'closed', 'finished')
      ORDER BY
@@ -33,10 +36,13 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
        CASE g.status WHEN 'open' THEN 0 WHEN 'closed' THEN 1 ELSE 2 END,
        g.game_date ASC`
   );
+  const games = enrichGamesForDisplay(gameRows);
 
-  const openGames = games.filter((g) => g.status === 'open');
-  const liveGames = games.filter((g) => g.status === 'closed');
-  const featuredGames = openGames.filter((g) => g.featured);
+  const openGamesRaw = games.filter((g) => g.status === 'open');
+  const liveGamesRaw = games.filter((g) => g.status === 'closed');
+  const openGames = dedupeGamesForDisplay(openGamesRaw);
+  const liveGames = dedupeGamesForDisplay(liveGamesRaw);
+  const featuredGames = dedupeGamesForDisplay(openGames.filter((g) => g.featured));
   const normalGames = openGames.filter((g) => !g.featured);
 
   const nowTs = Date.now();

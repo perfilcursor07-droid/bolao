@@ -7,6 +7,12 @@ const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
 const { deleteGamesByIds } = require('../services/gameDelete');
 const {
+  findExistingGame,
+  loadExistingGameKeys,
+  removeSafeDuplicateGames,
+  markDuplicateIds,
+} = require('../services/gameDuplicateService');
+const {
   getDefaultEntryFeeCents,
   getDefaultEntryFeeReais,
   setDefaultEntryFeeFromReais,
@@ -25,8 +31,55 @@ const {
   markAffiliatePayoutPaid,
 } = require('../services/affiliateService');
 const { normalizeBrazilPhone, formatPhoneDisplay, isWhatsAppReadyPhone } = require('../services/whatsapp/phone');
+const {
+  gameBetCountSubquery,
+  createMarketingBet,
+  createMarketingBetsBulk,
+  deleteMarketingBet,
+  updateMarketingBet,
+  listMarketingBetsForAdmin,
+  mapMarketingBetForAdmin,
+  randomDisplayName,
+  randomScore,
+} = require('../services/marketingBetService');
 
 const adminWhatsAppRoutes = require('./adminWhatsApp');
+
+function apostasAdminUrl(gameId, params = {}, tab = 'real') {
+  const parts = [];
+  if (tab === 'marketing') parts.push('tab=marketing');
+  if (gameId) parts.push(`game=${gameId}`);
+  Object.entries(params).forEach(([k, v]) => parts.push(`${k}=${encodeURIComponent(v)}`));
+  return parts.length ? `/admin/apostas?${parts.join('&')}` : '/admin/apostas';
+}
+
+function buildApostasGameGroups(games, betsList) {
+  const gameGroups = [];
+  const groupMap = new Map();
+  for (const bet of betsList) {
+    if (!groupMap.has(bet.game_id)) {
+      const gameMeta = games.find((g) => g.id === bet.game_id) || {
+        id: bet.game_id,
+        title: bet.game_title,
+        home_team: bet.home_team,
+        away_team: bet.away_team,
+        status: bet.game_status,
+        game_date: bet.game_date,
+        home_score: bet.home_score,
+        away_score: bet.away_score,
+        real_bet_count: 0,
+        marketing_bet_count: 0,
+        bet_count: 0,
+        entry_fee_cents: 1000,
+      };
+      const group = { game: gameMeta, bets: [] };
+      groupMap.set(bet.game_id, group);
+      gameGroups.push(group);
+    }
+    groupMap.get(bet.game_id).bets.push(bet);
+  }
+  return gameGroups;
+}
 
 const router = express.Router();
 
@@ -125,16 +178,35 @@ router.get('/partidas', requireAdmin, async (req, res) => {
        FROM games g JOIN users u ON u.id = g.created_by
        ORDER BY g.game_date DESC`
     );
+    const duplicateIds = markDuplicateIds(games);
     res.render('admin/partidas', {
       title: 'Partidas',
       games,
+      duplicateIds,
       user: req.session.user,
       activePage: 'partidas',
       deleted: req.query.deleted ? parseInt(req.query.deleted, 10) : null,
+      deduped: req.query.deduped ? parseInt(req.query.deduped, 10) : null,
       error: req.query.error || null,
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+router.post('/partidas/dedupe', requireAdmin, async (req, res) => {
+  try {
+    const { deleted, skippedGroups } = await removeSafeDuplicateGames();
+    if (deleted === 0 && skippedGroups > 0) {
+      return res.redirect(
+        '/admin/partidas?error=' +
+          encodeURIComponent('Há duplicatas com apostas — remova manualmente a cópia vazia.')
+      );
+    }
+    res.redirect(`/admin/partidas?deduped=${deleted}`);
+  } catch (err) {
+    console.error('Erro ao deduplicar partidas:', err.message);
+    res.redirect('/admin/partidas?error=' + encodeURIComponent(err.message));
   }
 });
 
@@ -162,13 +234,17 @@ router.get('/apostas', requireAdmin, async (req, res) => {
   try {
     const [games] = await pool.query(
       `SELECT g.id, g.title, g.home_team, g.away_team, g.status, g.game_date, g.home_score, g.away_score,
-        (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as bet_count
+        g.entry_fee_cents,
+        (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as real_bet_count,
+        (SELECT COUNT(*) FROM marketing_bets mb WHERE mb.game_id = g.id) as marketing_bet_count,
+        ${gameBetCountSubquery('g')} as bet_count
        FROM games g
        ORDER BY g.game_date DESC`
     );
 
     const selectedGameId = req.query.game ? parseInt(req.query.game, 10) : null;
     const validGameId = selectedGameId && games.some((g) => g.id === selectedGameId) ? selectedGameId : null;
+    const activeTab = req.query.tab === 'marketing' ? 'marketing' : 'real';
 
     let betsSql = `SELECT b.*, u.name as user_name, u.phone, u.cpf, u.role as user_role,
         g.id as game_id, g.title as game_title, g.home_team, g.away_team, g.home_score, g.away_score,
@@ -186,47 +262,49 @@ router.get('/apostas', requireAdmin, async (req, res) => {
     }
     betsSql += ' ORDER BY g.game_date DESC, b.is_winner DESC, b.created_at DESC';
 
-    const [bets] = await pool.query(betsSql, params);
+    const [realBets] = await pool.query(betsSql, params);
 
-    const gameGroups = [];
-    const groupMap = new Map();
-    for (const bet of bets) {
-      if (!groupMap.has(bet.game_id)) {
-        const gameMeta = games.find((g) => g.id === bet.game_id) || {
-          id: bet.game_id,
-          title: bet.game_title,
-          home_team: bet.home_team,
-          away_team: bet.away_team,
-          status: bet.game_status,
-          game_date: bet.game_date,
-          home_score: bet.home_score,
-          away_score: bet.away_score,
-          bet_count: 0,
-        };
-        const group = { game: gameMeta, bets: [] };
-        groupMap.set(bet.game_id, group);
-        gameGroups.push(group);
-      }
-      groupMap.get(bet.game_id).bets.push(bet);
-    }
+    const marketingRows = await listMarketingBetsForAdmin({ gameId: validGameId || undefined });
+    const marketingBets = marketingRows.map(mapMarketingBetForAdmin);
 
-    const stats = {
-      totalBets: bets.length,
-      winners: bets.filter((b) => b.is_winner).length,
-      waiting: bets.filter((b) => !b.is_winner && b.game_status !== 'finished').length,
-      lost: bets.filter((b) => !b.is_winner && b.game_status === 'finished').length,
+    const gameGroupsReal = buildApostasGameGroups(games, realBets);
+    const gameGroupsMarketing = buildApostasGameGroups(games, marketingBets);
+    const gameGroups = activeTab === 'marketing' ? gameGroupsMarketing : gameGroupsReal;
+    const bets = activeTab === 'marketing' ? marketingBets : realBets;
+
+    const statsReal = {
+      total: realBets.length,
+      winners: realBets.filter((b) => b.is_winner).length,
+      waiting: realBets.filter((b) => !b.is_winner && b.game_status !== 'finished').length,
+      lost: realBets.filter((b) => !b.is_winner && b.game_status === 'finished').length,
+    };
+
+    const statsMarketing = {
+      total: marketingBets.length,
+      totalCents: marketingBets.reduce((sum, b) => sum + (b.amount_cents || 0), 0),
     };
 
     res.render('admin/apostas', {
       title: 'Apostas',
       games,
       bets,
+      realBets,
+      marketingBets,
       gameGroups,
+      gameGroupsReal,
+      gameGroupsMarketing,
+      activeTab,
       selectedGameId: validGameId,
-      stats,
+      defaultGameId: validGameId,
+      openGames: games.filter((g) => g.status !== 'finished'),
+      statsReal,
+      statsMarketing,
       user: req.session.user,
       activePage: 'apostas',
       saved: req.query.saved === '1',
+      marketingSaved: req.query.marketing_saved === '1',
+      marketingCount: req.query.marketing_count ? parseInt(req.query.marketing_count, 10) : 0,
+      marketingDeleted: req.query.marketing_deleted === '1',
       error: req.query.error || null,
     });
   } catch (err) {
@@ -234,13 +312,124 @@ router.get('/apostas', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/apostas/marketing', requireAdmin, async (req, res) => {
+  const appendQuery = (gameId, params) => apostasAdminUrl(gameId, params, 'marketing');
+
+  try {
+    const gameId = parseInt(req.body.game_id, 10);
+    const quantity = Math.min(50, Math.max(1, parseInt(req.body.quantity, 10) || 1));
+    const amountReais = parseFloat(String(req.body.amount_reais || '').replace(',', '.'));
+    let amountCents = Number.isFinite(amountReais) ? Math.round(amountReais * 100) : NaN;
+
+    if (quantity > 1) {
+      const result = await createMarketingBetsBulk({ gameId, quantity, amountCents });
+      if (result.error) {
+        return res.redirect(appendQuery(gameId, { error: result.error }));
+      }
+      return res.redirect(appendQuery(gameId, { marketing_saved: '1', marketing_count: String(result.count) }));
+    }
+
+    const home = parseInt(req.body.home_score, 10);
+    const away = parseInt(req.body.away_score, 10);
+    const displayName = String(req.body.display_name || '').trim();
+    const useRandom = req.body.random_single === '1' || !displayName;
+
+    let result;
+    if (useRandom) {
+      const score = randomScore();
+      if (!Number.isFinite(amountCents)) {
+        const [games] = await pool.query('SELECT entry_fee_cents FROM games WHERE id = ?', [gameId]);
+        amountCents = games[0]?.entry_fee_cents;
+      }
+      result = await createMarketingBet({
+        gameId,
+        displayName: randomDisplayName(),
+        home: score.home,
+        away: score.away,
+        amountCents,
+      });
+    } else {
+      if (!Number.isFinite(amountCents)) {
+        const [games] = await pool.query('SELECT entry_fee_cents FROM games WHERE id = ?', [gameId]);
+        amountCents = games[0]?.entry_fee_cents;
+      }
+      result = await createMarketingBet({
+        gameId,
+        displayName,
+        home,
+        away,
+        amountCents,
+      });
+    }
+
+    if (result.error) {
+      return res.redirect(appendQuery(gameId, { error: result.error }));
+    }
+
+    res.redirect(appendQuery(gameId, { marketing_saved: '1', marketing_count: '1' }));
+  } catch (err) {
+    const gameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    res.redirect(appendQuery(gameId, { error: err.message }));
+  }
+});
+
+router.post('/apostas/marketing/:id/editar', requireAdmin, async (req, res) => {
+  const appendQuery = (gameId, params) => apostasAdminUrl(gameId, params, 'marketing');
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    const gameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    const home = parseInt(req.body.home_score, 10);
+    const away = parseInt(req.body.away_score, 10);
+    const amountReais = parseFloat(String(req.body.amount_reais || '').replace(',', '.'));
+    const amountCents = Number.isFinite(amountReais) ? Math.round(amountReais * 100) : NaN;
+
+    const result = await updateMarketingBet(id, {
+      displayName: req.body.display_name,
+      home,
+      away,
+      amountCents,
+    });
+
+    if (result.error) {
+      return res.redirect(appendQuery(gameId, { error: result.error }));
+    }
+
+    res.redirect(appendQuery(gameId, { marketing_saved: '1' }));
+  } catch (err) {
+    const gameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    res.redirect(appendQuery(gameId, { error: err.message }));
+  }
+});
+
+router.post('/apostas/marketing/:id/excluir', requireAdmin, async (req, res) => {
+  const appendQuery = (gameId, params) => apostasAdminUrl(gameId, params, 'marketing');
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    const gameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    const ok = await deleteMarketingBet(id);
+    if (!ok) {
+      return res.redirect(appendQuery(gameId, { error: 'Aposta marketing não encontrada' }));
+    }
+    res.redirect(appendQuery(gameId, { marketing_deleted: '1' }));
+  } catch (err) {
+    const gameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
+    res.redirect(appendQuery(gameId, { error: err.message }));
+  }
+});
+
+router.get('/apostas/marketing/random', requireAdmin, (req, res) => {
+  const score = randomScore();
+  res.json({
+    name: randomDisplayName(),
+    home: score.home,
+    away: score.away,
+  });
+});
+
 router.post('/apostas/:id/editar', requireAdmin, async (req, res) => {
-  const appendQuery = (gameId, params) => {
-    const parts = [];
-    if (gameId) parts.push(`game=${gameId}`);
-    Object.entries(params).forEach(([k, v]) => parts.push(`${k}=${encodeURIComponent(v)}`));
-    return parts.length ? `/admin/apostas?${parts.join('&')}` : '/admin/apostas';
-  };
+  const appendQuery = (gameId, params) => apostasAdminUrl(gameId, params, 'real');
 
   try {
     const betId = parseInt(req.params.id, 10);
@@ -467,11 +656,8 @@ router.get('/copa', requireAdmin, async (req, res) => {
     const defaultEntryFee = await getDefaultEntryFeeReais();
     const hasLive = matches?.some((m) => ['IN_PLAY', 'PAUSED', 'LIVE'].includes(m.status));
 
-    const [existingGames] = await pool.query(
-      'SELECT api_match_id FROM games WHERE api_match_id IS NOT NULL AND api_match_id != ?',
-      ['']
-    );
-    const existingApiMatchIds = existingGames.map((g) => String(g.api_match_id));
+    const { apiMatchIds: existingApiMatchIds, fingerprints: existingFingerprints } =
+      await loadExistingGameKeys();
 
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
@@ -481,6 +667,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       fromCache,
       hasLive,
       existingApiMatchIds,
+      existingFingerprints,
       user: req.session.user,
       activePage: 'copa',
       error: apiError
@@ -496,6 +683,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       fromCache: false,
       hasLive: false,
       existingApiMatchIds: [],
+      existingFingerprints: [],
       user: req.session.user,
       activePage: 'copa',
       error: 'Erro: ' + err.message,
@@ -514,13 +702,18 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
 
   try {
     if (api_match_id) {
-      const [existing] = await pool.query(
-        'SELECT id FROM games WHERE api_match_id = ? LIMIT 1',
-        [String(api_match_id)]
-      );
-      if (existing.length > 0) {
+      const existing = await findExistingGame({
+        apiMatchId: api_match_id,
+        homeTeam: home,
+        awayTeam: away,
+        gameDate: game_date,
+      });
+      if (existing) {
         return res.redirect('/admin/copa');
       }
+    } else {
+      const existing = await findExistingGame({ homeTeam: home, awayTeam: away, gameDate: game_date });
+      if (existing) return res.redirect('/admin/copa');
     }
 
     await pool.query(
@@ -560,16 +753,17 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
       if (!m.home_team || !m.away_team || !m.game_date) continue;
       if (new Date(m.game_date).getTime() <= Date.now()) continue;
 
-      if (m.api_match_id) {
-        const [existing] = await pool.query(
-          'SELECT id FROM games WHERE api_match_id = ? LIMIT 1',
-          [String(m.api_match_id)]
-        );
-        if (existing.length > 0) continue;
-      }
-
       const home = translateTeamName(m.home_team);
       const away = translateTeamName(m.away_team);
+
+      const existing = await findExistingGame({
+        apiMatchId: m.api_match_id,
+        homeTeam: home,
+        awayTeam: away,
+        gameDate: m.game_date,
+      });
+      if (existing) continue;
+
       const title = `Copa 2026 - ${home} x ${away}`;
       await pool.query(
         `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
@@ -630,6 +824,22 @@ router.post('/games', requireAdmin, async (req, res) => {
   }
 
   try {
+    const existing = await findExistingGame({
+      apiMatchId: api_match_id,
+      homeTeam: home,
+      awayTeam: away,
+      gameDate: game_date,
+    });
+    if (existing) {
+      return res.render('admin/game-form', {
+        title: 'Novo Jogo',
+        game: req.body,
+        error: 'Já existe um bolão para esta partida e horário.',
+        defaultEntryFee: centsToReaisInput(entryFeeCents),
+        user: req.session.user,
+      });
+    }
+
     await pool.query(
       `INSERT INTO games (title, description, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,

@@ -6177,6 +6177,29 @@ body.admin-nav-open {
   margin-bottom: 1.35rem;
 }
 
+.row-duplicate {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.row-duplicate td {
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.duplicate-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
 /* Sidebar recolhida (desktop) */
 .admin-shell.sidebar-collapsed {
   --admin-sidebar-width: var(--admin-sidebar-collapsed);
@@ -6736,6 +6759,56 @@ body.admin-nav-open {
 }
 
 /* Admin — Apostas */
+.admin-apostas-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  padding-bottom: 0;
+}
+
+.admin-apostas-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  margin-bottom: -1px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.admin-apostas-tab:hover {
+  color: var(--text-primary);
+}
+
+.admin-apostas-tab.is-active {
+  color: var(--gold, #f59e0b);
+  border-bottom-color: var(--gold, #f59e0b);
+}
+
+.admin-apostas-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+}
+
+.admin-apostas-tab.is-active .admin-apostas-tab-count {
+  background: rgba(245, 158, 11, 0.18);
+}
+
 .admin-apostas-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -6847,6 +6920,34 @@ body.admin-nav-open {
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   vertical-align: middle;
+}
+
+.admin-tag-marketing {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.14);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.admin-marketing-name-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.admin-marketing-name-row .form-control {
+  flex: 1;
+}
+
+tr.row-marketing {
+  background: rgba(168, 85, 247, 0.04);
 }
 
 .admin-cell-muted {

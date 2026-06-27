@@ -36,7 +36,7 @@
 
       <div class="game-stats">
         <div class="game-stat highlight">
-          <span class="game-stat-val"><%= formatCents(game.prize_pool_cents) %></span>
+          <span class="game-stat-val"><%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></span>
           <span class="game-stat-lbl">prêmio acumulado</span>
         </div>
         <div class="game-stat">

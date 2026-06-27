@@ -10,7 +10,7 @@
     </div>
     <div class="game-row-meta">
       <time><%= gameDateBR(game.game_date) %></time>
-      <span class="game-row-prize">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+      <span class="game-row-prize">🏆 <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></span>
       <span><%= formatCents(game.entry_fee_cents) %></span>
       <% if (game.total_bets && Number(game.total_bets) > 0) { %>
         <span class="game-row-bets-count"><%= game.total_bets %> aposta<%= Number(game.total_bets) !== 1 ? 's' : '' %></span>

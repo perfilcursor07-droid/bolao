@@ -16,6 +16,7 @@ async function deleteGamesByIds(ids) {
 
   try {
     await conn.beginTransaction();
+    await deleteByGameIds(conn, 'marketing_bets', placeholders, ids);
     await deleteByGameIds(conn, 'payouts', placeholders, ids);
     await deleteByGameIds(conn, 'bets', placeholders, ids);
     await deleteByGameIds(conn, 'payments', placeholders, ids);

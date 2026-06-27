@@ -87,6 +87,7 @@
         %>
 
         <% var existingIds = typeof existingApiMatchIds !== 'undefined' ? existingApiMatchIds.map(String) : []; %>
+        <% var existingFps = typeof existingFingerprints !== 'undefined' ? existingFingerprints : []; %>
         <% Object.keys(stages).forEach(function(stage) { %>
           <div class="copa-stage-header">
             <span><%= stageNames[stage] || stage %></span>
@@ -96,7 +97,8 @@
             <% stages[stage].forEach(function(m) { %>
               <% var matchNotStarted = (m.status === 'SCHEDULED' || m.status === 'TIMED') && new Date(m.date).getTime() > Date.now(); %>
               <% var hasTeams = m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir'; %>
-              <% var alreadyCreated = existingIds.indexOf(String(m.id)) !== -1; %>
+              <% var matchFp = gameFingerprint(m.homeTeam, m.awayTeam, toMySQLDateTime(m.date)); %>
+              <% var alreadyCreated = existingIds.indexOf(String(m.id)) !== -1 || existingFps.indexOf(matchFp) !== -1; %>
               <% var canCreateBolao = matchNotStarted && hasTeams && !alreadyCreated; %>
               <label class="copa-match-item copa-match-selectable<%= alreadyCreated ? ' copa-match-already' : '' %><%= !canCreateBolao && !alreadyCreated ? ' copa-match-unavailable' : '' %>" data-stage="<%= stage %>">
                 <% if (canCreateBolao) { %>

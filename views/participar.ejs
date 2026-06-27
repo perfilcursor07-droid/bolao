@@ -62,7 +62,7 @@
             </div>
             <div class="participar-hero-stat participar-hero-stat--prize">
               <span class="participar-hero-stat-label">Prêmio</span>
-              <span class="participar-hero-stat-value">🏆 <%= formatCents(game.prize_pool_cents) %></span>
+              <span class="participar-hero-stat-value">🏆 <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></span>
             </div>
           </div>
         </section>

@@ -18,6 +18,7 @@ const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
 const { captureReferralCode, tryBindSessionReferral } = require('./services/affiliateService');
 const { SYSTEM_FEE_RATE, NO_WINNER_FEE_RATE } = require('./services/prizeService');
+const { gameFingerprint } = require('./services/gameDuplicateService');
 
 const app = express();
 
@@ -83,6 +84,7 @@ app.use(async (req, res, next) => {
   };
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
+  res.locals.gameFingerprint = gameFingerprint;
   res.locals.isBettingOpen = isBettingOpen;
   res.locals.hasGameStarted = hasGameStarted;
   res.locals.bettingCloseMinutes = BETTING_CLOSE_MINUTES;

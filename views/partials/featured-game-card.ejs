@@ -16,7 +16,7 @@
       <span class="featured-stat-fee"><%= formatCents(game.entry_fee_cents) %>/placar</span>
       <div class="featured-stat-prize">
         <span class="featured-prize-label">🏆 Prêmio</span>
-        <strong class="featured-prize-value"><%= formatCents(game.prize_pool_cents) %></strong>
+        <strong class="featured-prize-value"><%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></strong>
       </div>
       <% if (Number(game.total_bets) > 0) { %>
         <button

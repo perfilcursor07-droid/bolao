@@ -12,10 +12,18 @@
   <%- include('layout') %>
 
     <div class="admin-page-actions">
+      <form method="POST" action="/admin/partidas/dedupe" style="display:inline;" onsubmit="return confirm('Remover partidas duplicadas sem apostas? A cópia com mais apostas/prêmio será mantida.');">
+        <button type="submit" class="btn btn-outline btn-sm">🧹 Limpar duplicatas</button>
+      </form>
       <a href="/admin/copa" class="btn btn-outline btn-sm">🌍 Copa</a>
       <a href="/admin/games/new" class="btn btn-primary btn-sm">+ Nova</a>
     </div>
 
+    <% if (typeof deduped === 'number' && deduped > 0) { %>
+      <div class="alert alert-success" style="margin-bottom:1rem;">
+        <%= deduped %> partida<%= deduped !== 1 ? 's duplicada' : ' duplicada' %><%= deduped !== 1 ? 's' : '' %> removida<%= deduped !== 1 ? 's' : '' %> automaticamente.
+      </div>
+    <% } %>
     <% if (typeof deleted === 'number' && deleted > 0) { %>
       <div class="alert alert-success" style="margin-bottom:1rem;">
         <%= deleted %> partida<%= deleted !== 1 ? 's' : '' %> removida<%= deleted !== 1 ? 's' : '' %> com sucesso.
@@ -62,13 +70,16 @@
             </thead>
             <tbody>
               <% games.forEach(game => { %>
-                <tr>
+                <tr class="<%= typeof duplicateIds !== 'undefined' && duplicateIds.has(game.id) ? 'row-duplicate' : '' %>">
                   <td>
                     <input type="checkbox" name="game_ids[]" value="<%= game.id %>" class="partidas-check">
                   </td>
                   <td>
                     <strong><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %></strong>
                     <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
+                    <% if (typeof duplicateIds !== 'undefined' && duplicateIds.has(game.id)) { %>
+                      <span class="duplicate-badge" title="Partida duplicada — use Limpar duplicatas ou remova manualmente">dup</span>
+                    <% } %>
                   </td>
                   <td><%= gameDateBR(game.game_date) %></td>
                   <td><%= game.total_bets %></td>

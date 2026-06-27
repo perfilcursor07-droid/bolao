@@ -11,53 +11,112 @@
 <body class="page-admin">
   <%- include('layout') %>
 
-    <p class="admin-page-intro">Todas as apostas confirmadas, agrupadas por jogo — quem apostou, palpite e status.</p>
+    <% const tabRealUrl = selectedGameId ? '/admin/apostas?game=' + selectedGameId : '/admin/apostas'; %>
+    <% const tabMarketingUrl = selectedGameId ? '/admin/apostas?tab=marketing&game=' + selectedGameId : '/admin/apostas?tab=marketing'; %>
+
+    <p class="admin-page-intro">
+      <% if (activeTab === 'marketing') { %>
+        Apostas fictícias para exibir movimento e prêmio no site — não geram PIX nem afetam pagamentos reais.
+      <% } else { %>
+        Apostas confirmadas após pagamento PIX — dados reais de participantes.
+      <% } %>
+    </p>
 
     <% if (typeof saved !== 'undefined' && saved) { %>
       <div class="alert alert-success">Palpite atualizado com sucesso.</div>
+    <% } %>
+    <% if (typeof marketingSaved !== 'undefined' && marketingSaved) { %>
+      <div class="alert alert-success">
+        <% if (marketingCount > 1) { %>
+          <%= marketingCount %> apostas de marketing criadas com dados aleatórios.
+        <% } else { %>
+          Aposta de marketing criada/atualizada.
+        <% } %>
+      </div>
+    <% } %>
+    <% if (typeof marketingDeleted !== 'undefined' && marketingDeleted) { %>
+      <div class="alert alert-success">Aposta de marketing removida.</div>
     <% } %>
     <% if (typeof error !== 'undefined' && error) { %>
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
+    <nav class="admin-apostas-tabs" aria-label="Tipo de apostas">
+      <a href="<%= tabRealUrl %>" class="admin-apostas-tab<%= activeTab === 'real' ? ' is-active' : '' %>">
+        Apostas reais
+        <span class="admin-apostas-tab-count"><%= statsReal.total %></span>
+      </a>
+      <a href="<%= tabMarketingUrl %>" class="admin-apostas-tab<%= activeTab === 'marketing' ? ' is-active' : '' %>">
+        Marketing
+        <span class="admin-apostas-tab-count"><%= statsMarketing.total %></span>
+      </a>
+    </nav>
+
     <div class="admin-apostas-toolbar">
       <form method="GET" action="/admin/apostas" class="admin-apostas-filter">
+        <% if (activeTab === 'marketing') { %>
+          <input type="hidden" name="tab" value="marketing">
+        <% } %>
         <label for="game">Filtrar por jogo</label>
         <select name="game" id="game" class="form-control" onchange="this.form.submit()">
           <option value="">Todos os jogos</option>
-          <% games.forEach(function(g) { %>
+          <% games.forEach(function(g) {
+            const count = activeTab === 'marketing' ? g.marketing_bet_count : g.real_bet_count;
+          %>
             <option value="<%= g.id %>" <%= selectedGameId === g.id ? 'selected' : '' %>>
-              <%= g.title %> — <%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %> (<%= g.bet_count %>)
+              <%= g.title %> — <%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %> (<%= count %>)
             </option>
           <% }); %>
         </select>
       </form>
 
+      <% if (activeTab === 'marketing') { %>
+        <button type="button" class="btn btn-gold btn-sm" id="btn-open-marketing-modal">
+          + Aposta marketing
+        </button>
+      <% } %>
+
       <div class="admin-apostas-stats">
-        <div class="admin-stat-chip">
-          <span class="admin-stat-chip-value"><%= stats.totalBets %></span>
-          <span class="admin-stat-chip-label">Apostas</span>
-        </div>
-        <div class="admin-stat-chip admin-stat-chip--gold">
-          <span class="admin-stat-chip-value"><%= stats.winners %></span>
-          <span class="admin-stat-chip-label">Ganhadores</span>
-        </div>
-        <div class="admin-stat-chip admin-stat-chip--muted">
-          <span class="admin-stat-chip-value"><%= stats.waiting %></span>
-          <span class="admin-stat-chip-label">Aguardando</span>
-        </div>
-        <div class="admin-stat-chip admin-stat-chip--danger">
-          <span class="admin-stat-chip-value"><%= stats.lost %></span>
-          <span class="admin-stat-chip-label">Não ganhou</span>
-        </div>
+        <% if (activeTab === 'real') { %>
+          <div class="admin-stat-chip">
+            <span class="admin-stat-chip-value"><%= statsReal.total %></span>
+            <span class="admin-stat-chip-label">Apostas</span>
+          </div>
+          <div class="admin-stat-chip admin-stat-chip--gold">
+            <span class="admin-stat-chip-value"><%= statsReal.winners %></span>
+            <span class="admin-stat-chip-label">Ganhadores</span>
+          </div>
+          <div class="admin-stat-chip admin-stat-chip--muted">
+            <span class="admin-stat-chip-value"><%= statsReal.waiting %></span>
+            <span class="admin-stat-chip-label">Aguardando</span>
+          </div>
+          <div class="admin-stat-chip admin-stat-chip--danger">
+            <span class="admin-stat-chip-value"><%= statsReal.lost %></span>
+            <span class="admin-stat-chip-label">Não ganhou</span>
+          </div>
+        <% } else { %>
+          <div class="admin-stat-chip">
+            <span class="admin-stat-chip-value"><%= statsMarketing.total %></span>
+            <span class="admin-stat-chip-label">Apostas fictícias</span>
+          </div>
+          <div class="admin-stat-chip admin-stat-chip--gold">
+            <span class="admin-stat-chip-value"><%= formatCents(statsMarketing.totalCents) %></span>
+            <span class="admin-stat-chip-label">Valor simulado</span>
+          </div>
+        <% } %>
       </div>
     </div>
 
     <% if (bets.length === 0) { %>
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <p>Nenhuma aposta registrada<%= selectedGameId ? ' neste jogo' : '' %> ainda</p>
-        <small>As apostas aparecem aqui após o pagamento PIX ser confirmado</small>
+        <div class="empty-icon"><%= activeTab === 'marketing' ? '📣' : '📋' %></div>
+        <% if (activeTab === 'marketing') { %>
+          <p>Nenhuma aposta de marketing<%= selectedGameId ? ' neste jogo' : '' %></p>
+          <small>Use <strong>+ Aposta marketing</strong> para gerar movimento fictício no site.</small>
+        <% } else { %>
+          <p>Nenhuma aposta real<%= selectedGameId ? ' neste jogo' : '' %> ainda</p>
+          <small>As apostas aparecem aqui após o pagamento PIX ser confirmado.</small>
+        <% } %>
       </div>
     <% } else { %>
       <% const groups = selectedGameId ? [{ game: games.find(g => g.id === selectedGameId), bets }] : gameGroups; %>
@@ -84,84 +143,194 @@
 
           <div class="table-container">
             <table>
-              <thead>
-                <tr>
-                  <th>Jogador</th>
-                  <th>WhatsApp</th>
-                  <th>Chave PIX</th>
-                  <th>Palpite</th>
-                  <th>PIX entrada</th>
-                  <th>Status aposta</th>
-                  <th>Prêmio</th>
-                  <th>Data</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% group.bets.forEach(function(bet) { %>
-                  <tr class="<%= bet.is_winner ? 'row-winner' : '' %>">
-                    <td>
-                      <strong><%= bet.user_name %></strong>
-                      <% if (bet.user_role === 'guest') { %>
-                        <span class="admin-tag-guest">visitante</span>
-                      <% } %>
-                    </td>
-                    <td class="admin-cell-muted"><%= bet.phone || '—' %></td>
-                    <td class="admin-cell-muted" style="font-size:0.78rem; max-width:140px; word-break:break-all;"><%= bet.cpf || '—' %></td>
-                    <td><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong></td>
-                    <td>
-                      <% if (bet.payment_status === 'paid') { %>
-                        <span class="card-badge finished">Pago</span>
-                        <small class="admin-cell-muted"><%= formatCents(bet.amount_cents) %></small>
-                      <% } else { %>
-                        <span class="card-badge closed"><%= bet.payment_status %></span>
-                      <% } %>
-                    </td>
-                    <td>
-                      <% if (bet.is_winner) { %>
-                        <span class="winner-badge">🏆 Ganhou</span>
-                        <% if (bet.prize_paid_at) { %>
-                          <small class="admin-cell-muted">prêmio pago</small>
-                        <% } else { %>
-                          <small class="admin-cell-muted">prêmio pendente</small>
-                        <% } %>
-                      <% } else if (bet.game_status === 'finished') { %>
-                        <span class="status-tag lost">Não ganhou</span>
-                      <% } else { %>
-                        <span class="status-tag waiting">Aguardando</span>
-                      <% } %>
-                    </td>
-                    <td>
-                      <% if (bet.is_winner) { %>
-                        <span class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></span>
-                      <% } else { %>—<% } %>
-                    </td>
-                    <td class="admin-cell-muted"><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
-                    <td>
-                      <% if (bet.game_status !== 'finished') { %>
-                        <button
-                          type="button"
-                          class="btn btn-outline btn-sm btn-edit-bet"
-                          data-bet-id="<%= bet.id %>"
-                          data-game-id="<%= bet.game_id %>"
-                          data-user-name="<%= bet.user_name %>"
-                          data-game-title="<%= bet.game_title %>"
-                          data-match="<%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %>"
-                          data-home="<%= bet.home_score_prediction %>"
-                          data-away="<%= bet.away_score_prediction %>"
-                        >Editar</button>
-                      <% } else { %>
-                        <span class="admin-cell-muted">—</span>
-                      <% } %>
-                    </td>
+              <% if (activeTab === 'marketing') { %>
+                <thead>
+                  <tr>
+                    <th>Nome exibido</th>
+                    <th>Palpite</th>
+                    <th>Valor simulado</th>
+                    <th>Data</th>
+                    <th>Ações</th>
                   </tr>
-                <% }); %>
-              </tbody>
+                </thead>
+                <tbody>
+                  <% group.bets.forEach(function(bet) { %>
+                    <tr class="row-marketing">
+                      <td>
+                        <strong><%= bet.user_name %></strong>
+                        <span class="admin-tag-marketing">marketing</span>
+                      </td>
+                      <td><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong></td>
+                      <td>
+                        <span class="card-badge finished">Simulado</span>
+                        <small class="admin-cell-muted"><%= formatCents(bet.amount_cents) %></small>
+                      </td>
+                      <td class="admin-cell-muted"><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
+                      <td>
+                        <% if (bet.game_status !== 'finished') { %>
+                          <button
+                            type="button"
+                            class="btn btn-outline btn-sm btn-edit-marketing"
+                            data-marketing-id="<%= bet.marketing_id %>"
+                            data-game-id="<%= bet.game_id %>"
+                            data-user-name="<%= bet.user_name %>"
+                            data-home="<%= bet.home_score_prediction %>"
+                            data-away="<%= bet.away_score_prediction %>"
+                            data-amount-cents="<%= bet.amount_cents %>"
+                          >Editar</button>
+                          <form method="POST" action="/admin/apostas/marketing/<%= bet.marketing_id %>/excluir" style="display:inline;" onsubmit="return confirm('Remover esta aposta de marketing?');">
+                            <input type="hidden" name="game_id" value="<%= selectedGameId || bet.game_id %>">
+                            <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);">Excluir</button>
+                          </form>
+                        <% } else { %>
+                          <span class="admin-cell-muted">—</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              <% } else { %>
+                <thead>
+                  <tr>
+                    <th>Jogador</th>
+                    <th>WhatsApp</th>
+                    <th>Chave PIX</th>
+                    <th>Palpite</th>
+                    <th>PIX entrada</th>
+                    <th>Status aposta</th>
+                    <th>Prêmio</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% group.bets.forEach(function(bet) { %>
+                    <tr class="<%= bet.is_winner ? 'row-winner' : '' %>">
+                      <td>
+                        <strong><%= bet.user_name %></strong>
+                        <% if (bet.user_role === 'guest') { %>
+                          <span class="admin-tag-guest">visitante</span>
+                        <% } %>
+                      </td>
+                      <td class="admin-cell-muted"><%= bet.phone || '—' %></td>
+                      <td class="admin-cell-muted" style="font-size:0.78rem; max-width:140px; word-break:break-all;"><%= bet.cpf || '—' %></td>
+                      <td><strong><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></strong></td>
+                      <td>
+                        <% if (bet.payment_status === 'paid') { %>
+                          <span class="card-badge finished">Pago</span>
+                          <small class="admin-cell-muted"><%= formatCents(bet.amount_cents) %></small>
+                        <% } else { %>
+                          <span class="card-badge closed"><%= bet.payment_status %></span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <% if (bet.is_winner) { %>
+                          <span class="winner-badge">🏆 Ganhou</span>
+                          <% if (bet.prize_paid_at) { %>
+                            <small class="admin-cell-muted">prêmio pago</small>
+                          <% } else { %>
+                            <small class="admin-cell-muted">prêmio pendente</small>
+                          <% } %>
+                        <% } else if (bet.game_status === 'finished') { %>
+                          <span class="status-tag lost">Não ganhou</span>
+                        <% } else { %>
+                          <span class="status-tag waiting">Aguardando</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <% if (bet.is_winner) { %>
+                          <span class="prize-amount"><%= formatCents(bet.prize_amount_cents) %></span>
+                        <% } else { %>—<% } %>
+                      </td>
+                      <td class="admin-cell-muted"><%= new Date(bet.created_at).toLocaleString('pt-BR') %></td>
+                      <td>
+                        <% if (bet.game_status !== 'finished') { %>
+                          <button
+                            type="button"
+                            class="btn btn-outline btn-sm btn-edit-bet"
+                            data-bet-id="<%= bet.id %>"
+                            data-game-id="<%= bet.game_id %>"
+                            data-user-name="<%= bet.user_name %>"
+                            data-game-title="<%= bet.game_title %>"
+                            data-match="<%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %>"
+                            data-home="<%= bet.home_score_prediction %>"
+                            data-away="<%= bet.away_score_prediction %>"
+                          >Editar</button>
+                        <% } else { %>
+                          <span class="admin-cell-muted">—</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              <% } %>
             </table>
           </div>
         </section>
       <% }); %>
     <% } %>
+
+    <div class="admin-bet-modal" id="admin-marketing-modal" hidden>
+      <div class="admin-bet-modal-backdrop" id="admin-marketing-modal-backdrop"></div>
+      <div class="admin-bet-modal-dialog" role="dialog" aria-labelledby="admin-marketing-modal-title" aria-modal="true">
+        <header class="admin-bet-modal-header">
+          <div>
+            <h2 class="admin-bet-modal-title" id="admin-marketing-modal-title">Aposta de marketing</h2>
+            <p class="admin-bet-modal-sub">Fictícia — aparece no site como aposta real, sem PIX nem prêmio real.</p>
+          </div>
+          <button type="button" class="admin-bet-modal-close" id="admin-marketing-modal-close" aria-label="Fechar">×</button>
+        </header>
+        <form method="POST" action="/admin/apostas/marketing" id="admin-marketing-form" class="admin-bet-modal-body">
+          <input type="hidden" name="game_id" id="marketing-game-id-hidden" value="">
+          <input type="hidden" name="random_single" id="marketing-random-single" value="0">
+          <div class="form-group">
+            <label for="marketing-game-id">Jogo</label>
+            <select id="marketing-game-id" class="form-control" required>
+              <option value="">Selecione o jogo</option>
+              <% openGames.forEach(function(g) { %>
+                <option value="<%= g.id %>" <%= defaultGameId === g.id ? 'selected' : '' %>>
+                  <%= g.title %> — <%= teamPt(g.home_team) %> × <%= teamPt(g.away_team) %>
+                </option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="form-group" id="marketing-quantity-wrap">
+            <label for="marketing-quantity">Quantidade</label>
+            <input type="number" id="marketing-quantity" name="quantity" class="form-control" min="1" max="50" value="5" required>
+            <small class="admin-cell-muted" id="marketing-quantity-hint">Serão criadas várias apostas com nome, placar e valor gerados aleatoriamente.</small>
+          </div>
+          <div id="marketing-single-fields">
+            <div class="form-group">
+              <label for="marketing-name">Nome exibido <span class="admin-cell-muted">(opcional se quantidade &gt; 1)</span></label>
+              <div class="admin-marketing-name-row">
+                <input type="text" id="marketing-name" name="display_name" class="form-control" minlength="2" placeholder="Ex: Maria Silva">
+                <button type="button" class="btn btn-outline btn-sm" id="marketing-random-btn">Pré-visualizar</button>
+              </div>
+            </div>
+            <div class="admin-bet-score-row">
+              <div class="form-group">
+                <label for="marketing-home">Casa</label>
+                <input type="number" id="marketing-home" name="home_score" class="form-control" min="0" max="20" value="1">
+              </div>
+              <span class="admin-bet-score-x">×</span>
+              <div class="form-group">
+                <label for="marketing-away">Visitante</label>
+                <input type="number" id="marketing-away" name="away_score" class="form-control" min="0" max="20" value="0">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="marketing-amount">Valor exibido por aposta (R$)</label>
+            <input type="text" id="marketing-amount" name="amount_reais" class="form-control" placeholder="10,00">
+            <small class="admin-cell-muted">Deixe em branco para usar a taxa do jogo. Vale para todas da quantidade.</small>
+          </div>
+          <div class="admin-bet-modal-actions">
+            <button type="button" class="btn btn-outline" id="admin-marketing-cancel">Cancelar</button>
+            <button type="submit" class="btn btn-gold" id="marketing-submit-btn">Gerar apostas</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div class="admin-bet-modal" id="admin-bet-modal" hidden>
       <div class="admin-bet-modal-backdrop" id="admin-bet-modal-backdrop"></div>
@@ -197,6 +366,137 @@
 
     <script>
       (function () {
+        const gamesData = {
+          <% openGames.forEach(function(g, i) { %>
+          <%= g.id %>: <%= g.entry_fee_cents %><%= i < openGames.length - 1 ? ',' : '' %>
+          <% }); %>
+        };
+
+        function syncMarketingGameId() {
+          const select = document.getElementById('marketing-game-id');
+          const hidden = document.getElementById('marketing-game-id-hidden');
+          hidden.value = select.value;
+          const fee = gamesData[select.value];
+          if (fee && !document.getElementById('marketing-amount').dataset.userEdited) {
+            document.getElementById('marketing-amount').value = (fee / 100).toFixed(2).replace('.', ',');
+          }
+        }
+
+        const marketingModal = document.getElementById('admin-marketing-modal');
+        const marketingForm = document.getElementById('admin-marketing-form');
+        const marketingBackdrop = document.getElementById('admin-marketing-modal-backdrop');
+        const marketingClose = document.getElementById('admin-marketing-modal-close');
+        const marketingCancel = document.getElementById('admin-marketing-cancel');
+        const marketingGameSelect = document.getElementById('marketing-game-id');
+        const marketingAmount = document.getElementById('marketing-amount');
+        const marketingQuantity = document.getElementById('marketing-quantity');
+        const marketingQuantityWrap = document.getElementById('marketing-quantity-wrap');
+        const marketingSingleFields = document.getElementById('marketing-single-fields');
+        const marketingSubmitBtn = document.getElementById('marketing-submit-btn');
+        const marketingQuantityHint = document.getElementById('marketing-quantity-hint');
+        const marketingRandomSingle = document.getElementById('marketing-random-single');
+        const openMarketingBtn = document.getElementById('btn-open-marketing-modal');
+
+        function updateMarketingBulkUi(isEdit) {
+          const qty = parseInt(marketingQuantity.value, 10) || 1;
+          const bulk = !isEdit && qty > 1;
+
+          marketingQuantityWrap.hidden = isEdit;
+          marketingSingleFields.hidden = bulk;
+          marketingQuantity.disabled = isEdit;
+
+          if (isEdit) {
+            marketingSubmitBtn.textContent = 'Salvar';
+            marketingQuantityHint.textContent = '';
+          } else if (bulk) {
+            marketingSubmitBtn.textContent = 'Gerar ' + qty + ' apostas aleatórias';
+            marketingQuantityHint.textContent =
+              qty + ' apostas serão criadas com nome, placar e valor gerados aleatoriamente.';
+          } else {
+            marketingSubmitBtn.textContent = 'Criar aposta';
+            marketingQuantityHint.textContent =
+              'Quantidade 1: preencha os dados ou use Pré-visualizar e deixe aleatório ao salvar.';
+          }
+        }
+
+        function closeMarketingModal() {
+          marketingModal.hidden = true;
+          document.body.classList.remove('admin-modal-open');
+        }
+
+        function openMarketingModal(editBtn) {
+          marketingForm.action = editBtn
+            ? '/admin/apostas/marketing/' + editBtn.dataset.marketingId + '/editar'
+            : '/admin/apostas/marketing';
+          document.getElementById('admin-marketing-modal-title').textContent = editBtn
+            ? 'Editar aposta marketing'
+            : 'Aposta de marketing';
+
+          if (editBtn) {
+            document.getElementById('marketing-name').value = editBtn.dataset.userName || '';
+            document.getElementById('marketing-home').value = editBtn.dataset.home;
+            document.getElementById('marketing-away').value = editBtn.dataset.away;
+            const cents = parseInt(editBtn.dataset.amountCents, 10);
+            marketingAmount.value = (cents / 100).toFixed(2).replace('.', ',');
+            marketingAmount.dataset.userEdited = '1';
+            marketingGameSelect.value = editBtn.dataset.gameId || '';
+            marketingRandomSingle.value = '0';
+            updateMarketingBulkUi(true);
+          } else {
+            marketingForm.reset();
+            marketingAmount.dataset.userEdited = '';
+            marketingQuantity.value = 5;
+            document.getElementById('marketing-home').value = 1;
+            document.getElementById('marketing-away').value = 0;
+            marketingRandomSingle.value = '0';
+            <% if (defaultGameId) { %>marketingGameSelect.value = '<%= defaultGameId %>';<% } %>
+            updateMarketingBulkUi(false);
+          }
+          syncMarketingGameId();
+          marketingModal.hidden = false;
+          document.body.classList.add('admin-modal-open');
+          (editBtn ? document.getElementById('marketing-name') : marketingQuantity).focus();
+        }
+
+        marketingForm.addEventListener('submit', function () {
+          syncMarketingGameId();
+          const qty = parseInt(marketingQuantity.value, 10) || 1;
+          if (qty === 1 && marketingForm.action.endsWith('/marketing')) {
+            const name = document.getElementById('marketing-name').value.trim();
+            marketingRandomSingle.value = name ? '0' : '1';
+          } else {
+            marketingRandomSingle.value = '0';
+          }
+        });
+
+        marketingQuantity.addEventListener('input', () => updateMarketingBulkUi(false));
+
+        if (openMarketingBtn) {
+          openMarketingBtn.addEventListener('click', () => openMarketingModal(null));
+        }
+        marketingBackdrop.addEventListener('click', closeMarketingModal);
+        marketingClose.addEventListener('click', closeMarketingModal);
+        marketingCancel.addEventListener('click', closeMarketingModal);
+        marketingGameSelect.addEventListener('change', syncMarketingGameId);
+        marketingAmount.addEventListener('input', () => { marketingAmount.dataset.userEdited = '1'; });
+
+        document.getElementById('marketing-random-btn').addEventListener('click', async () => {
+          marketingQuantity.value = 1;
+          updateMarketingBulkUi(false);
+          try {
+            const res = await fetch('/admin/apostas/marketing/random');
+            const data = await res.json();
+            document.getElementById('marketing-name').value = data.name || '';
+            document.getElementById('marketing-home').value = data.home;
+            document.getElementById('marketing-away').value = data.away;
+            marketingRandomSingle.value = '0';
+          } catch (e) {}
+        });
+
+        document.querySelectorAll('.btn-edit-marketing').forEach((btn) => {
+          btn.addEventListener('click', () => openMarketingModal(btn));
+        });
+
         const modal = document.getElementById('admin-bet-modal');
         const form = document.getElementById('admin-bet-edit-form');
         const backdrop = document.getElementById('admin-bet-modal-backdrop');
@@ -238,7 +538,10 @@
         cancelBtn.addEventListener('click', closeModal);
 
         document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && !modal.hidden) closeModal();
+          if (e.key === 'Escape') {
+            if (!modal.hidden) closeModal();
+            if (!marketingModal.hidden) closeMarketingModal();
+          }
         });
       })();
     </script>

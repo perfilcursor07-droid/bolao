@@ -6,6 +6,7 @@ const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch, findU
 const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
+const { attachMarketingPoolToGame } = require('../services/marketingBetService');
 const { isBettingOpen } = require('../services/bettingRules');
 const { closeExpiredOpenGames } = require('../services/gameStatusService');
 
@@ -147,7 +148,7 @@ router.get('/games/:id/participar', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
-    const game = games[0];
+    const game = await attachMarketingPoolToGame(games[0]);
 
     if (req.session.user) {
       return res.redirect(`/games/${game.id}/placar`);
@@ -167,7 +168,7 @@ router.post('/games/:id/participar', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
-    const game = games[0];
+    const game = await attachMarketingPoolToGame(games[0]);
 
     if (!pixKeysMatch(cpf, cpf_confirm)) {
       return res.render('participar', {
@@ -223,7 +224,7 @@ router.get('/games/:id', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0) return res.redirect('/');
 
-    const game = games[0];
+    const game = await attachMarketingPoolToGame(games[0]);
 
     if (game.status === 'open' && isBettingOpen(game) && !req.session.user) {
       return res.redirect(`/games/${game.id}/participar`);
@@ -241,7 +242,7 @@ router.get('/games/:id', async (req, res) => {
       [game.id]
     );
 
-    const prizeBreakdown = calcPrizeBreakdown(game.prize_pool_cents, winners.length);
+    const prizeBreakdown = calcPrizeBreakdown(game.display_prize_pool_cents, winners.length);
 
     const betsMap = await loadBetsForGames([game]);
     const publicBets = betsMap[game.id] || { bets: [], breakdown: prizeBreakdown };

@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { calcPrizeBreakdown } = require('./prizeService');
+const { loadMarketingBetsForGames, gameBetCountSubquery, marketingPoolSubquery, enrichGameForDisplay } = require('./marketingBetService');
 
 function firstName(name) {
   if (!name || !String(name).trim()) return 'Participante';
@@ -18,14 +19,19 @@ function mapPublicBet(row) {
 }
 
 async function loadFinishedBoloes({ includeAllBets = false } = {}) {
-  const [games] = await pool.query(
+  const [gameRows] = await pool.query(
     `SELECT g.*,
-      (SELECT COUNT(*) FROM bets b WHERE b.game_id = g.id) as total_bets
+      ${gameBetCountSubquery('g')} as total_bets,
+      ${marketingPoolSubquery('g')} as marketing_pool_cents
      FROM games g
      WHERE g.status = 'finished'
-       AND EXISTS (SELECT 1 FROM bets b WHERE b.game_id = g.id)
+       AND (
+         EXISTS (SELECT 1 FROM bets b WHERE b.game_id = g.id)
+         OR EXISTS (SELECT 1 FROM marketing_bets mb WHERE mb.game_id = g.id)
+       )
      ORDER BY g.game_date DESC`
   );
+  const games = gameRows.map(enrichGameForDisplay);
 
   if (games.length === 0) return [];
 
@@ -68,7 +74,7 @@ async function loadFinishedBoloes({ includeAllBets = false } = {}) {
       game,
       winners,
       bets: betsByGame[game.id] || [],
-      breakdown: calcPrizeBreakdown(game.prize_pool_cents, winners.length),
+      breakdown: calcPrizeBreakdown(game.display_prize_pool_cents ?? game.prize_pool_cents, winners.length),
     };
   });
 }
@@ -79,25 +85,40 @@ async function loadBetsForGames(games) {
 
   const gameIds = games.map((g) => g.id);
   const [rows] = await pool.query(
-    `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction, u.name
+    `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction, u.name, b.created_at
      FROM bets b JOIN users u ON u.id = b.user_id
      WHERE b.game_id IN (?)
      ORDER BY b.game_id, b.created_at ASC`,
     [gameIds]
   );
 
+  const marketingByGame = await loadMarketingBetsForGames(gameIds);
+
   const betsByGame = {};
   for (const row of rows) {
     if (!betsByGame[row.game_id]) betsByGame[row.game_id] = [];
-    betsByGame[row.game_id].push(mapPublicBet(row));
+    betsByGame[row.game_id].push({
+      ...mapPublicBet(row),
+      sort_at: row.created_at,
+    });
+  }
+  for (const [gid, marketingBets] of Object.entries(marketingByGame)) {
+    const gameId = parseInt(gid, 10);
+    if (!betsByGame[gameId]) betsByGame[gameId] = [];
+    for (const bet of marketingBets) {
+      betsByGame[gameId].push({ ...bet, sort_at: bet.created_at || new Date(0) });
+    }
   }
 
   const result = {};
   for (const game of games) {
-    const bets = betsByGame[game.id] || [];
+    const enriched = enrichGameForDisplay(game);
+    const bets = (betsByGame[game.id] || [])
+      .sort((a, b) => new Date(a.sort_at) - new Date(b.sort_at))
+      .map(({ sort_at, ...bet }) => bet);
     result[game.id] = {
       bets,
-      breakdown: calcPrizeBreakdown(game.prize_pool_cents, 0),
+      breakdown: calcPrizeBreakdown(enriched.display_prize_pool_cents, 0),
     };
   }
   return result;
