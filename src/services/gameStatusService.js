@@ -19,11 +19,21 @@ function getMatchEndTime(game) {
   return new Date(kickoff.getTime() + MATCH_END_MINUTES * 60 * 1000);
 }
 
-function shouldAutoFinalize(game) {
+function shouldAutoFinalize(game, { apiFinished = false } = {}) {
   if (!game || game.status !== 'closed') return false;
   if (game.home_score === null || game.away_score === null) return false;
-  const endTime = getMatchEndTime(game);
-  return Boolean(endTime && Date.now() >= endTime.getTime());
+
+  if (apiFinished || isApiMatchFinished(game.api_match_status)) {
+    return true;
+  }
+
+  // Jogos sem API: fallback por horário após 120 min
+  if (!game.api_match_id) {
+    const endTime = getMatchEndTime(game);
+    return Boolean(endTime && Date.now() >= endTime.getTime());
+  }
+
+  return false;
 }
 
 async function closeExpiredOpenGames() {
@@ -143,7 +153,7 @@ async function syncGamesFromWorldCupMatches(options = {}) {
 
     const updated = { ...game, home_score: homeScore ?? game.home_score, away_score: awayScore ?? game.away_score };
 
-    if (finished || shouldAutoFinalize(updated)) {
+    if (finished) {
       try {
         const result = await processGameResults(game.id);
         const winners = result?.winners ?? 0;
@@ -241,9 +251,9 @@ async function updateGameFromApiResult(game, result) {
     );
   }
 
-  const updated = { ...game, home_score: homeScore, away_score: awayScore };
+  const updated = { ...game, home_score: homeScore, away_score: awayScore, api_match_status: result.status || game.api_match_status };
   let finalized = false;
-  if (result.finished || shouldAutoFinalize(updated)) {
+  if (result.finished || shouldAutoFinalize(updated, { apiFinished: result.finished })) {
     await processGameResults(game.id);
     finalized = true;
     console.log(`🏆 Jogo ${game.id} finalizado via API (${homeScore}×${awayScore}). Status: ${result.status}`);

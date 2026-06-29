@@ -976,6 +976,24 @@ router.post('/games/:id/result', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/games/:id/reprocess-result', requireAdmin, async (req, res) => {
+  const { home_score, away_score } = req.body;
+  const { reprocessGameResults } = require('../services/prizeService');
+
+  try {
+    const result = await reprocessGameResults(req.params.id, {
+      homeScore: home_score,
+      awayScore: away_score,
+    });
+    const winners = result?.winners ?? 0;
+    req.session.flash = `Placar corrigido. ${winners} ganhador(es) recalculado(s).`;
+    res.redirect(`/admin/games/${req.params.id}`);
+  } catch (err) {
+    req.session.flash = err.message || 'Erro ao recalcular resultado.';
+    res.redirect(`/admin/games/${req.params.id}`);
+  }
+});
+
 router.get('/games/:id', requireAdmin, async (req, res) => {
   try {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);

@@ -398,6 +398,78 @@ const PAYOUT_SELECT = `
   LEFT JOIN payments p ON p.id = b.payment_id
 `;
 
+async function reprocessGameResults(gameId, { homeScore, awayScore } = {}) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [games] = await connection.query('SELECT * FROM games WHERE id = ? FOR UPDATE', [gameId]);
+    if (games.length === 0) {
+      await connection.rollback();
+      throw new Error('Jogo não encontrado');
+    }
+    const game = games[0];
+    if (game.status !== 'finished') {
+      await connection.rollback();
+      throw new Error('Só é possível recalcular jogos já finalizados.');
+    }
+
+    const [paidBets] = await connection.query(
+      `SELECT COUNT(*) AS c FROM bets WHERE game_id = ? AND prize_paid_at IS NOT NULL`,
+      [gameId]
+    );
+    if (paidBets[0].c > 0) {
+      await connection.rollback();
+      throw new Error('Não é possível recalcular: já há prêmios marcados como pagos.');
+    }
+
+    try {
+      const [paidPayouts] = await connection.query(
+        `SELECT COUNT(*) AS c FROM payouts WHERE game_id = ? AND status = 'paid'`,
+        [gameId]
+      );
+      if (paidPayouts[0].c > 0) {
+        await connection.rollback();
+        throw new Error('Não é possível recalcular: já há pagamentos de prêmio confirmados.');
+      }
+    } catch (err) {
+      if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
+
+    const home = homeScore != null ? parseInt(homeScore, 10) : game.home_score;
+    const away = awayScore != null ? parseInt(awayScore, 10) : game.away_score;
+    if (Number.isNaN(home) || Number.isNaN(away) || home < 0 || away < 0) {
+      await connection.rollback();
+      throw new Error('Placar inválido');
+    }
+
+    await connection.query(
+      `UPDATE bets SET is_winner = FALSE, prize_amount_cents = 0, prize_paid_at = NULL WHERE game_id = ?`,
+      [gameId]
+    );
+
+    try {
+      await connection.query('DELETE FROM payouts WHERE game_id = ?', [gameId]);
+    } catch (err) {
+      if (err.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
+
+    await connection.query(
+      `UPDATE games SET home_score = ?, away_score = ?, status = 'closed', api_match_status = 'FINISHED' WHERE id = ?`,
+      [home, away, gameId]
+    );
+
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+
+  return processGameResults(gameId);
+}
+
 module.exports = {
   SYSTEM_FEE_RATE,
   NO_WINNER_FEE_RATE,
@@ -405,6 +477,7 @@ module.exports = {
   calcNoWinnerRefundCents,
   calcNoWinnerBreakdown,
   processGameResults,
+  reprocessGameResults,
   confirmPayment,
   createPaymentWithPlacar,
   getUserGameStatus,
