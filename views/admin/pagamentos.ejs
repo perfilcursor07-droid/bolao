@@ -51,6 +51,9 @@
       <button type="button" class="btn btn-sm tab-btn active" data-tab="pending-pix" onclick="showTab('pending-pix', this)">
         ⏳ PIX Pendentes (<%= pendingPayments.length %>)
       </button>
+      <button type="button" class="btn btn-sm tab-btn" data-tab="expired-pix" onclick="showTab('expired-pix', this)">
+        ⛔ Expirados (<%= typeof expiredPayments !== 'undefined' ? expiredPayments.length : 0 %>)
+      </button>
       <button type="button" class="btn btn-sm tab-btn" data-tab="confirmed-pix" onclick="showTab('confirmed-pix', this)">
         ✅ PIX Confirmados (<%= confirmedPayments.length %>)
       </button>
@@ -65,7 +68,9 @@
     <!-- TAB 1: PIX Pendentes -->
     <div class="tab-content" id="tab-pending-pix">
       <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">⏳ Aguardando pagamento PIX</h3>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Usuários que geraram QR Code mas ainda não pagaram</p>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+        Usuários que geraram QR Code mas ainda podem pagar (bolão com apostas abertas)
+      </p>
 
       <% if (pendingPayments.length === 0) { %>
         <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">
@@ -92,6 +97,43 @@
         <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
           Total pendente: <strong><%= formatCents(pendingPayments.reduce((s, p) => s + p.amount_cents, 0)) %></strong>
         </p>
+      <% } %>
+    </div>
+
+    <!-- TAB: PIX expirados / recusados -->
+    <div class="tab-content" id="tab-expired-pix" style="display:none;">
+      <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.5rem;">⛔ PIX expirados ou recusados</h3>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+        QR Codes gerados após o encerramento das apostas ou pagos tarde demais — <strong>não geram aposta</strong>.
+      </p>
+
+      <% if (typeof expiredPayments === 'undefined' || expiredPayments.length === 0) { %>
+        <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">
+          Nenhum PIX expirado ou recusado recentemente.
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Jogador</th><th>Jogo</th><th>Valor</th><th>Status</th><th>Atualizado</th></tr></thead>
+            <tbody>
+              <% expiredPayments.forEach(p => { %>
+                <tr>
+                  <td><strong><%= p.user_name %></strong></td>
+                  <td style="font-size:0.8rem;"><%= teamPt(p.home_team) %> × <%= teamPt(p.away_team) %></td>
+                  <td><%= formatCents(p.amount_cents) %></td>
+                  <td>
+                    <% if (p.status === 'declined') { %>
+                      <span class="card-badge closed">Recusado (pago tarde)</span>
+                    <% } else { %>
+                      <span class="card-badge finished">Expirado</span>
+                    <% } %>
+                  </td>
+                  <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.updated_at).toLocaleString('pt-BR') %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
       <% } %>
     </div>
 

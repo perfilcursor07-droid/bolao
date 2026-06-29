@@ -1,5 +1,11 @@
 const pool = require('../config/database');
 const { isBettingOpen } = require('./bettingRules');
+const {
+  expirePendingPaymentsForGame,
+  expirePendingPaymentsForClosedBetting,
+  assertPaymentCanBeConfirmed,
+  canAcceptPaymentForGame,
+} = require('./paymentGateService');
 const { processAffiliateCommissionOnPayment } = require('./affiliateService');
 
 const SYSTEM_FEE_RATE = 0.10;
@@ -170,6 +176,16 @@ async function confirmPayment(paymentId) {
       return true;
     }
 
+    const [games] = await connection.query('SELECT * FROM games WHERE id = ?', [payment.game_id]);
+    const gate = await assertPaymentCanBeConfirmed(payment, games[0], connection);
+    if (!gate.ok) {
+      await connection.commit();
+      console.warn(
+        `[confirmPayment] PIX recusado #${paymentId} — apostas encerradas (jogo ${payment.game_id})`
+      );
+      return { rejected: true, reason: gate.reason };
+    }
+
     await connection.query('UPDATE payments SET status = ?, paid_at = NOW() WHERE id = ?', ['paid', paymentId]);
     payment.status = 'paid';
 
@@ -270,14 +286,18 @@ async function getUserGameStatus(userId, gameId) {
     [userId, gameId]
   );
 
+  const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [gameId]);
+  const game = games[0] || null;
+
   const [pending] = await pool.query(
     `SELECT * FROM payments WHERE user_id = ? AND game_id = ? AND status = 'pending' ORDER BY created_at DESC`,
     [userId, gameId]
   );
 
-  const pendingPayments = pending.filter(p => p.qr_code_text);
+  const pendingPayments = pending.filter(
+    (p) => p.qr_code_text && game && canAcceptPaymentForGame(game)
+  );
 
-  // Sempre permitir nova aposta - mostrar pendentes como informação
   return { step: 'placar', bets, pendingPayments, pendingPayment: pendingPayments[0] || null, placares: [] };
 }
 

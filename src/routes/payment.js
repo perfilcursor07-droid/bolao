@@ -3,6 +3,10 @@ const QRCode = require('qrcode');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { confirmPayment } = require('../services/prizeService');
+const {
+  canAcceptPaymentForGame,
+  expirePendingPaymentsForClosedBetting,
+} = require('../services/paymentGateService');
 const { getOrderStatus, extractChargeStatus } = require('../services/pagbank');
 
 const router = express.Router();
@@ -10,7 +14,7 @@ const router = express.Router();
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [payments] = await pool.query(
-      `SELECT p.*, g.title, g.home_team, g.away_team
+      `SELECT p.*, g.title, g.home_team, g.away_team, g.status AS game_status, g.game_date
        FROM payments p JOIN games g ON g.id = p.game_id
        WHERE p.id = ? AND p.user_id = ?`,
       [req.params.id, req.session.user.id]
@@ -27,6 +31,14 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
 
     const payment = payments[0];
+
+    if (payment.status === 'pending' && !canAcceptPaymentForGame(payment)) {
+      await pool.query(`UPDATE payments SET status = 'expired' WHERE id = ? AND status = 'pending'`, [
+        payment.id,
+      ]);
+      payment.status = 'expired';
+    }
+
     let qrImage = null;
 
     if (payment.qr_code_text) {
@@ -37,6 +49,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       title: 'Pagamento PIX',
       payment,
       qrImage,
+      paymentClosed: ['expired', 'declined', 'cancelled'].includes(payment.status),
       user: req.session.user,
     });
   } catch (err) {
@@ -48,7 +61,9 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.get('/:id/status', requireAuth, async (req, res) => {
   try {
     const [payments] = await pool.query(
-      'SELECT * FROM payments WHERE id = ? AND user_id = ?',
+      `SELECT p.*, g.status AS game_status, g.game_date
+       FROM payments p JOIN games g ON g.id = p.game_id
+       WHERE p.id = ? AND p.user_id = ?`,
       [req.params.id, req.session.user.id]
     );
 
@@ -62,13 +77,27 @@ router.get('/:id/status', requireAuth, async (req, res) => {
       return res.json({ status: 'paid' });
     }
 
+    if (['expired', 'declined', 'cancelled'].includes(payment.status)) {
+      return res.json({ status: payment.status });
+    }
+
+    if (!canAcceptPaymentForGame(payment)) {
+      await pool.query(`UPDATE payments SET status = 'expired' WHERE id = ? AND status = 'pending'`, [
+        payment.id,
+      ]);
+      return res.json({ status: 'expired' });
+    }
+
     if (payment.pagbank_order_id) {
       try {
         const order = await getOrderStatus(payment.pagbank_order_id);
         const chargeStatus = extractChargeStatus(order);
 
         if (chargeStatus === 'PAID') {
-          await confirmPayment(payment.id);
+          const result = await confirmPayment(payment.id);
+          if (result?.rejected) {
+            return res.json({ status: 'declined', reason: 'betting_closed' });
+          }
           return res.json({ status: 'paid' });
         }
       } catch (err) {
@@ -94,10 +123,20 @@ router.post('/webhook/pagbank', express.json(), async (req, res) => {
 
     let payment;
     if (referenceId) {
-      const [rows] = await pool.query('SELECT * FROM payments WHERE reference_id = ?', [referenceId]);
+      const [rows] = await pool.query(
+        `SELECT p.*, g.status AS game_status, g.game_date
+         FROM payments p JOIN games g ON g.id = p.game_id
+         WHERE p.reference_id = ?`,
+        [referenceId]
+      );
       payment = rows[0];
     } else {
-      const [rows] = await pool.query('SELECT * FROM payments WHERE pagbank_order_id = ?', [orderId]);
+      const [rows] = await pool.query(
+        `SELECT p.*, g.status AS game_status, g.game_date
+         FROM payments p JOIN games g ON g.id = p.game_id
+         WHERE p.pagbank_order_id = ?`,
+        [orderId]
+      );
       payment = rows[0];
     }
 
@@ -105,12 +144,20 @@ router.post('/webhook/pagbank', express.json(), async (req, res) => {
       return res.status(200).send('OK');
     }
 
+    if (['expired', 'declined', 'cancelled'].includes(payment.status)) {
+      return res.status(200).send('OK');
+    }
+
     const order = orderId ? body : await getOrderStatus(payment.pagbank_order_id);
     const chargeStatus = extractChargeStatus(order);
 
     if (chargeStatus === 'PAID') {
-      await confirmPayment(payment.id);
-      console.log(`Webhook: pagamento confirmado ${payment.reference_id}`);
+      const result = await confirmPayment(payment.id);
+      if (result?.rejected) {
+        console.warn(`Webhook: PIX recusado ${payment.reference_id} — apostas encerradas`);
+      } else {
+        console.log(`Webhook: pagamento confirmado ${payment.reference_id}`);
+      }
     }
 
     res.status(200).send('OK');

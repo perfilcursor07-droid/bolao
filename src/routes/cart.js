@@ -128,20 +128,23 @@ router.get('/carrinho/pagamento', requireAuth, async (req, res) => {
   try {
     const placeholders = paymentIds.map(() => '?').join(',');
     const [payments] = await pool.query(
-      `SELECT p.*, g.title, g.home_team, g.away_team
+      `SELECT p.*, g.title, g.home_team, g.away_team, g.status AS game_status, g.game_date
        FROM payments p JOIN games g ON g.id = p.game_id
        WHERE p.id IN (${placeholders}) AND p.user_id = ? AND p.status = 'pending'
        ORDER BY p.id ASC`,
       [...paymentIds, req.session.user.id]
     );
 
-    if (payments.length === 0) {
+    const { canAcceptPaymentForGame } = require('../services/paymentGateService');
+    const validPayments = payments.filter((p) => canAcceptPaymentForGame(p));
+
+    if (validPayments.length === 0) {
       delete req.session.checkoutPayments;
       return res.redirect('/my-payments');
     }
 
     const paymentsWithQr = await Promise.all(
-      payments.map(async (payment) => {
+      validPayments.map(async (payment) => {
         let qrImage = null;
         if (payment.qr_code_text) {
           qrImage = await QRCode.toDataURL(payment.qr_code_text, { width: 180, margin: 1 });
@@ -150,7 +153,7 @@ router.get('/carrinho/pagamento', requireAuth, async (req, res) => {
       })
     );
 
-    const totalCents = payments.reduce((sum, p) => sum + p.amount_cents, 0);
+    const totalCents = validPayments.reduce((sum, p) => sum + p.amount_cents, 0);
 
     res.render('carrinho-pagamento', {
       title: 'Pagar apostas',

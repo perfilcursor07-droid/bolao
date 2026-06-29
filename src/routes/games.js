@@ -9,6 +9,7 @@ const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBo
 const { attachMarketingPoolToGame } = require('../services/marketingBetService');
 const { isBettingOpen } = require('../services/bettingRules');
 const { closeExpiredOpenGames } = require('../services/gameStatusService');
+const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
 
 const router = express.Router();
 
@@ -412,8 +413,10 @@ router.get('/my-bets', requireAuth, async (req, res) => {
 });
 
 router.get('/my-payments', requireAuth, async (req, res) => {
+  await expirePendingPaymentsForClosedBetting();
+
   const [payments] = await pool.query(
-    `SELECT p.*, g.title, g.home_team, g.away_team
+    `SELECT p.*, g.title, g.home_team, g.away_team, g.status AS game_status, g.game_date
      FROM payments p JOIN games g ON g.id = p.game_id
      WHERE p.user_id = ?
      ORDER BY p.created_at DESC`,
@@ -421,7 +424,7 @@ router.get('/my-payments', requireAuth, async (req, res) => {
   );
 
   const pendingPayments = payments.filter(
-    (p) => p.status === 'pending' && p.qr_code_text
+    (p) => p.status === 'pending' && p.qr_code_text && canAcceptPaymentForGame(p)
   );
 
   res.render('my-payments', {

@@ -24,6 +24,7 @@ const {
   enrichPayoutRow,
   PAYOUT_SELECT,
 } = require('../services/prizeService');
+const { expirePendingPaymentsForClosedBetting } = require('../services/paymentGateService');
 
 const {
   listAffiliatesForAdmin,
@@ -569,13 +570,24 @@ router.get('/ganhadores', requireAdmin, async (req, res) => {
 // Pagamentos - visão completa
 router.get('/pagamentos', requireAdmin, async (req, res) => {
   try {
-    // 1. Pagamentos PIX pendentes (usuário gerou QR mas não pagou)
+    await expirePendingPaymentsForClosedBetting();
+
+    // 1. Pagamentos PIX pendentes (ainda dentro do prazo de aposta)
     const [pendingPayments] = await pool.query(
       `SELECT p.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
-        g.home_team, g.away_team, g.title as game_title
+        g.home_team, g.away_team, g.title as game_title, g.status as game_status, g.game_date
        FROM payments p JOIN users u ON u.id = p.user_id JOIN games g ON g.id = p.game_id
        WHERE p.status = 'pending'
        ORDER BY p.created_at DESC`
+    );
+
+    const [expiredPayments] = await pool.query(
+      `SELECT p.*, u.name as user_name, u.cpf as user_pix, u.phone as user_phone,
+        g.home_team, g.away_team, g.title as game_title
+       FROM payments p JOIN users u ON u.id = p.user_id JOIN games g ON g.id = p.game_id
+       WHERE p.status IN ('expired', 'declined')
+       ORDER BY p.updated_at DESC
+       LIMIT 100`
     );
 
     // 2. Pagamentos PIX confirmados (apostas pagas)
@@ -606,6 +618,7 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
     res.render('admin/pagamentos', {
       title: 'Pagamentos',
       pendingPayments,
+      expiredPayments,
       confirmedPayments,
       pendingPayouts,
       paidPayouts,

@@ -8,6 +8,7 @@ const {
   getBettingDeadline,
   isBettingOpen,
 } = require('./bettingRules');
+const { expirePendingPaymentsForGame } = require('./paymentGateService');
 
 /** Tempo após o apito inicial para considerar o jogo encerrado (90min + intervalo + acréscimos). */
 const MATCH_END_MINUTES = 120;
@@ -26,10 +27,22 @@ function shouldAutoFinalize(game) {
 }
 
 async function closeExpiredOpenGames() {
+  const [closing] = await pool.query(
+    `SELECT id FROM games WHERE status = 'open' AND game_date <= NOW()`
+  );
+
   const [result] = await pool.query(
     `UPDATE games SET status = 'closed'
      WHERE status = 'open' AND game_date <= NOW()`
   );
+
+  for (const game of closing) {
+    const expired = await expirePendingPaymentsForGame(game.id);
+    if (expired > 0) {
+      console.log(`[gameStatus] ${expired} PIX pendente(s) expirado(s) — jogo ${game.id} iniciou`);
+    }
+  }
+
   return result.affectedRows || 0;
 }
 
@@ -105,6 +118,10 @@ async function syncGamesFromWorldCupMatches(options = {}) {
     if (game.status === 'open' && (live || finished) && parseGameDate(game) <= new Date()) {
       await pool.query(`UPDATE games SET status = 'closed' WHERE id = ?`, [game.id]);
       game.status = 'closed';
+      const expired = await expirePendingPaymentsForGame(game.id);
+      if (expired > 0) {
+        console.log(`[syncWC] ${expired} PIX pendente(s) expirado(s) — jogo ${game.id}`);
+      }
     }
 
     if (homeScore === null || awayScore === null) {

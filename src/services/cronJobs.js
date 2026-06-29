@@ -3,11 +3,16 @@ const pool = require('../config/database');
 const { getOrderStatus, extractChargeStatus } = require('./pagbank');
 const { confirmPayment } = require('./prizeService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, syncGamesFromApi } = require('./gameStatusService');
+const { expirePendingPaymentsForClosedBetting } = require('./paymentGateService');
 
 function startCronJobs() {
   cron.schedule('*/1 * * * *', async () => {
     try {
       await closeExpiredOpenGames();
+      const expiredPix = await expirePendingPaymentsForClosedBetting();
+      if (expiredPix > 0) {
+        console.log(`[cron] ${expiredPix} PIX pendente(s) expirado(s) — apostas encerradas`);
+      }
       const finalized = await finalizeClosedGamesWithScores();
       if (finalized > 0) {
         console.log(`[cron] ${finalized} jogo(s) finalizado(s) com placar`);
@@ -51,10 +56,12 @@ function startCronJobs() {
 async function checkPendingPayments() {
   try {
     const [payments] = await pool.query(
-      `SELECT * FROM payments
-       WHERE status = 'pending'
-         AND pagbank_order_id IS NOT NULL
-         AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
+      `SELECT p.*, g.status AS game_status, g.game_date
+       FROM payments p
+       JOIN games g ON g.id = p.game_id
+       WHERE p.status = 'pending'
+         AND p.pagbank_order_id IS NOT NULL
+         AND p.created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
     );
 
     for (const payment of payments) {
@@ -63,8 +70,12 @@ async function checkPendingPayments() {
         const status = extractChargeStatus(order);
 
         if (status === 'PAID') {
-          await confirmPayment(payment.id);
-          console.log(`✅ Pagamento confirmado: ${payment.reference_id}`);
+          const result = await confirmPayment(payment.id);
+          if (result?.rejected) {
+            console.warn(`⚠️ PIX recusado (apostas encerradas): ${payment.reference_id}`);
+          } else {
+            console.log(`✅ Pagamento confirmado: ${payment.reference_id}`);
+          }
         } else if (['CANCELED', 'DECLINED'].includes(status)) {
           await pool.query('UPDATE payments SET status = ? WHERE id = ?', [
             status === 'CANCELED' ? 'cancelled' : 'declined',

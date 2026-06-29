@@ -16,6 +16,7 @@ const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./util
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
+const { expirePendingPaymentsForClosedBetting } = require('./services/paymentGateService');
 const { captureReferralCode, tryBindSessionReferral } = require('./services/affiliateService');
 const { SYSTEM_FEE_RATE, NO_WINNER_FEE_RATE } = require('./services/prizeService');
 const { gameFingerprint } = require('./services/gameDuplicateService');
@@ -45,6 +46,7 @@ app.use(async (req, res, next) => {
     lastGameStatusCheck = now;
     try {
       await closeExpiredOpenGames();
+      await expirePendingPaymentsForClosedBetting();
       await finalizeClosedGamesWithScores();
     } catch (err) {
       console.error('[gameStatus] Erro ao fechar jogos:', err.message);

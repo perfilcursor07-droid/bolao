@@ -48,6 +48,10 @@
                 <span class="status-tag" style="background: #d4edda; color: #155724;">✅ Pago</span>
               <% } else if (payment.status === 'pending') { %>
                 <span class="status-tag waiting">⏳ Pendente</span>
+              <% } else if (payment.status === 'expired') { %>
+                <span class="status-tag lost">⛔ Expirado</span>
+              <% } else if (payment.status === 'declined') { %>
+                <span class="status-tag lost">⛔ Recusado</span>
               <% } else if (payment.status === 'cancelled') { %>
                 <span class="status-tag lost">❌ Cancelado</span>
               <% } else { %>
@@ -71,6 +75,10 @@
               <a href="/payment/<%= payment.id %>" class="btn btn-primary btn-block" style="margin-top: 0.75rem;">
                 💰 Pagar agora
               </a>
+            <% } else if (payment.status === 'expired' || payment.status === 'declined') { %>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.45;">
+                Apostas encerradas — este PIX não pode mais ser pago.
+              </p>
             <% } else if (payment.status === 'paid') { %>
               <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center;">
                 Pago em <%= payment.paid_at ? new Date(payment.paid_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '—' %>
