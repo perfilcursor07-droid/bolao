@@ -12,10 +12,10 @@ const AS_KEY = process.env.APISPORTS_KEY || '';
 
 const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
 const WC_CACHE_TTL_DEFAULT_MS = 15 * 60 * 1000;
-const WC_CACHE_TTL_LIVE_MS = 2 * 60 * 1000;
+const WC_CACHE_TTL_LIVE_MS = 45 * 1000;
 const WC_CACHE_TTL_TODAY_MS = 5 * 60 * 1000;
 const MATCH_CACHE_FINISHED_MS = 24 * 60 * 60 * 1000;
-const MATCH_CACHE_LIVE_MS = 2 * 60 * 1000;
+const MATCH_CACHE_LIVE_MS = 45 * 1000;
 const MATCH_CACHE_PENDING_MS = 10 * 60 * 1000;
 
 let fdLastRequestAt = 0;
@@ -254,12 +254,18 @@ function parseApiSportsMatch(f) {
 
 /**
  * Busca resultado de uma partida específica
+ * @param {string|number} matchId
+ * @param {{ forceRefresh?: boolean }} [options]
  */
-async function getMatchResult(matchId) {
+async function getMatchResult(matchId, options = {}) {
   if (!matchId) return null;
 
-  const cached = getCachedMatchResult(matchId);
-  if (cached) return cached;
+  if (options.forceRefresh) {
+    matchResultCache.delete(String(matchId));
+  } else {
+    const cached = getCachedMatchResult(matchId);
+    if (cached) return cached;
+  }
 
   if (Date.now() < rateLimitedUntil) return null;
 

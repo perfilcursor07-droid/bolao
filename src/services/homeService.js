@@ -1,13 +1,15 @@
 const pool = require('../config/database');
 const { loadFinishedBoloes, loadBetsForGames } = require('./finishedBoloesService');
 const { getUserGameStatus } = require('./prizeService');
-const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches } = require('./gameStatusService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, syncLiveGameScores, liveGamesSqlWhere } = require('./gameStatusService');
 const { isBettingOpen } = require('./bettingRules');
 const { gameBetCountSubquery, marketingPoolSubquery, enrichGamesForDisplay } = require('./marketingBetService');
 const { dedupeGamesForDisplay } = require('./gameDuplicateService');
 
 let lastHomeApiSync = 0;
+let lastHomeLiveSync = 0;
 const HOME_API_SYNC_MS = 3 * 60 * 1000;
+const HOME_LIVE_SYNC_MS = 30 * 1000;
 
 async function loadHomeData(userId, { withApiSync = false } = {}) {
   await closeExpiredOpenGames();
@@ -15,13 +17,21 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
 
   if (withApiSync) {
     const now = Date.now();
-    if (now - lastHomeApiSync >= HOME_API_SYNC_MS) {
-      lastHomeApiSync = now;
-      try {
+    try {
+      const [liveRows] = await pool.query(
+        `SELECT COUNT(*) AS c FROM games WHERE ${liveGamesSqlWhere()}`
+      );
+      const hasActiveLive = liveRows[0].c > 0;
+
+      if (hasActiveLive && now - lastHomeLiveSync >= HOME_LIVE_SYNC_MS) {
+        lastHomeLiveSync = now;
+        await syncLiveGameScores({ forceRefresh: true });
+      } else if (!hasActiveLive && now - lastHomeApiSync >= HOME_API_SYNC_MS) {
+        lastHomeApiSync = now;
         await syncGamesFromWorldCupMatches();
-      } catch (err) {
-        console.error('[home] sync API:', err.message);
       }
+    } catch (err) {
+      console.error('[home] sync API:', err.message);
     }
   }
 

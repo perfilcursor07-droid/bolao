@@ -180,26 +180,8 @@ async function syncGamesFromApi({ maxGames = 2 } = {}) {
   for (const game of games) {
     try {
       const result = await getMatchResult(game.api_match_id);
-      if (!result) continue;
-
-      const homeScore = result.homeScore ?? game.home_score;
-      const awayScore = result.awayScore ?? game.away_score;
-
-      if (homeScore === null || awayScore === null) continue;
-
-      await pool.query(
-        `UPDATE games SET home_score = ?, away_score = ? WHERE id = ?`,
-        [homeScore, awayScore, game.id]
-      );
-
-      const updated = { ...game, home_score: homeScore, away_score: awayScore };
-
-      if (result.finished || shouldAutoFinalize(updated)) {
-        await processGameResults(game.id);
-        console.log(`🏆 Jogo ${game.id} finalizado via API. Status: ${result.status}`);
-      }
-
-      synced++;
+      const { updated } = await updateGameFromApiResult(game, result);
+      if (updated) synced++;
     } catch (err) {
       console.error(`[syncGames] jogo ${game.id}:`, err.message);
     }
@@ -212,6 +194,70 @@ function isLiveGame(game) {
   return Boolean(game && game.status === 'closed');
 }
 
+const LIVE_GAME_WINDOW_MINUTES = 130;
+
+function liveGamesSqlWhere(alias = '') {
+  const p = alias ? `${alias}.` : '';
+  return `${p}status = 'closed'
+       AND ${p}api_match_id IS NOT NULL
+       AND ${p}game_date <= NOW()
+       AND ${p}game_date >= DATE_SUB(NOW(), INTERVAL ${LIVE_GAME_WINDOW_MINUTES} MINUTE)`;
+}
+
+async function updateGameFromApiResult(game, result) {
+  if (!result || (!result.live && !result.finished)) {
+    return { updated: false, finalized: false };
+  }
+
+  const homeScore = result.homeScore ?? game.home_score;
+  const awayScore = result.awayScore ?? game.away_score;
+  if (homeScore === null || awayScore === null) {
+    return { updated: false, finalized: false };
+  }
+
+  const changed = game.home_score !== homeScore || game.away_score !== awayScore;
+  if (changed) {
+    await pool.query(`UPDATE games SET home_score = ?, away_score = ? WHERE id = ?`, [
+      homeScore,
+      awayScore,
+      game.id,
+    ]);
+  }
+
+  const updated = { ...game, home_score: homeScore, away_score: awayScore };
+  let finalized = false;
+  if (result.finished || shouldAutoFinalize(updated)) {
+    await processGameResults(game.id);
+    finalized = true;
+    console.log(`🏆 Jogo ${game.id} finalizado via API (${homeScore}×${awayScore}). Status: ${result.status}`);
+  }
+
+  return { updated: changed || finalized, finalized };
+}
+
+/**
+ * Sincroniza placares de jogos ao vivo (1 chamada por partida, mais rápido que lista da Copa).
+ */
+async function syncLiveGameScores(options = {}) {
+  const [games] = await pool.query(`SELECT * FROM games WHERE ${liveGamesSqlWhere()}`);
+  if (games.length === 0) return 0;
+
+  let synced = 0;
+  for (const game of games) {
+    try {
+      const result = await getMatchResult(game.api_match_id, {
+        forceRefresh: options.forceRefresh === true,
+      });
+      const { updated } = await updateGameFromApiResult(game, result);
+      if (updated) synced++;
+    } catch (err) {
+      console.error(`[syncLive] jogo ${game.id}:`, err.message);
+    }
+  }
+
+  return synced;
+}
+
 module.exports = {
   BETTING_CLOSE_MINUTES,
   MATCH_END_MINUTES,
@@ -219,9 +265,11 @@ module.exports = {
   finalizeClosedGamesWithScores,
   syncGamesFromWorldCupMatches,
   syncGamesFromApi,
+  syncLiveGameScores,
   isBettingOpen,
   getBettingDeadline,
   hasGameStarted,
   shouldAutoFinalize,
   isLiveGame,
+  LIVE_GAME_WINDOW_MINUTES,
 };

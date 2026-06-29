@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const pool = require('../config/database');
 const { getOrderStatus, extractChargeStatus } = require('./pagbank');
 const { confirmPayment } = require('./prizeService');
-const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, syncGamesFromApi } = require('./gameStatusService');
+const { closeExpiredOpenGames, finalizeClosedGamesWithScores, syncGamesFromWorldCupMatches, syncGamesFromApi, syncLiveGameScores } = require('./gameStatusService');
 const { expirePendingPaymentsForClosedBetting } = require('./paymentGateService');
 
 function startCronJobs() {
@@ -16,6 +16,10 @@ function startCronJobs() {
       const finalized = await finalizeClosedGamesWithScores();
       if (finalized > 0) {
         console.log(`[cron] ${finalized} jogo(s) finalizado(s) com placar`);
+      }
+      const liveSynced = await syncLiveGameScores({ forceRefresh: true });
+      if (liveSynced > 0) {
+        console.log(`[cron] ${liveSynced} placar(es) ao vivo atualizado(s)`);
       }
     } catch (err) {
       console.error('[cron] Erro ao fechar/finalizar jogos:', err.message);
@@ -50,7 +54,7 @@ function startCronJobs() {
     }
   });
 
-  console.log('⏰ Cron jobs iniciados (fechar: 1min, pagamentos: 2min, Copa API: 3min, match API: 10min)');
+  console.log('⏰ Cron jobs iniciados (fechar+live: 1min, pagamentos: 2min, Copa API: 3min, match API: 10min)');
 }
 
 async function checkPendingPayments() {
