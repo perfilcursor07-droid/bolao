@@ -28,9 +28,9 @@
       <a href="/admin/copa?refresh=1" class="btn btn-sm btn-outline">↻ Atualizar agora</a>
     </div>
     <p class="copa-sync-hint">
-      Marque jogos que <strong>ainda não iniciaram</strong> para criar bolões.
+      Marque jogos para criar bolões.
       Jogos com <strong>✓ Bolão criado</strong> ficam desativados para não duplicar.
-      <strong>✓ confirmado</strong> / <strong>⚠ provável</strong> é só informativo no mata-mata — o admin pode criar bolão em qualquer jogo futuro com os dois times definidos.
+      Pode criar bolão em qualquer jogo que ainda não terminou.
     </p>
 
     <% if (error) { %>
@@ -95,18 +95,18 @@
           </div>
           <div class="copa-stage-list">
             <% stages[stage].forEach(function(m) { %>
-              <% var matchNotStarted = (m.status === 'SCHEDULED' || m.status === 'TIMED') && new Date(m.date).getTime() > Date.now(); %>
+              <% var matchNotFinished = m.status !== 'FINISHED' && m.status !== 'AWARDED' && m.status !== 'CANCELLED' && m.status !== 'POSTPONED'; %>
               <% var hasTeams = m.homeTeam && m.awayTeam && m.homeTeam !== 'A definir' && m.awayTeam !== 'A definir'; %>
               <% var matchFp = gameFingerprint(m.homeTeam, m.awayTeam, toMySQLDateTime(m.date)); %>
               <% var alreadyCreated = existingIds.indexOf(String(m.id)) !== -1 || existingFps.indexOf(matchFp) !== -1; %>
-              <% var canCreateBolao = matchNotStarted && hasTeams && !alreadyCreated; %>
+              <% var canCreateBolao = matchNotFinished && hasTeams && !alreadyCreated; %>
               <label class="copa-match-item copa-match-selectable<%= alreadyCreated ? ' copa-match-already' : '' %><%= !canCreateBolao && !alreadyCreated ? ' copa-match-unavailable' : '' %>" data-stage="<%= stage %>">
                 <% if (canCreateBolao) { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
                     value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
                   <input type="checkbox" disabled class="copa-check copa-check--disabled"
-                    title="<%= alreadyCreated ? 'Bolão já criado para este jogo' : !matchNotStarted ? 'Jogo já iniciou ou encerrou' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
+                    title="<%= alreadyCreated ? 'Bolão já criado para este jogo' : !matchNotFinished ? 'Jogo finalizado ou cancelado' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
                 <% } %>
                 <div class="copa-match-info">
                   <div class="copa-match-teams">
@@ -128,9 +128,7 @@
                         <span class="copa-match-badge-created">✓ Bolão criado</span>
                       <% } %>
                       <% if (m.bracketCertainty === 'confirmed') { %>
-                        <span class="copa-certainty-badge copa-certainty-badge--confirmed" title="<%= m.bracketSlotHome %> × <%= m.bracketSlotAway %>"> · ✓ confirmado</span>
-                      <% } else if (m.bracketCertainty === 'tentative') { %>
-                        <span class="copa-certainty-badge copa-certainty-badge--tentative" title="Pode mudar — <%= m.bracketSlotHome %> × <%= m.bracketSlotAway %>"> · ⚠ provável</span>
+                        <span class="copa-certainty-badge copa-certainty-badge--confirmed" title="Times confirmados"> · ✓</span>
                       <% } %>
                     </span>
                   </div>
