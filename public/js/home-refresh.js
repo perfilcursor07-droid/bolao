@@ -11,7 +11,7 @@
   let busy = false;
 
   function getPollInterval() {
-    const hasLive = container.dataset.hasLive === '1' || container.querySelector('.game-row-live');
+    const hasLive = container.dataset.hasLive === '1' || container.querySelector('.live-game-card, .game-row-live');
     return hasLive ? POLL_LIVE_MS : POLL_NORMAL_MS;
   }
 
@@ -65,7 +65,7 @@
       }
 
       container.innerHTML = html;
-      container.dataset.hasLive = container.querySelector('.game-row-live') ? '1' : '0';
+      container.dataset.hasLive = container.querySelector('.live-game-card, .game-row-live') ? '1' : '0';
       restoreOpenDetails(openIds);
 
       const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });

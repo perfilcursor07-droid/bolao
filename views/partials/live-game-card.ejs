@@ -1,0 +1,36 @@
+<article class="live-game-card">
+  <a href="/games/<%= game.id %>" class="live-game-card-link">
+    <div class="live-game-card-inner">
+      <header class="live-game-head">
+        <span class="live-game-badge">
+          <span class="live-dot" aria-hidden="true"></span>
+          AO VIVO
+        </span>
+        <time class="live-game-date"><%= gameDateBR(game.game_date) %></time>
+      </header>
+
+      <% if (game.title) { %>
+        <p class="live-game-title"><%= game.title %></p>
+      <% } %>
+
+      <div class="live-game-match">
+        <span class="live-game-team"><%= teamPt(game.home_team) %></span>
+        <% if (game.home_score !== null && game.away_score !== null) { %>
+          <span class="live-game-score"><%= game.home_score %> × <%= game.away_score %></span>
+        <% } else { %>
+          <span class="live-game-score live-game-score--pending">×</span>
+        <% } %>
+        <span class="live-game-team"><%= teamPt(game.away_team) %></span>
+      </div>
+
+      <div class="live-game-prize">
+        <span class="live-game-prize-label">🏆 Prêmio acumulado</span>
+        <strong class="live-game-prize-value">
+          <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %>
+        </strong>
+      </div>
+
+      <span class="live-game-cta">Acompanhar bolão →</span>
+    </div>
+  </a>
+</article>

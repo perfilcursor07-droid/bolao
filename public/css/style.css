@@ -833,6 +833,172 @@ body.nav-open { overflow: hidden; }
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.06) 0%, transparent 40%);
 }
 
+/* Jogos ao vivo — destaque grande (home) */
+.home-section-header--live {
+  margin-top: 1.5rem;
+}
+
+.home-section-header--live h2 {
+  color: #fecaca;
+}
+
+.live-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.live-game-card {
+  margin: 0;
+}
+
+.live-game-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.live-game-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.15rem 1rem;
+  background: linear-gradient(160deg, rgba(239, 68, 68, 0.22) 0%, rgba(127, 29, 29, 0.08) 38%, var(--bg-card) 100%);
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.18);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.live-game-card-link:hover .live-game-card-inner,
+.live-game-card-link:focus-visible .live-game-card-inner {
+  transform: translateY(-2px);
+  border-color: rgba(252, 165, 165, 0.75);
+  box-shadow: 0 12px 36px rgba(239, 68, 68, 0.28);
+}
+
+.live-game-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.live-game-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  border: 1px solid rgba(254, 202, 202, 0.45);
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.45);
+}
+
+.live-game-badge .live-dot {
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  animation: livePulseWhite 1.6s ease-in-out infinite;
+}
+
+@keyframes livePulseWhite {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+}
+
+.live-game-date {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.live-game-title {
+  margin: -0.25rem 0 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.35;
+}
+
+.live-game-match {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0 0.15rem;
+  text-align: center;
+}
+
+.live-game-team {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.live-game-score {
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #fef08a;
+  padding: 0.2rem 0.7rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  border-radius: 10px;
+  line-height: 1.1;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.live-game-score--pending {
+  color: var(--text-muted);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.live-game-prize {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.live-game-prize-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.live-game-prize-value {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #4ade80;
+  line-height: 1.2;
+}
+
+.live-game-cta {
+  display: block;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fca5a5;
+  padding-top: 0.15rem;
+}
+
 .live-count {
   background: rgba(239, 68, 68, 0.2) !important;
   color: #f87171 !important;
