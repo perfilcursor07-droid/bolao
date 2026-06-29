@@ -59,7 +59,7 @@ function parsePredictions(predictionData) {
   return [];
 }
 
-async function processGameResults(gameId) {
+async function processGameResults(gameId, { skipNotify = false } = {}) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -108,6 +108,7 @@ async function processGameResults(gameId) {
       await connection.commit();
 
       setImmediate(() => {
+        if (skipNotify) return;
         require('./whatsappNotifyService')
           .notifyGameResults(gameId)
           .catch((err) => console.error('[whatsapp] resultado:', err.message));
@@ -129,9 +130,10 @@ async function processGameResults(gameId) {
     await connection.commit();
 
     setImmediate(() => {
+      if (skipNotify) return;
       require('./whatsappNotifyService')
-        .notifyGameResults(gameId)
-        .catch((err) => console.error('[whatsapp] resultado:', err.message));
+        .notifyWinners(gameId)
+        .catch((err) => console.error('[whatsapp] ganhadores:', err.message));
     });
 
     return { winners: winners.length, prizeEach, totalPool: game.prize_pool_cents, netPool };
@@ -467,7 +469,20 @@ async function reprocessGameResults(gameId, { homeScore, awayScore } = {}) {
     connection.release();
   }
 
-  return processGameResults(gameId);
+  const result = await processGameResults(gameId, { skipNotify: true });
+
+  setImmediate(() => {
+    require('./whatsappNotifyService')
+      .notifyWinners(gameId)
+      .then((notifyResult) => {
+        if (notifyResult?.queued > 0) {
+          console.log(`[whatsapp] ${notifyResult.queued} ganhador(es) notificado(s) — jogo ${gameId}`);
+        }
+      })
+      .catch((err) => console.error('[whatsapp] ganhadores:', err.message));
+  });
+
+  return result;
 }
 
 module.exports = {

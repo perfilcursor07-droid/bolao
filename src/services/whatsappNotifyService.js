@@ -86,11 +86,14 @@ async function notifyPaymentConfirmed(paymentId) {
   });
 }
 
-async function notifyGameResults(gameId) {
-  if (!(await isNotificationsEnabled())) return;
+async function notifyGameResults(gameId, options = {}) {
+  if (!(await isNotificationsEnabled())) return { skipped: true, reason: 'notifications_disabled' };
+
+  const winnersOnly = options.winnersOnly === true;
+  const referenceSuffix = options.referenceSuffix ? String(options.referenceSuffix) : '';
 
   const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'finished']);
-  if (games.length === 0) return;
+  if (games.length === 0) return { skipped: true, reason: 'game_not_finished' };
   const game = games[0];
 
   const [bets] = await pool.query(
@@ -100,7 +103,7 @@ async function notifyGameResults(gameId) {
      WHERE b.game_id = ?`,
     [gameId]
   );
-  if (bets.length === 0) return;
+  if (bets.length === 0) return { skipped: true, reason: 'no_bets' };
 
   const resultLine = formatPlacar(game.home_score, game.away_score);
   const matchLabel = `${translateTeamName(game.home_team)} × ${translateTeamName(game.away_team)}`;
@@ -115,25 +118,33 @@ async function notifyGameResults(gameId) {
     byUser[bet.user_id].bets.push(bet);
   }
 
+  let queued = 0;
+  let duplicates = 0;
+
   for (const [userId, group] of Object.entries(byUser)) {
+    const hasWinner = group.bets.some((b) => b.is_winner);
+    if (winnersOnly && !hasWinner) continue;
+
     const lines = [];
-    let hasWinner = false;
 
     for (const bet of group.bets) {
       const palpite = formatPlacar(bet.home_score_prediction, bet.away_score_prediction);
       if (bet.is_winner) {
-        hasWinner = true;
         lines.push(`🏆 Palpite ${palpite} — *GANHOU* ${formatCents(bet.prize_amount_cents)}`);
-      } else if (bet.prize_amount_cents > 0 && !bet.is_winner) {
+      } else if (!winnersOnly && bet.prize_amount_cents > 0 && !bet.is_winner) {
         lines.push(`↩️ Palpite ${palpite} — reembolso ${formatCents(bet.prize_amount_cents)}`);
-      } else {
+      } else if (!winnersOnly) {
         lines.push(`❌ Palpite ${palpite} — não acertou`);
       }
     }
 
+    if (winnersOnly && lines.length === 0) continue;
+
     let header;
     if (hasWinner) {
-      header = '🏆 *Parabéns, você ganhou!*';
+      header = winnersOnly && referenceSuffix
+        ? '🏆 *Parabéns! Resultado corrigido — você ganhou!*'
+        : '🏆 *Parabéns, você ganhou!*';
     } else if (lines.some((l) => l.includes('reembolso'))) {
       header = '📋 *Resultado do bolão* (reembolso)';
     } else {
@@ -187,18 +198,36 @@ async function notifyGameResults(gameId) {
       .filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== ''))
       .join('\n');
 
-    await enqueueMessage({
+    const enqueueResult = await enqueueMessage({
       userId: parseInt(userId, 10),
       phone: group.phone,
       messageType: 'bet_result',
-      referenceKey: `game_${gameId}_user_${userId}`,
+      referenceKey: `game_${gameId}_user_${userId}${referenceSuffix}`,
       body,
     });
+    if (enqueueResult.queued) queued++;
+    else if (enqueueResult.duplicate) duplicates++;
   }
+
+  return { queued, duplicates, winnersOnly };
+}
+
+async function notifyWinners(gameId, options = {}) {
+  const [games] = await pool.query('SELECT home_score, away_score FROM games WHERE id = ?', [gameId]);
+  const game = games[0];
+  const scoreSuffix =
+    game && game.home_score != null && game.away_score != null
+      ? `_final_${game.home_score}x${game.away_score}`
+      : `_winners_${Date.now()}`;
+  return notifyGameResults(gameId, {
+    winnersOnly: true,
+    referenceSuffix: options.referenceSuffix || scoreSuffix,
+  });
 }
 
 module.exports = {
   isNotificationsEnabled,
   notifyPaymentConfirmed,
   notifyGameResults,
+  notifyWinners,
 };

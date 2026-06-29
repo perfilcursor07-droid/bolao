@@ -986,10 +986,36 @@ router.post('/games/:id/reprocess-result', requireAdmin, async (req, res) => {
       awayScore: away_score,
     });
     const winners = result?.winners ?? 0;
-    req.session.flash = `Placar corrigido. ${winners} ganhador(es) recalculado(s).`;
+    req.session.flash = `Placar corrigido. ${winners} ganhador(es) recalculado(s). WhatsApp será enviado aos ganhadores.`;
     res.redirect(`/admin/games/${req.params.id}`);
   } catch (err) {
     req.session.flash = err.message || 'Erro ao recalcular resultado.';
+    res.redirect(`/admin/games/${req.params.id}`);
+  }
+});
+
+router.post('/games/:id/notify-winners', requireAdmin, async (req, res) => {
+  const { notifyWinners, isNotificationsEnabled } = require('../services/whatsappNotifyService');
+
+  try {
+    if (!(await isNotificationsEnabled())) {
+      req.session.flash = 'Ative as notificações WhatsApp em /admin/whatsapp antes de enviar.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
+    const result = await notifyWinners(req.params.id);
+    if (result?.skipped) {
+      req.session.flash = 'Não foi possível enviar: jogo não finalizado ou sem apostas.';
+    } else if (result?.queued > 0) {
+      req.session.flash = `${result.queued} mensagem(ns) enfileirada(s) para ganhadores.`;
+    } else if (result?.duplicates > 0) {
+      req.session.flash = 'Mensagens já foram enviadas anteriormente para estes ganhadores.';
+    } else {
+      req.session.flash = 'Nenhum ganhador com WhatsApp válido encontrado.';
+    }
+    res.redirect(`/admin/games/${req.params.id}`);
+  } catch (err) {
+    req.session.flash = err.message || 'Erro ao enviar WhatsApp.';
     res.redirect(`/admin/games/${req.params.id}`);
   }
 });
@@ -1006,10 +1032,14 @@ router.get('/games/:id', requireAdmin, async (req, res) => {
       [req.params.id]
     );
 
+    const flash = req.session.flash || null;
+    delete req.session.flash;
+
     res.render('admin/game-detail', {
       title: games[0].title,
       game: games[0],
       bets,
+      flash,
       user: req.session.user,
     });
   } catch (err) {

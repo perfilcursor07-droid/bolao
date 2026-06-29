@@ -14,6 +14,10 @@
   <div class="container">
     <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem;">← Voltar ao painel</a>
 
+    <% if (typeof flash !== 'undefined' && flash) { %>
+      <div class="alert alert-info" style="margin-top: 1rem;"><%= flash %></div>
+    <% } %>
+
     <div class="card" style="margin-top: 1.5rem;">
       <div style="display: flex; justify-content: space-between; align-items: start;">
         <div>
@@ -85,6 +89,14 @@
             </button>
           </form>
         </div>
+        <% const winnerCount = bets.filter(function(b) { return b.is_winner; }).length; %>
+        <% if (winnerCount > 0) { %>
+          <form method="POST" action="/admin/games/<%= game.id %>/notify-winners" style="margin-top: 1rem;">
+            <button type="submit" class="btn btn-outline" onclick="return confirm('Enviar WhatsApp para <%= winnerCount %> ganhador(es)?');">
+              📲 Enviar WhatsApp aos ganhadores (<%= winnerCount %>)
+            </button>
+          </form>
+        <% } %>
       <% } %>
     </div>
 
