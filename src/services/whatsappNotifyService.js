@@ -9,6 +9,8 @@ const {
   PRIZE_TRANSFER_HOURS,
 } = require('../config/support');
 
+const API_FINISHED_STATUSES = new Set(['FINISHED', 'AWARDED']);
+
 async function isNotificationsEnabled() {
   try {
     const [rows] = await pool.query(
@@ -26,6 +28,34 @@ function formatPlacar(h, a) {
 
 function firstName(name) {
   return String(name || '').trim().split(/\s+/)[0] || 'Apostador';
+}
+
+function isGameResultConfirmed(game) {
+  if (!game || game.status !== 'finished') return false;
+  if (game.home_score === null || game.away_score === null) return false;
+  if (game.api_match_id) {
+    return API_FINISHED_STATUSES.has(String(game.api_match_status || '').toUpperCase());
+  }
+  return true;
+}
+
+/**
+ * Apostas ganhadoras conferidas: is_winner + palpite = placar final do jogo.
+ */
+async function loadVerifiedWinningBets(gameId) {
+  const [rows] = await pool.query(
+    `SELECT b.*, u.name, u.phone, u.cpf, g.home_score, g.away_score, g.title, g.home_team, g.away_team, g.status
+     FROM bets b
+     JOIN users u ON u.id = b.user_id
+     JOIN games g ON g.id = b.game_id
+     WHERE b.game_id = ?
+       AND g.status = 'finished'
+       AND b.is_winner = TRUE
+       AND b.home_score_prediction = g.home_score
+       AND b.away_score_prediction = g.away_score`,
+    [gameId]
+  );
+  return rows;
 }
 
 async function notifyPaymentConfirmed(paymentId) {
@@ -86,30 +116,48 @@ async function notifyPaymentConfirmed(paymentId) {
   });
 }
 
-async function notifyGameResults(gameId, options = {}) {
-  if (!(await isNotificationsEnabled())) return { skipped: true, reason: 'notifications_disabled' };
+/**
+ * Envia WhatsApp SOMENTE para ganhadores verificados (palpite = placar final).
+ * Nunca envia automaticamente — só via ação explícita do admin.
+ */
+async function notifyWinners(gameId, options = {}) {
+  if (!(await isNotificationsEnabled())) {
+    return { skipped: true, reason: 'notifications_disabled' };
+  }
 
-  const winnersOnly = options.winnersOnly === true;
-  const referenceSuffix = options.referenceSuffix ? String(options.referenceSuffix) : '';
+  const force = options.force === true;
 
-  const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'finished']);
-  if (games.length === 0) return { skipped: true, reason: 'game_not_finished' };
+  const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [gameId]);
+  if (games.length === 0) return { skipped: true, reason: 'game_not_found' };
   const game = games[0];
 
-  const [bets] = await pool.query(
-    `SELECT b.*, u.name, u.phone, u.cpf
-     FROM bets b
-     JOIN users u ON u.id = b.user_id
-     WHERE b.game_id = ?`,
-    [gameId]
-  );
-  if (bets.length === 0) return { skipped: true, reason: 'no_bets' };
+  if (!isGameResultConfirmed(game)) {
+    return {
+      skipped: true,
+      reason: 'result_not_confirmed',
+      message: 'Placar ainda não confirmado pela API (aguarde status FINISHED) ou jogo não finalizado.',
+    };
+  }
+
+  if (game.results_whatsapp_sent_at && !force) {
+    return {
+      skipped: true,
+      reason: 'already_sent',
+      message: 'WhatsApp de ganhadores já foi enviado para este placar. Use reenvio forçado se necessário.',
+    };
+  }
+
+  const winningBets = await loadVerifiedWinningBets(gameId);
+  if (winningBets.length === 0) {
+    return { skipped: true, reason: 'no_verified_winners' };
+  }
 
   const resultLine = formatPlacar(game.home_score, game.away_score);
   const matchLabel = `${translateTeamName(game.home_team)} × ${translateTeamName(game.away_team)}`;
+  const referenceSuffix = `_final_${game.home_score}x${game.away_score}`;
 
   const byUser = {};
-  for (const bet of bets) {
+  for (const bet of winningBets) {
     const phone = cleanPhone(bet.phone);
     if (!normalizeBrazilPhone(phone)) continue;
     if (!byUser[bet.user_id]) {
@@ -120,83 +168,34 @@ async function notifyGameResults(gameId, options = {}) {
 
   let queued = 0;
   let duplicates = 0;
+  const consultarUrl = getConsultarUrl();
 
   for (const [userId, group] of Object.entries(byUser)) {
-    const hasWinner = group.bets.some((b) => b.is_winner);
-    if (winnersOnly && !hasWinner) continue;
-
-    const lines = [];
-
-    for (const bet of group.bets) {
+    const lines = group.bets.map((bet) => {
       const palpite = formatPlacar(bet.home_score_prediction, bet.away_score_prediction);
-      if (bet.is_winner) {
-        lines.push(`🏆 Palpite ${palpite} — *GANHOU* ${formatCents(bet.prize_amount_cents)}`);
-      } else if (!winnersOnly && bet.prize_amount_cents > 0 && !bet.is_winner) {
-        lines.push(`↩️ Palpite ${palpite} — reembolso ${formatCents(bet.prize_amount_cents)}`);
-      } else if (!winnersOnly) {
-        lines.push(`❌ Palpite ${palpite} — não acertou`);
-      }
-    }
-
-    if (winnersOnly && lines.length === 0) continue;
-
-    let header;
-    if (hasWinner) {
-      header = winnersOnly && referenceSuffix
-        ? '🏆 *Parabéns! Resultado corrigido — você ganhou!*'
-        : '🏆 *Parabéns, você ganhou!*';
-    } else if (lines.some((l) => l.includes('reembolso'))) {
-      header = '📋 *Resultado do bolão* (reembolso)';
-    } else {
-      header = '📋 *Resultado do bolão*';
-    }
-
-    const consultarUrl = getConsultarUrl();
-    const payoutLines = [];
-
-    if (hasWinner) {
-      payoutLines.push(
-        `💰 *Pagamento do prêmio*`,
-        `A transferência será realizada em *até ${PRIZE_TRANSFER_HOURS} horas* para a chave PIX que você confirmou no cadastro.`,
-        group.pixKey ? `📌 *Sua chave PIX:* ${group.pixKey}` : '📌 *Sua chave PIX:* (consulte em /consultar com seu WhatsApp)',
-        '',
-        `📲 *Acompanhe o status do pagamento:*`,
-        consultarUrl,
-        '(Use o mesmo WhatsApp da aposta)',
-        '',
-        `💬 Dúvidas ou contato: *${SUPPORT_PHONE_DISPLAY}*`
-      );
-    } else if (lines.some((l) => l.includes('reembolso'))) {
-      payoutLines.push(
-        `↩️ *Reembolso*`,
-        `O valor será devolvido em *até ${PRIZE_TRANSFER_HOURS} horas* para a chave PIX cadastrada.`,
-        group.pixKey ? `📌 *Sua chave PIX:* ${group.pixKey}` : '',
-        '',
-        `📲 Status: ${consultarUrl}`,
-        `💬 Contato: *${SUPPORT_PHONE_DISPLAY}*`
-      );
-    }
+      return `🏆 Palpite ${palpite} — *GANHOU* ${formatCents(bet.prize_amount_cents)}`;
+    });
 
     const body = [
-      header,
+      '🏆 *Parabéns, você ganhou!*',
       '',
       `Olá, ${firstName(group.name)}!`,
       '',
       `*${game.title}*`,
-      `Resultado final: *${resultLine}*`,
+      `Resultado final confirmado: *${resultLine}*`,
       `(${matchLabel})`,
       '',
       ...lines,
       '',
-      ...payoutLines,
-      ...(hasWinner || lines.some((l) => l.includes('reembolso'))
-        ? []
-        : ['Obrigado por participar! Boa sorte no próximo bolão. ⚽']),
+      '💰 *Pagamento do prêmio*',
+      `A transferência será realizada em *até ${PRIZE_TRANSFER_HOURS} horas* para a chave PIX cadastrada.`,
+      group.pixKey ? `📌 *Sua chave PIX:* ${group.pixKey}` : '📌 Consulte sua chave em /consultar com seu WhatsApp',
+      '',
+      `📲 *Acompanhe o status:* ${consultarUrl}`,
+      `💬 Dúvidas: *${SUPPORT_PHONE_DISPLAY}*`,
       '',
       '_Bolão Online_',
-    ]
-      .filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== ''))
-      .join('\n');
+    ].join('\n');
 
     const enqueueResult = await enqueueMessage({
       userId: parseInt(userId, 10),
@@ -209,25 +208,105 @@ async function notifyGameResults(gameId, options = {}) {
     else if (enqueueResult.duplicate) duplicates++;
   }
 
-  return { queued, duplicates, winnersOnly };
+  if (queued > 0) {
+    await pool.query('UPDATE games SET results_whatsapp_sent_at = NOW() WHERE id = ?', [gameId]);
+  }
+
+  return { queued, duplicates, verifiedWinners: winningBets.length };
 }
 
-async function notifyWinners(gameId, options = {}) {
-  const [games] = await pool.query('SELECT home_score, away_score FROM games WHERE id = ?', [gameId]);
+/**
+ * Aviso de correção para participantes (ex.: placar provisório errado).
+ * Não menciona vitória — só o resultado oficial.
+ */
+async function notifyResultCorrection(gameId) {
+  if (!(await isNotificationsEnabled())) {
+    return { skipped: true, reason: 'notifications_disabled' };
+  }
+
+  const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'finished']);
+  if (games.length === 0) return { skipped: true, reason: 'game_not_finished' };
   const game = games[0];
-  const scoreSuffix =
-    game && game.home_score != null && game.away_score != null
-      ? `_final_${game.home_score}x${game.away_score}`
-      : `_winners_${Date.now()}`;
-  return notifyGameResults(gameId, {
-    winnersOnly: true,
-    referenceSuffix: options.referenceSuffix || scoreSuffix,
-  });
+
+  const resultLine = formatPlacar(game.home_score, game.away_score);
+  const matchLabel = `${translateTeamName(game.home_team)} × ${translateTeamName(game.away_team)}`;
+
+  const [bets] = await pool.query(
+    `SELECT b.user_id, b.home_score_prediction, b.away_score_prediction, b.is_winner,
+            u.name, u.phone
+     FROM bets b
+     JOIN users u ON u.id = b.user_id
+     WHERE b.game_id = ?`,
+    [gameId]
+  );
+
+  const byUser = {};
+  for (const bet of bets) {
+    const phone = cleanPhone(bet.phone);
+    if (!normalizeBrazilPhone(phone)) continue;
+    if (!byUser[bet.user_id]) {
+      byUser[bet.user_id] = { name: bet.name, phone: normalizeBrazilPhone(phone), bets: [] };
+    }
+    byUser[bet.user_id].bets.push(bet);
+  }
+
+  let queued = 0;
+  const suffix = `_correction_${game.home_score}x${game.away_score}`;
+
+  for (const [userId, group] of Object.entries(byUser)) {
+    const hasVerifiedWin = group.bets.some(
+      (b) =>
+        b.is_winner &&
+        b.home_score_prediction === game.home_score &&
+        b.away_score_prediction === game.away_score
+    );
+
+    const body = [
+      '⚠️ *Correção de resultado — Bolão Online*',
+      '',
+      `Olá, ${firstName(group.name)}!`,
+      '',
+      `*${game.title}* (${matchLabel})`,
+      '',
+      `O *resultado final confirmado* é *${resultLine}*.`,
+      '',
+      hasVerifiedWin
+        ? 'Seu palpite acertou o placar final. O prêmio será pago conforme as regras do bolão.'
+        : 'Se você recebeu mensagem anterior com placar diferente, *desconsidere* — foi enviada antes da confirmação oficial do jogo.',
+      '',
+      'Pedimos desculpas pelo transtorno.',
+      '',
+      `📲 Consulte suas apostas: ${getConsultarUrl()}`,
+      `💬 Contato: *${SUPPORT_PHONE_DISPLAY}*`,
+      '',
+      '_Bolão Online_',
+    ].join('\n');
+
+    const enqueueResult = await enqueueMessage({
+      userId: parseInt(userId, 10),
+      phone: group.phone,
+      messageType: 'bet_result',
+      referenceKey: `game_${gameId}_user_${userId}${suffix}`,
+      body,
+    });
+    if (enqueueResult.queued) queued++;
+  }
+
+  return { queued };
+}
+
+/** @deprecated Use notifyWinners — nunca envia para quem não ganhou. */
+async function notifyGameResults(gameId, options = {}) {
+  if (options.winnersOnly) return notifyWinners(gameId, options);
+  return { skipped: true, reason: 'broadcast_disabled' };
 }
 
 module.exports = {
   isNotificationsEnabled,
+  isGameResultConfirmed,
+  loadVerifiedWinningBets,
   notifyPaymentConfirmed,
   notifyGameResults,
   notifyWinners,
+  notifyResultCorrection,
 };

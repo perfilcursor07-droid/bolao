@@ -89,14 +89,50 @@
             </button>
           </form>
         </div>
-        <% const winnerCount = bets.filter(function(b) { return b.is_winner; }).length; %>
-        <% if (winnerCount > 0) { %>
-          <form method="POST" action="/admin/games/<%= game.id %>/notify-winners" style="margin-top: 1rem;">
-            <button type="submit" class="btn btn-outline" onclick="return confirm('Enviar WhatsApp para <%= winnerCount %> ganhador(es)?');">
-              📲 Enviar WhatsApp aos ganhadores (<%= winnerCount %>)
+        <% const verifiedWinners = bets.filter(function(b) {
+          return b.is_winner && b.home_score_prediction === game.home_score && b.away_score_prediction === game.away_score;
+        }); %>
+        <div class="card" style="background: var(--bg-secondary); border: 1px solid rgba(34, 197, 94, 0.35); margin-bottom: 1.5rem; padding: 1rem;">
+          <h3 style="margin-bottom: 0.5rem;">WhatsApp — somente manual</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            O sistema <strong>não envia mais</strong> mensagem de vitória automaticamente.
+            Confira o placar <strong><%= game.home_score %>×<%= game.away_score %></strong> antes de enviar.
+            Ganhadores conferidos: <strong><%= verifiedWinners.length %></strong> aposta(s).
+            <% if (game.results_whatsapp_sent_at) { %>
+              <br><span style="color: var(--gold);">Último envio: <%= new Date(game.results_whatsapp_sent_at).toLocaleString('pt-BR') %></span>
+            <% } %>
+          </p>
+
+          <% if (verifiedWinners.length > 0) { %>
+            <form method="POST" action="/admin/games/<%= game.id %>/notify-winners" style="margin-bottom: 1rem;">
+              <input type="hidden" name="score_home" value="<%= game.home_score %>">
+              <input type="hidden" name="score_away" value="<%= game.away_score %>">
+              <label style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.75rem; cursor: pointer;">
+                <input type="checkbox" name="confirm" value="1" required style="margin-top: 0.2rem;">
+                <span>Confirmo que o placar final <strong><%= game.home_score %>×<%= game.away_score %></strong> está correto e desejo avisar <strong>somente os <%= verifiedWinners.length %> ganhador(es)</strong> verificados.</span>
+              </label>
+              <% if (game.results_whatsapp_sent_at) { %>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 0.75rem; color: var(--text-muted);">
+                  <input type="checkbox" name="force" value="1">
+                  Reenviar (já houve envio anterior)
+                </label>
+              <% } %>
+              <button type="submit" class="btn btn-gold">📲 Enviar WhatsApp aos ganhadores</button>
+            </form>
+          <% } else { %>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Nenhum ganhador verificado para este placar.</p>
+          <% } %>
+
+          <form method="POST" action="/admin/games/<%= game.id %>/notify-correction">
+            <input type="hidden" name="confirm" value="1">
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Se alguém recebeu aviso errado (ex.: placar provisório), envie a correção para todos os participantes.
+            </p>
+            <button type="submit" class="btn btn-outline" onclick="return confirm('Enviar correção de resultado para TODOS os participantes deste bolão?');">
+              ⚠️ Enviar correção de resultado a todos
             </button>
           </form>
-        <% } %>
+        </div>
       <% } %>
     </div>
 

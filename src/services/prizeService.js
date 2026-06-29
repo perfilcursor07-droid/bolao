@@ -59,7 +59,7 @@ function parsePredictions(predictionData) {
   return [];
 }
 
-async function processGameResults(gameId, { skipNotify = false } = {}) {
+async function processGameResults(gameId) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -107,13 +107,6 @@ async function processGameResults(gameId, { skipNotify = false } = {}) {
       await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
       await connection.commit();
 
-      setImmediate(() => {
-        if (skipNotify) return;
-        require('./whatsappNotifyService')
-          .notifyGameResults(gameId)
-          .catch((err) => console.error('[whatsapp] resultado:', err.message));
-      });
-
       return { winners: 0, prizeEach: 0, refunds: allBets.length, refundEach };
     }
 
@@ -128,13 +121,6 @@ async function processGameResults(gameId, { skipNotify = false } = {}) {
 
     await connection.query('UPDATE games SET status = ? WHERE id = ?', ['finished', gameId]);
     await connection.commit();
-
-    setImmediate(() => {
-      if (skipNotify) return;
-      require('./whatsappNotifyService')
-        .notifyWinners(gameId)
-        .catch((err) => console.error('[whatsapp] ganhadores:', err.message));
-    });
 
     return { winners: winners.length, prizeEach, totalPool: game.prize_pool_cents, netPool };
   } catch (err) {
@@ -457,7 +443,7 @@ async function reprocessGameResults(gameId, { homeScore, awayScore } = {}) {
     }
 
     await connection.query(
-      `UPDATE games SET home_score = ?, away_score = ?, status = 'closed', api_match_status = 'FINISHED' WHERE id = ?`,
+      `UPDATE games SET home_score = ?, away_score = ?, status = 'closed', api_match_status = 'FINISHED', results_whatsapp_sent_at = NULL WHERE id = ?`,
       [home, away, gameId]
     );
 
@@ -469,20 +455,7 @@ async function reprocessGameResults(gameId, { homeScore, awayScore } = {}) {
     connection.release();
   }
 
-  const result = await processGameResults(gameId, { skipNotify: true });
-
-  setImmediate(() => {
-    require('./whatsappNotifyService')
-      .notifyWinners(gameId)
-      .then((notifyResult) => {
-        if (notifyResult?.queued > 0) {
-          console.log(`[whatsapp] ${notifyResult.queued} ganhador(es) notificado(s) — jogo ${gameId}`);
-        }
-      })
-      .catch((err) => console.error('[whatsapp] ganhadores:', err.message));
-  });
-
-  return result;
+  return processGameResults(gameId);
 }
 
 module.exports = {

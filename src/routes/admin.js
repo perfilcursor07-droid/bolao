@@ -966,10 +966,11 @@ router.post('/games/:id/result', requireAdmin, async (req, res) => {
 
   try {
     await pool.query(
-      'UPDATE games SET home_score = ?, away_score = ?, status = ? WHERE id = ?',
-      [parseInt(home_score), parseInt(away_score), 'closed', req.params.id]
+      'UPDATE games SET home_score = ?, away_score = ?, status = ?, api_match_status = ? WHERE id = ?',
+      [parseInt(home_score), parseInt(away_score), 'closed', 'FINISHED', req.params.id]
     );
     await processGameResults(req.params.id);
+    req.session.flash = 'Jogo finalizado. Envie WhatsApp aos ganhadores manualmente após conferir o placar.';
     res.redirect(`/admin/games/${req.params.id}`);
   } catch (err) {
     res.redirect(`/admin/games/${req.params.id}`);
@@ -986,7 +987,7 @@ router.post('/games/:id/reprocess-result', requireAdmin, async (req, res) => {
       awayScore: away_score,
     });
     const winners = result?.winners ?? 0;
-    req.session.flash = `Placar corrigido. ${winners} ganhador(es) recalculado(s). WhatsApp será enviado aos ganhadores.`;
+    req.session.flash = `Placar corrigido. ${winners} ganhador(es) recalculado(s). Revise a lista e envie WhatsApp manualmente.`;
     res.redirect(`/admin/games/${req.params.id}`);
   } catch (err) {
     req.session.flash = err.message || 'Erro ao recalcular resultado.';
@@ -995,27 +996,80 @@ router.post('/games/:id/reprocess-result', requireAdmin, async (req, res) => {
 });
 
 router.post('/games/:id/notify-winners', requireAdmin, async (req, res) => {
-  const { notifyWinners, isNotificationsEnabled } = require('../services/whatsappNotifyService');
+  const { notifyWinners, isNotificationsEnabled, isGameResultConfirmed, loadVerifiedWinningBets } = require('../services/whatsappNotifyService');
 
   try {
+    if (req.body.confirm !== '1') {
+      req.session.flash = 'Marque a confirmação do placar antes de enviar.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
     if (!(await isNotificationsEnabled())) {
       req.session.flash = 'Ative as notificações WhatsApp em /admin/whatsapp antes de enviar.';
       return res.redirect(`/admin/games/${req.params.id}`);
     }
 
-    const result = await notifyWinners(req.params.id);
-    if (result?.skipped) {
-      req.session.flash = 'Não foi possível enviar: jogo não finalizado ou sem apostas.';
+    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+    if (games.length === 0) return res.redirect('/admin');
+    const game = games[0];
+
+    const home = parseInt(req.body.score_home, 10);
+    const away = parseInt(req.body.score_away, 10);
+    if (home !== game.home_score || away !== game.away_score) {
+      req.session.flash = 'Placar informado não confere com o cadastrado. Atualize a página e tente de novo.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
+    if (!isGameResultConfirmed(game)) {
+      req.session.flash = 'Resultado ainda não confirmado (API deve estar FINISHED). Não envie WhatsApp ainda.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
+    const verified = await loadVerifiedWinningBets(req.params.id);
+    const force = req.body.force === '1';
+
+    const result = await notifyWinners(req.params.id, { force });
+    if (result?.skipped && result.reason === 'already_sent' && !force) {
+      req.session.flash = result.message;
+    } else if (result?.skipped) {
+      req.session.flash = result.message || 'Não foi possível enviar.';
     } else if (result?.queued > 0) {
-      req.session.flash = `${result.queued} mensagem(ns) enfileirada(s) para ganhadores.`;
+      req.session.flash = `${result.queued} ganhador(es) notificado(s) (placar ${home}×${away}, ${verified.length} aposta(s) conferida(s)).`;
     } else if (result?.duplicates > 0) {
-      req.session.flash = 'Mensagens já foram enviadas anteriormente para estes ganhadores.';
+      req.session.flash = 'Essas mensagens já foram enviadas para este placar.';
     } else {
-      req.session.flash = 'Nenhum ganhador com WhatsApp válido encontrado.';
+      req.session.flash = 'Nenhum ganhador com WhatsApp válido.';
     }
     res.redirect(`/admin/games/${req.params.id}`);
   } catch (err) {
     req.session.flash = err.message || 'Erro ao enviar WhatsApp.';
+    res.redirect(`/admin/games/${req.params.id}`);
+  }
+});
+
+router.post('/games/:id/notify-correction', requireAdmin, async (req, res) => {
+  const { notifyResultCorrection, isNotificationsEnabled } = require('../services/whatsappNotifyService');
+
+  try {
+    if (req.body.confirm !== '1') {
+      req.session.flash = 'Confirme o envio da correção.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
+    if (!(await isNotificationsEnabled())) {
+      req.session.flash = 'Ative as notificações WhatsApp em /admin/whatsapp.';
+      return res.redirect(`/admin/games/${req.params.id}`);
+    }
+
+    const result = await notifyResultCorrection(req.params.id);
+    if (result?.queued > 0) {
+      req.session.flash = `Correção enviada para ${result.queued} participante(s).`;
+    } else {
+      req.session.flash = 'Nenhuma mensagem de correção enfileirada.';
+    }
+    res.redirect(`/admin/games/${req.params.id}`);
+  } catch (err) {
+    req.session.flash = err.message || 'Erro ao enviar correção.';
     res.redirect(`/admin/games/${req.params.id}`);
   }
 });
