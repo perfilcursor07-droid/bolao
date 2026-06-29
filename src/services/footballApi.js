@@ -26,10 +26,10 @@ const matchResultCache = new Map();
 function extractFootballDataScores(m) {
   const ft = m.score?.fullTime;
   const rt = m.score?.regularTime;
-  const ht = m.score?.halfTime;
+  // NUNCA usar halfTime como placar final — apenas fullTime ou regularTime
+  // halfTime é placar parcial (intervalo, pausa hidratação)
   if (ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
   if (rt?.home != null && rt?.away != null) return { home: rt.home, away: rt.away };
-  if (ht?.home != null && ht?.away != null) return { home: ht.home, away: ht.away };
   return { home: null, away: null };
 }
 
@@ -285,12 +285,32 @@ async function getMatchResult(matchId, options = {}) {
         return pending;
       }
 
-      const homeScore =
-        m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? m.score?.halfTime?.home ?? 0;
-      const awayScore =
-        m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? m.score?.halfTime?.away ?? 0;
+      // Para finalizar, EXIGIR que fullTime ou regularTime tenham placar
+      // Nunca usar halfTime como placar definitivo
+      const ftHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+      const ftAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
 
-      const result = { finished, live, homeScore, awayScore, status: m.status, matchMinute: null, matchInjuryTime: m.injuryTime ?? null };
+      // Se está finished mas não tem fullTime score ainda, não finalizar
+      if (finished && (ftHome == null || ftAway == null)) {
+        console.warn(`[getMatchResult] Jogo ${matchId} status FINISHED mas sem fullTime score — aguardando`);
+        const waiting = { finished: false, live: false, status: 'WAITING_SCORE' };
+        cacheMatchResult(matchId, waiting);
+        return waiting;
+      }
+
+      // Se está ao vivo, usar o placar parcial só para exibição (NÃO para finalizar)
+      const homeScore = ftHome ?? m.score?.halfTime?.home ?? 0;
+      const awayScore = ftAway ?? m.score?.halfTime?.away ?? 0;
+
+      const result = {
+        finished: finished && ftHome != null && ftAway != null,
+        live,
+        homeScore,
+        awayScore,
+        status: m.status,
+        matchMinute: null,
+        matchInjuryTime: m.injuryTime ?? null
+      };
       cacheMatchResult(matchId, result);
       return result;
     } catch (err) {

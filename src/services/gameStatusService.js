@@ -10,8 +10,10 @@ const {
 } = require('./bettingRules');
 const { expirePendingPaymentsForGame } = require('./paymentGateService');
 
-/** Tempo após o apito inicial para considerar o jogo encerrado (90min + intervalo + acréscimos). */
-const MATCH_END_MINUTES = 120;
+/** Tempo após o apito inicial para considerar o jogo encerrado.
+ * Copa 2026: 90min + pausa hidratação (2x ~3min) + intervalo (15min) + acréscimos (~10min) = ~130min
+ * Margem de segurança: 140 minutos */
+const MATCH_END_MINUTES = 140;
 
 function getMatchEndTime(game) {
   const kickoff = parseGameDate(game);
@@ -153,12 +155,13 @@ async function syncGamesFromWorldCupMatches(options = {}) {
 
     const updated = { ...game, home_score: homeScore ?? game.home_score, away_score: awayScore ?? game.away_score };
 
-    if (finished) {
+    // SÓ FINALIZAR se a API reportar FINISHED E tiver score fullTime válido
+    if (finished && homeScore !== null && awayScore !== null) {
       try {
         const result = await processGameResults(game.id);
         const winners = result?.winners ?? 0;
         console.log(
-          `🏆 Jogo ${game.id} finalizado via Copa API (${updated.home_score}×${updated.away_score}). Ganhadores: ${winners}`
+          `🏆 Jogo ${game.id} finalizado via Copa API (${homeScore}×${awayScore}). Ganhadores: ${winners}`
         );
       } catch (err) {
         console.error(`[syncWC] jogo ${game.id}:`, err.message);
