@@ -13,6 +13,7 @@ const { startCronJobs } = require('./services/cronJobs');
 const { formatCents } = require('./routes/games');
 const { translateTeamName } = require('./utils/teamNamesPt');
 const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime, formatBetPaidAtBR } = require('./utils/dateTime');
+const { formatLiveMatchMinute } = require('./utils/liveMatchDisplay');
 const { shortName } = require('./utils/displayName');
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
@@ -95,6 +96,7 @@ app.use(async (req, res, next) => {
   };
   res.locals.shortName = shortName;
   res.locals.formatBetPaidAtBR = formatBetPaidAtBR;
+  res.locals.formatLiveMatchMinute = formatLiveMatchMinute;
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
   res.locals.gameFingerprint = gameFingerprint;

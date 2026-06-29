@@ -130,11 +130,15 @@ async function syncGamesFromWorldCupMatches(options = {}) {
 
     if (homeScore !== null && awayScore !== null) {
       await pool.query(
-        `UPDATE games SET home_score = ?, away_score = ? WHERE id = ?`,
-        [homeScore, awayScore, game.id]
+        `UPDATE games SET home_score = ?, away_score = ?, api_match_status = ? WHERE id = ?`,
+        [homeScore, awayScore, live || finished ? apiMatch.status : game.api_match_status, game.id]
       );
       game.home_score = homeScore;
       game.away_score = awayScore;
+      if (live || finished) game.api_match_status = apiMatch.status;
+    } else if (live || finished) {
+      await pool.query(`UPDATE games SET api_match_status = ? WHERE id = ?`, [apiMatch.status, game.id]);
+      game.api_match_status = apiMatch.status;
     }
 
     const updated = { ...game, home_score: homeScore ?? game.home_score, away_score: awayScore ?? game.away_score };
@@ -216,12 +220,25 @@ async function updateGameFromApiResult(game, result) {
   }
 
   const changed = game.home_score !== homeScore || game.away_score !== awayScore;
-  if (changed) {
-    await pool.query(`UPDATE games SET home_score = ?, away_score = ? WHERE id = ?`, [
-      homeScore,
-      awayScore,
-      game.id,
-    ]);
+  const statusChanged = result.status && result.status !== game.api_match_status;
+  const minuteChanged =
+    result.matchMinute != null &&
+    (result.matchMinute !== game.match_minute || result.matchInjuryTime !== game.match_injury_time);
+
+  if (changed || statusChanged || minuteChanged) {
+    await pool.query(
+      `UPDATE games SET home_score = ?, away_score = ?, api_match_status = ?,
+        match_minute = COALESCE(?, match_minute), match_injury_time = COALESCE(?, match_injury_time)
+       WHERE id = ?`,
+      [
+        homeScore,
+        awayScore,
+        result.status || game.api_match_status || null,
+        result.matchMinute ?? null,
+        result.matchInjuryTime ?? null,
+        game.id,
+      ]
+    );
   }
 
   const updated = { ...game, home_score: homeScore, away_score: awayScore };
@@ -232,7 +249,7 @@ async function updateGameFromApiResult(game, result) {
     console.log(`🏆 Jogo ${game.id} finalizado via API (${homeScore}×${awayScore}). Status: ${result.status}`);
   }
 
-  return { updated: changed || finalized, finalized };
+  return { updated: changed || statusChanged || minuteChanged || finalized, finalized };
 }
 
 /**

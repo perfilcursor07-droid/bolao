@@ -885,6 +885,28 @@ body.nav-open { overflow: hidden; }
   gap: 0.5rem;
 }
 
+.live-game-head-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.live-game-minute {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fde68a;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
 .live-game-badge {
   display: inline-flex;
   align-items: center;

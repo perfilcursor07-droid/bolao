@@ -290,7 +290,7 @@ async function getMatchResult(matchId, options = {}) {
       const awayScore =
         m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? m.score?.halfTime?.away ?? 0;
 
-      const result = { finished, live, homeScore, awayScore, status: m.status };
+      const result = { finished, live, homeScore, awayScore, status: m.status, matchMinute: null, matchInjuryTime: m.injuryTime ?? null };
       cacheMatchResult(matchId, result);
       return result;
     } catch (err) {
@@ -320,7 +320,9 @@ async function getMatchResult(matchId, options = {}) {
         live,
         homeScore: f.goals?.home ?? 0,
         awayScore: f.goals?.away ?? 0,
-        status: f.fixture.status?.long || st,
+        status: st === 'HT' ? 'PAUSED' : st,
+        matchMinute: f.fixture.status?.elapsed ?? null,
+        matchInjuryTime: f.fixture.status?.extra ?? null,
       };
       cacheMatchResult(matchId, result);
       return result;
