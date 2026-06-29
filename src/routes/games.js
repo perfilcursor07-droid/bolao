@@ -308,7 +308,9 @@ router.get('/games/:id/placar', requireAuth, async (req, res) => {
           ? 'Adicione pelo menos um palpite.'
           : req.query.error === 'cart'
             ? 'Erro ao adicionar ao carrinho.'
-            : null,
+            : req.query.error === 'no_edit'
+              ? 'Apostas já confirmadas não podem ser alteradas. Para outro palpite, adicione uma nova aposta.'
+              : null,
     });
   } catch (err) {
     res.redirect('/');
@@ -380,6 +382,15 @@ function formatCents(cents) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Palpites confirmados não podem ser alterados pelo apostador — somente admin em /admin/apostas
+function blockUserBetEdit(req, res) {
+  const gameId = req.params.gameId || req.params.id;
+  const target = gameId ? `/games/${gameId}/placar` : '/my-bets';
+  res.redirect(`${target}?error=no_edit`);
+}
+
+router.all('/games/:gameId/bets/:betId/edit', requireAuth, blockUserBetEdit);
+
 router.get('/my-bets', requireAuth, async (req, res) => {
   const [bets] = await pool.query(
     `SELECT b.*, g.title, g.home_team, g.away_team, g.home_score, g.away_score, g.status as game_status, g.prize_pool_cents
@@ -387,7 +398,15 @@ router.get('/my-bets', requireAuth, async (req, res) => {
      WHERE b.user_id = ? ORDER BY b.created_at DESC`,
     [req.session.user.id]
   );
-  res.render('my-bets', { title: 'Minhas Apostas', bets, user: req.session.user });
+  res.render('my-bets', {
+    title: 'Minhas Apostas',
+    bets,
+    user: req.session.user,
+    error:
+      req.query.error === 'no_edit'
+        ? 'Apostas já confirmadas não podem ser alteradas. Entre em contato com o suporte se precisar de ajuda.'
+        : null,
+  });
 });
 
 router.get('/my-payments', requireAuth, async (req, res) => {

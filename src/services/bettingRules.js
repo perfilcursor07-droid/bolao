@@ -16,7 +16,7 @@ function hasGameStarted(game) {
   return Date.now() >= kickoff.getTime();
 }
 
-/** Horário limite para apostar/editar (5 min antes do jogo). */
+/** Horário limite para novas apostas (5 min antes do jogo). */
 function getBettingDeadline(game) {
   const kickoff = parseGameDate(game);
   if (!kickoff) return null;

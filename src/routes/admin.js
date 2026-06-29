@@ -432,6 +432,7 @@ router.get('/apostas/marketing/random', requireAdmin, (req, res) => {
 });
 
 router.post('/apostas/:id/editar', requireAdmin, async (req, res) => {
+  const { updateBetPredictionAsAdmin } = require('../services/betEditService');
   const appendQuery = (gameId, params) => apostasAdminUrl(gameId, params, 'real');
 
   try {
@@ -440,35 +441,12 @@ router.post('/apostas/:id/editar', requireAdmin, async (req, res) => {
     const away = parseInt(req.body.away_score, 10);
     const returnGameId = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
 
-    if (!Number.isFinite(betId) || !Number.isFinite(home) || !Number.isFinite(away)) {
-      return res.redirect(appendQuery(returnGameId, { error: 'Placar inválido' }));
-    }
-    if (home < 0 || away < 0 || home > 20 || away > 20) {
-      return res.redirect(appendQuery(returnGameId, { error: 'Use placares entre 0 e 20' }));
+    const result = await updateBetPredictionAsAdmin(betId, home, away);
+    if (!result.ok) {
+      return res.redirect(appendQuery(returnGameId, { error: result.error }));
     }
 
-    const [rows] = await pool.query(
-      `SELECT b.id, b.game_id, g.status as game_status
-       FROM bets b JOIN games g ON g.id = b.game_id WHERE b.id = ?`,
-      [betId]
-    );
-    if (rows.length === 0) {
-      return res.redirect(appendQuery(returnGameId, { error: 'Aposta não encontrada' }));
-    }
-
-    const bet = rows[0];
-    if (bet.game_status === 'finished') {
-      return res.redirect(
-        appendQuery(returnGameId || bet.game_id, { error: 'Não é possível editar palpite de jogo finalizado' })
-      );
-    }
-
-    await pool.query(
-      'UPDATE bets SET home_score_prediction = ?, away_score_prediction = ? WHERE id = ?',
-      [home, away, betId]
-    );
-
-    res.redirect(appendQuery(returnGameId || bet.game_id, { saved: '1' }));
+    res.redirect(appendQuery(returnGameId || result.gameId, { saved: '1' }));
   } catch (err) {
     const gid = req.body.game_id ? parseInt(req.body.game_id, 10) : null;
     res.redirect(appendQuery(gid, { error: err.message }));
