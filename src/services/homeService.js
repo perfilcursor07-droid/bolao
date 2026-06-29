@@ -9,7 +9,7 @@ const { dedupeGamesForDisplay } = require('./gameDuplicateService');
 let lastHomeApiSync = 0;
 let lastHomeLiveSync = 0;
 const HOME_API_SYNC_MS = 3 * 60 * 1000;
-const HOME_LIVE_SYNC_MS = 30 * 1000;
+const HOME_LIVE_SYNC_MS = 15 * 1000;
 
 async function loadHomeData(userId, { withApiSync = false } = {}) {
   await closeExpiredOpenGames();

@@ -18,18 +18,33 @@
       </div>
     <% } %>
 
-    <!-- Bolões encerrados -->
+    <!-- Bolões encerrados (compacto) -->
     <% if (typeof finishedSummaries !== 'undefined' && finishedSummaries.length > 0) { %>
-      <div class="home-section-header" style="margin-top:1.5rem;">
-        <h2>Bolões encerrados</h2>
-        <div class="home-section-header-right">
-          <span class="home-count"><%= typeof totalFinishedCount !== 'undefined' ? totalFinishedCount : finishedSummaries.length %></span>
-          <% if (typeof hasMoreFinished !== 'undefined' && hasMoreFinished) { %>
-            <a href="/boloes-encerrados" class="home-link">Ver todos →</a>
-          <% } %>
-        </div>
+      <div class="home-section-header" style="margin-top:1.25rem;">
+        <h2>Encerrados</h2>
+        <a href="/boloes-encerrados" class="home-link">Ver todos →</a>
       </div>
-      <%- include('finished-boloes-list', { finishedSummaries, useWinnerModal: true }) %>
+      <div class="finished-compact-list">
+        <% finishedSummaries.slice(0, 5).forEach(function(item) { %>
+          <% var game = item.game, winners = item.winners, breakdown = item.breakdown; %>
+          <a href="/games/<%= game.id %>" class="finished-compact-row">
+            <div class="finished-compact-match">
+              <span><%= teamPt(game.home_team) %></span>
+              <strong class="finished-compact-score"><%= game.home_score %> × <%= game.away_score %></strong>
+              <span><%= teamPt(game.away_team) %></span>
+            </div>
+            <div class="finished-compact-meta">
+              <% if (winners.length > 0) { %>
+                <span class="finished-compact-winners">🏆 <%= winners.length %></span>
+              <% } else { %>
+                <span class="finished-compact-nowinner">Sem ganhador</span>
+              <% } %>
+              <span class="finished-compact-pool"><%= formatCents(breakdown.totalPool) %></span>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+      <div style="height: 1.25rem;"></div>
     <% } %>
 
     <!-- Jogos abertos -->

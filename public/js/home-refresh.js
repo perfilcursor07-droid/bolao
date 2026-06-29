@@ -1,6 +1,6 @@
 (function () {
   const POLL_NORMAL_MS = 30000;
-  const POLL_LIVE_MS = 10000;
+  const POLL_LIVE_MS = 8000;
 
   const container = document.getElementById('home-dynamic');
   if (!container) return;
