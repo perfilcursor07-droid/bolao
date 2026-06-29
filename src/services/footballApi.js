@@ -2,13 +2,21 @@ const axios = require('axios');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { enrichKnockoutMatches } = require('./worldCupBracket');
 
-// ═══ football-data.org (principal — gratuito, 10 req/min) ═══
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_KEY = process.env.FOOTBALL_API_KEY || '';
-
-// ═══ api-sports.io (alternativa — 100 req/dia no free) ═══
+// ═══ api-sports.io (PRINCIPAL — melhor para live, 100 req/dia free) ═══
+// score.fulltime = placar dos 90 minutos
+// score.extratime = gols na prorrogação
+// score.penalty = pênaltis
+// goals = total incluindo tudo
+// REGRA DO BOLÃO: usar score.fulltime (90min + acréscimos)
 const AS_BASE = 'https://v3.football.api-sports.io';
 const AS_KEY = process.env.APISPORTS_KEY || '';
+
+// ═══ football-data.org (FALLBACK — 10 req/min free) ═══
+// regularTime = placar dos 90 minutos
+// fullTime = pode incluir prorrogação + pênaltis!
+// REGRA DO BOLÃO: usar regularTime primeiro
+const FD_BASE = 'https://api.football-data.org/v4';
+const FD_KEY = process.env.FOOTBALL_API_KEY || '';
 
 const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
 const WC_CACHE_TTL_DEFAULT_MS = 15 * 60 * 1000;
@@ -24,14 +32,18 @@ let worldCupCache = { result: null, expiresAt: 0, fetchedAt: 0 };
 const matchResultCache = new Map();
 
 function extractFootballDataScores(m) {
-  const ft = m.score?.fullTime;
   const rt = m.score?.regularTime;
-  // REGRA DO BOLÃO: Apenas placar do tempo regulamentar (90min + acréscimos)
-  // Prorrogação e pênaltis NÃO são considerados.
-  // regularTime = 90min. fullTime pode incluir extra time.
-  // Prioridade: regularTime > fullTime (em jogos sem prorrogação, fullTime == regularTime)
+  const ft = m.score?.fullTime;
+  const duration = m.score?.duration;
+  // REGRA DO BOLÃO: placar dos 90 minutos APENAS
+  // regularTime = 90min exatos (disponível na v4 da football-data.org)
+  // fullTime = pode incluir prorrogação + pênaltis!
   if (rt?.home != null && rt?.away != null) return { home: rt.home, away: rt.away };
-  // fallback: fullTime só se regularTime não disponível (fase de grupos não tem prorrogação)
+  // Se duration = REGULAR, fullTime == regularTime (sem prorrogação)
+  if (duration === 'REGULAR' && ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
+  // Se não tem regularTime E tem prorrogação, não retornar score (evitar erro)
+  if (duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT') return { home: null, away: null };
+  // Fallback para fase de grupos (nunca tem prorrogação)
   if (ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
   return { home: null, away: null };
 }
@@ -119,7 +131,7 @@ function getCachedMatchResult(matchId) {
 }
 
 /**
- * Lista partidas da Copa do Mundo 2026 via football-data.org
+ * Lista partidas da Copa do Mundo 2026 via api-sports.io (principal) ou football-data.org (fallback)
  * @param {{ forceRefresh?: boolean }} options
  */
 async function getWorldCupMatches(options = {}) {
@@ -135,7 +147,32 @@ async function getWorldCupMatches(options = {}) {
 
   const errors = [];
 
-  // Tenta football-data.org primeiro
+  // PRINCIPAL: api-sports.io (dados melhores ao vivo, score.fulltime separado)
+  if (AS_KEY) {
+    try {
+      const res = await axios.get(`${AS_BASE}/fixtures`, {
+        headers: { 'x-apisports-key': AS_KEY },
+        params: { league: 1, season: 2026 }, // league 1 = World Cup
+        timeout: 12000,
+      });
+
+      const fixtures = res.data.response || [];
+      if (fixtures.length > 0) {
+        const matches = enrichKnockoutMatches(fixtures.map(parseApiSportsMatch));
+        const result = { matches, error: null };
+        const ttl = computeWorldCupCacheTtl(matches);
+        worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
+        return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
+      }
+      errors.push('api-sports: 0 fixtures retornados');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      console.error('[api-sports] Erro:', err.response?.status, msg);
+      errors.push(`api-sports (${err.response?.status || 'erro'}): ${msg}`);
+    }
+  }
+
+  // FALLBACK: football-data.org
   if (FD_KEY) {
     try {
       const res = await footballDataGet(`${FD_BASE}/competitions/WC/matches`, {
@@ -151,14 +188,12 @@ async function getWorldCupMatches(options = {}) {
       return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
-      const status = err.response?.status;
       if (err.code !== 'RATE_LIMIT_COOLDOWN') {
-        console.error('[football-data.org] Erro:', status, msg);
+        console.error('[football-data.org] Erro:', err.response?.status, msg);
       }
-      errors.push(`football-data.org (${status || err.code || 'erro'}): ${msg}`);
+      errors.push(`football-data.org (${err.response?.status || err.code || 'erro'}): ${msg}`);
 
-      // Se a season 2026 não existir ainda, tenta sem filtro
-      if (status === 400) {
+      if (err.response?.status === 400) {
         try {
           const res2 = await footballDataGet(`${FD_BASE}/competitions/WC/matches`, {
             headers: { 'X-Auth-Token': FD_KEY },
@@ -170,45 +205,24 @@ async function getWorldCupMatches(options = {}) {
           worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
           return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
         } catch (err2) {
-          const msg2 = err2.response?.data?.message || err2.message;
-          console.error('[football-data.org] Fallback erro:', err2.response?.status, msg2);
-          errors.push(`football-data.org fallback: ${msg2}`);
+          errors.push(`football-data.org fallback: ${err2.message}`);
         }
       }
 
+      // Retorna cache se existir
       if (worldCupCache.result?.matches) {
         return {
           matches: worldCupCache.result.matches,
-          error: status === 429 || err.code === 'RATE_LIMIT_COOLDOWN'
-            ? 'Lista em cache (API no limite). Tente em 1 minuto.'
-            : errors.join(' · '),
+          error: errors.join(' · '),
           cachedAt: worldCupCache.fetchedAt,
           fromCache: true,
         };
       }
     }
-  } else {
-    errors.push('FOOTBALL_API_KEY não configurada no .env');
   }
 
-  // Fallback: api-sports.io
-  if (AS_KEY) {
-    try {
-      const res = await axios.get(`${AS_BASE}/fixtures`, {
-        headers: { 'x-apisports-key': AS_KEY },
-        params: { league: 1, season: 2026 }, // league 1 = World Cup
-        timeout: 10000,
-      });
-
-      const fixtures = res.data.response || [];
-      return { matches: fixtures.map(parseApiSportsMatch), error: null };
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message;
-      console.error('[api-sports] Erro:', err.response?.status, msg);
-      errors.push(`api-sports (${err.response?.status || 'erro'}): ${msg}`);
-    }
-  } else if (!FD_KEY) {
-    errors.push('APISPORTS_KEY não configurada no .env');
+  if (!AS_KEY && !FD_KEY) {
+    errors.push('Nenhuma API key configurada no .env (APISPORTS_KEY ou FOOTBALL_API_KEY)');
   }
 
   return {
@@ -238,19 +252,40 @@ function parseApiSportsMatch(f) {
     NS: 'SCHEDULED', TBD: 'SCHEDULED',
     '1H': 'IN_PLAY', '2H': 'IN_PLAY', HT: 'PAUSED',
     FT: 'FINISHED', AET: 'FINISHED', PEN: 'FINISHED',
+    ET: 'IN_PLAY', BT: 'PAUSED', P: 'IN_PLAY',
     PST: 'POSTPONED', CANC: 'CANCELLED',
+    AWD: 'FINISHED', WO: 'FINISHED',
   };
 
   const st = f.fixture.status?.short;
-  // REGRA: placar dos 90min. Se AET/PEN, usar score.fulltime (que é o placar dos 90min)
+  // REGRA DO BOLÃO: placar dos 90min APENAS
+  // score.fulltime = placar ao final dos 90 minutos
+  // goals = total incluindo extra time e pênaltis
   let homeScore, awayScore;
   if (st === 'AET' || st === 'PEN') {
+    // Prorrogação/Pênaltis — usar score.fulltime (= 90 minutos)
+    homeScore = f.score?.fulltime?.home ?? null;
+    awayScore = f.score?.fulltime?.away ?? null;
+  } else if (st === 'ET' || st === 'BT' || st === 'P') {
+    // Ao vivo em prorrogação — mostrar placar dos 90min (fulltime)
     homeScore = f.score?.fulltime?.home ?? f.goals?.home ?? null;
     awayScore = f.score?.fulltime?.away ?? f.goals?.away ?? null;
   } else {
+    // FT, 1H, 2H, HT, NS — goals = placar atual/final dos 90min
     homeScore = f.goals?.home ?? null;
     awayScore = f.goals?.away ?? null;
   }
+
+  // Detectar fase
+  const round = f.league.round || '';
+  let stage = 'GROUP_STAGE';
+  if (round.includes('Round of 32')) stage = 'ROUND_OF_32';
+  else if (round.includes('Round of 16')) stage = 'ROUND_OF_16';
+  else if (round.includes('Quarter')) stage = 'QUARTER_FINALS';
+  else if (round.includes('Semi')) stage = 'SEMI_FINALS';
+  else if (round.includes('3rd') || round.includes('Third')) stage = 'THIRD_PLACE';
+  else if (round.includes('Final') && !round.includes('Quarter') && !round.includes('Semi')) stage = 'FINAL';
+  else if (!round.includes('Group')) stage = 'KNOCKOUT';
 
   return {
     id: f.fixture.id,
@@ -258,16 +293,21 @@ function parseApiSportsMatch(f) {
     awayTeam: translateTeamName(f.teams.away?.name || 'A definir'),
     date: f.fixture.date,
     status: statusMap[st] || st || 'SCHEDULED',
-    matchday: f.league.round,
-    stage: f.league.round?.includes('Group') ? 'GROUP_STAGE' : 'KNOCKOUT',
-    group: f.league.round,
+    statusDetail: st,
+    matchday: round,
+    stage,
+    group: round.includes('Group') ? round : null,
     homeScore,
     awayScore,
+    minute: f.fixture.status?.elapsed ?? null,
+    extraTime: st === 'AET' || st === 'PEN' || st === 'ET',
   };
 }
 
 /**
  * Busca resultado de uma partida específica
+ * PRINCIPAL: api-sports.io (melhor live data)
+ * FALLBACK: football-data.org
  * @param {string|number} matchId
  * @param {{ forceRefresh?: boolean }} [options]
  */
@@ -283,7 +323,63 @@ async function getMatchResult(matchId, options = {}) {
 
   if (Date.now() < rateLimitedUntil) return null;
 
-  // Tenta football-data.org
+  // PRINCIPAL: api-sports.io
+  if (AS_KEY) {
+    try {
+      const res = await axios.get(`${AS_BASE}/fixtures`, {
+        headers: { 'x-apisports-key': AS_KEY },
+        params: { id: matchId },
+        timeout: 10000,
+      });
+      const f = res.data.response?.[0];
+      if (f) {
+        const st = f.fixture.status?.short;
+        const live = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(st);
+        const finished = ['FT', 'AET', 'PEN'].includes(st);
+
+        if (!live && !finished) {
+          const pending = { finished: false, live: false, status: st };
+          cacheMatchResult(matchId, pending);
+          return pending;
+        }
+
+        // REGRA DO BOLÃO: placar dos 90 minutos APENAS
+        // score.fulltime = placar ao fim dos 90min (antes da prorrogação)
+        // goals = total geral (pode incluir extra time)
+        let homeScore, awayScore;
+        if (st === 'AET' || st === 'PEN') {
+          // Jogo teve prorrogação — usar score.fulltime (= 90min)
+          homeScore = f.score?.fulltime?.home;
+          awayScore = f.score?.fulltime?.away;
+          if (homeScore == null || awayScore == null) {
+            // fallback se fulltime não disponível
+            homeScore = (f.goals?.home ?? 0) - (f.score?.extratime?.home ?? 0) - (f.score?.penalty?.home ?? 0);
+            awayScore = (f.goals?.away ?? 0) - (f.score?.extratime?.away ?? 0) - (f.score?.penalty?.away ?? 0);
+          }
+        } else {
+          // FT normal ou ao vivo — goals = placar atual dos 90min
+          homeScore = f.goals?.home ?? 0;
+          awayScore = f.goals?.away ?? 0;
+        }
+
+        const result = {
+          finished,
+          live,
+          homeScore,
+          awayScore,
+          status: st === 'HT' ? 'PAUSED' : st,
+          matchMinute: f.fixture.status?.elapsed ?? null,
+          matchInjuryTime: f.fixture.status?.extra ?? null,
+        };
+        cacheMatchResult(matchId, result);
+        return result;
+      }
+    } catch (err) {
+      console.error('[api-sports] Match result erro:', err.message);
+    }
+  }
+
+  // FALLBACK: football-data.org
   if (FD_KEY) {
     try {
       const res = await footballDataGet(`${FD_BASE}/matches/${matchId}`, {
@@ -299,35 +395,43 @@ async function getMatchResult(matchId, options = {}) {
         return pending;
       }
 
-      // Para finalizar, EXIGIR que regularTime ou fullTime tenham placar
-      // Nunca usar halfTime como placar definitivo
-      // REGRA: usar regularTime (90min) — fullTime pode incluir prorrogação
+      // REGRA DO BOLÃO: regularTime = 90 minutos
+      // fullTime na football-data.org INCLUI prorrogação + pênaltis!
       const rtHome = m.score?.regularTime?.home;
       const rtAway = m.score?.regularTime?.away;
-      const ftHome = rtHome ?? m.score?.fullTime?.home;
-      const ftAway = rtAway ?? m.score?.fullTime?.away;
 
-      // Se está finished mas não tem fullTime score ainda, não finalizar
-      if (finished && (ftHome == null || ftAway == null)) {
-        console.warn(`[getMatchResult] Jogo ${matchId} status FINISHED mas sem fullTime score — aguardando`);
+      let homeScore, awayScore;
+      if (rtHome != null && rtAway != null) {
+        // regularTime disponível — usar (90 min exatos)
+        homeScore = rtHome;
+        awayScore = rtAway;
+      } else if (m.score?.duration === 'REGULAR' || (!m.score?.extraTime?.home && !m.score?.penalties?.home)) {
+        // Jogo acabou no tempo regulamentar — fullTime = regularTime
+        homeScore = m.score?.fullTime?.home ?? null;
+        awayScore = m.score?.fullTime?.away ?? null;
+      } else {
+        // Tem prorrogação mas sem regularTime — não podemos confiar no fullTime
+        console.warn(`[getMatchResult] Jogo ${matchId} tem prorrogação mas sem regularTime — aguardando`);
+        const waiting = { finished: false, live, status: 'WAITING_REGULAR_SCORE' };
+        cacheMatchResult(matchId, waiting);
+        return waiting;
+      }
+
+      if (finished && (homeScore == null || awayScore == null)) {
+        console.warn(`[getMatchResult] Jogo ${matchId} FINISHED mas sem score regulamentar — aguardando`);
         const waiting = { finished: false, live: false, status: 'WAITING_SCORE' };
         cacheMatchResult(matchId, waiting);
         return waiting;
       }
 
-      // Se está ao vivo, usar o placar parcial só para exibição (NÃO para finalizar)
-      // Prioridade: regularTime > fullTime > halfTime (para display ao vivo)
-      const homeScore = ftHome ?? m.score?.halfTime?.home ?? 0;
-      const awayScore = ftAway ?? m.score?.halfTime?.away ?? 0;
-
       const result = {
-        finished: finished && ftHome != null && ftAway != null,
+        finished: finished && homeScore != null && awayScore != null,
         live,
-        homeScore,
-        awayScore,
+        homeScore: homeScore ?? 0,
+        awayScore: awayScore ?? 0,
         status: m.status,
         matchMinute: null,
-        matchInjuryTime: m.injuryTime ?? null
+        matchInjuryTime: m.injuryTime ?? null,
       };
       cacheMatchResult(matchId, result);
       return result;
@@ -335,50 +439,6 @@ async function getMatchResult(matchId, options = {}) {
       if (err.code !== 'RATE_LIMIT_COOLDOWN') {
         console.error('[football-data.org] Match result erro:', err.message);
       }
-    }
-  }
-
-  // Fallback: api-sports.io
-  if (AS_KEY) {
-    try {
-      const res = await axios.get(`${AS_BASE}/fixtures`, {
-        headers: { 'x-apisports-key': AS_KEY },
-        params: { id: matchId },
-        timeout: 10000,
-      });
-      const f = res.data.response?.[0];
-      if (!f) return null;
-      const st = f.fixture.status?.short;
-      const live = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(st);
-      const finished = ['FT', 'AET', 'PEN'].includes(st);
-      if (!live && !finished) return { finished: false, live: false, status: st };
-
-      // REGRA: usar placar do tempo regulamentar (90min)
-      // Em jogos AET/PEN, f.score.fulltime = placar dos 90min, f.goals = placar total com prorrogação
-      // Em jogos FT (sem prorrogação), f.goals == f.score.fulltime
-      let homeScore, awayScore;
-      if (st === 'AET' || st === 'PEN') {
-        // Usar fulltime (90min) e não goals (que inclui extra time)
-        homeScore = f.score?.fulltime?.home ?? f.goals?.home ?? 0;
-        awayScore = f.score?.fulltime?.away ?? f.goals?.away ?? 0;
-      } else {
-        homeScore = f.goals?.home ?? 0;
-        awayScore = f.goals?.away ?? 0;
-      }
-
-      const result = {
-        finished,
-        live,
-        homeScore,
-        awayScore,
-        status: st === 'HT' ? 'PAUSED' : st,
-        matchMinute: f.fixture.status?.elapsed ?? null,
-        matchInjuryTime: f.fixture.status?.extra ?? null,
-      };
-      cacheMatchResult(matchId, result);
-      return result;
-    } catch (err) {
-      console.error('[api-sports] Match result erro:', err.message);
     }
   }
 
