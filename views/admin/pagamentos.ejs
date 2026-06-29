@@ -272,6 +272,7 @@
                 <th>Taxa</th>
                 <th>Líquido PIX</th>
                 <th>Pago em</th>
+                <th>Zap</th>
               </tr>
             </thead>
             <tbody>
@@ -291,6 +292,13 @@
                   </td>
                   <td><%= formatCents(p.prize_amount_cents) %></td>
                   <td style="font-size:0.75rem; color:var(--text-muted);"><%= new Date(p.prize_paid_at).toLocaleString('pt-BR') %></td>
+                  <td>
+                    <% if (p.user_phone) { %>
+                      <a href="https://wa.me/55<%= String(p.user_phone).replace(/\D/g,'') %>?text=<%= encodeURIComponent('✅ PIX enviado!\n\nOlá ' + (p.user_name || '').split(' ')[0] + '! O prêmio de ' + formatCents(p.prize_amount_cents) + ' do bolão ' + teamPt(p.home_team) + ' × ' + teamPt(p.away_team) + ' já foi transferido para sua chave PIX.\n\nConfira sua conta! 🎉\n\n— Bolão Online') %>" target="_blank" class="btn btn-sm btn-gold" title="Enviar WhatsApp individual">📲</a>
+                    <% } else { %>
+                      <span style="color:var(--text-muted);">—</span>
+                    <% } %>
+                  </td>
                 </tr>
               <% }); %>
             </tbody>
