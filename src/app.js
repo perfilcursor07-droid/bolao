@@ -12,7 +12,8 @@ const paymentRoutes = require('./routes/payment');
 const { startCronJobs } = require('./services/cronJobs');
 const { formatCents } = require('./routes/games');
 const { translateTeamName } = require('./utils/teamNamesPt');
-const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime } = require('./utils/dateTime');
+const { formatGameDateBR, toDatetimeLocalBR, toMySQLDateTime, formatBetPaidAtBR } = require('./utils/dateTime');
+const { shortName } = require('./utils/displayName');
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
@@ -92,6 +93,8 @@ app.use(async (req, res, next) => {
     const part = name.trim().split(/\s+/)[0];
     return part || '—';
   };
+  res.locals.shortName = shortName;
+  res.locals.formatBetPaidAtBR = formatBetPaidAtBR;
   res.locals.toDatetimeLocalBR = toDatetimeLocalBR;
   res.locals.toMySQLDateTime = toMySQLDateTime;
   res.locals.gameFingerprint = gameFingerprint;

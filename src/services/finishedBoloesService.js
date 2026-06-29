@@ -1,11 +1,13 @@
 const pool = require('../config/database');
 const { calcPrizeBreakdown } = require('./prizeService');
 const { loadMarketingBetsForGames, gameBetCountSubquery, marketingPoolSubquery, enrichGameForDisplay } = require('./marketingBetService');
+const { shortName } = require('../utils/displayName');
 
-function firstName(name) {
-  if (!name || !String(name).trim()) return 'Participante';
-  return String(name).trim().split(/\s+/)[0];
-}
+const BET_PUBLIC_SELECT = `
+  b.game_id, b.home_score_prediction, b.away_score_prediction,
+  b.is_winner, b.prize_amount_cents, u.name,
+  COALESCE(p.paid_at, b.created_at) AS paid_at
+`;
 
 function mapPublicBet(row) {
   return {
@@ -14,7 +16,8 @@ function mapPublicBet(row) {
     away_score_prediction: row.away_score_prediction,
     is_winner: row.is_winner,
     prize_amount_cents: row.prize_amount_cents,
-    name: firstName(row.name),
+    name: shortName(row.name),
+    paid_at: row.paid_at || null,
   };
 }
 
@@ -38,28 +41,33 @@ async function loadFinishedBoloes({ includeAllBets = false } = {}) {
   const finishedIds = games.map((g) => g.id);
 
   const [allWinners] = await pool.query(
-    `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction,
-            b.prize_amount_cents, u.name
-     FROM bets b JOIN users u ON u.id = b.user_id
+    `SELECT ${BET_PUBLIC_SELECT}
+     FROM bets b
+     JOIN users u ON u.id = b.user_id
+     LEFT JOIN payments p ON p.id = b.payment_id
      WHERE b.game_id IN (?) AND b.is_winner = TRUE
-     ORDER BY b.prize_amount_cents DESC, u.name ASC`,
+     ORDER BY paid_at ASC, u.name ASC`,
     [finishedIds]
   );
 
   const winnersByGame = {};
   for (const w of allWinners) {
     if (!winnersByGame[w.game_id]) winnersByGame[w.game_id] = [];
-    winnersByGame[w.game_id].push(w);
+    winnersByGame[w.game_id].push({
+      ...w,
+      name: shortName(w.name),
+    });
   }
 
   let betsByGame = {};
   if (includeAllBets) {
     const [allBets] = await pool.query(
-      `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction,
-              b.is_winner, b.prize_amount_cents, u.name
-       FROM bets b JOIN users u ON u.id = b.user_id
+      `SELECT ${BET_PUBLIC_SELECT}
+       FROM bets b
+       JOIN users u ON u.id = b.user_id
+       LEFT JOIN payments p ON p.id = b.payment_id
        WHERE b.game_id IN (?)
-       ORDER BY b.is_winner DESC, u.name ASC`,
+       ORDER BY paid_at ASC, u.name ASC`,
       [finishedIds]
     );
     for (const bet of allBets) {
@@ -85,10 +93,12 @@ async function loadBetsForGames(games) {
 
   const gameIds = games.map((g) => g.id);
   const [rows] = await pool.query(
-    `SELECT b.game_id, b.home_score_prediction, b.away_score_prediction, u.name, b.created_at
-     FROM bets b JOIN users u ON u.id = b.user_id
+    `SELECT ${BET_PUBLIC_SELECT}, b.created_at
+     FROM bets b
+     JOIN users u ON u.id = b.user_id
+     LEFT JOIN payments p ON p.id = b.payment_id
      WHERE b.game_id IN (?)
-     ORDER BY b.game_id, b.created_at ASC`,
+     ORDER BY b.game_id, paid_at ASC`,
     [gameIds]
   );
 
@@ -99,14 +109,19 @@ async function loadBetsForGames(games) {
     if (!betsByGame[row.game_id]) betsByGame[row.game_id] = [];
     betsByGame[row.game_id].push({
       ...mapPublicBet(row),
-      sort_at: row.created_at,
+      sort_at: row.paid_at || row.created_at,
     });
   }
   for (const [gid, marketingBets] of Object.entries(marketingByGame)) {
     const gameId = parseInt(gid, 10);
     if (!betsByGame[gameId]) betsByGame[gameId] = [];
     for (const bet of marketingBets) {
-      betsByGame[gameId].push({ ...bet, sort_at: bet.created_at || new Date(0) });
+      betsByGame[gameId].push({
+        ...bet,
+        name: shortName(bet.name),
+        paid_at: bet.created_at || null,
+        sort_at: bet.created_at || new Date(0),
+      });
     }
   }
 

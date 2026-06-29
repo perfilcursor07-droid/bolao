@@ -1,0 +1,5 @@
+<% if (typeof paidAt !== 'undefined' && paidAt) { %>
+  <span class="bet-public-time">
+    Aposta confirmada: <time datetime="<%= new Date(paidAt).toISOString() %>"><%= formatBetPaidAtBR(paidAt) %></time>
+  </span>
+<% } %>

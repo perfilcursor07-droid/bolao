@@ -34,7 +34,10 @@
   <div class="winners-list finished-winners-list">
     <% winners.forEach(function(w) { %>
       <div class="winner-row">
-        <span><%= firstName(w.name) %> — <%= w.home_score_prediction %>×<%= w.away_score_prediction %></span>
+        <div class="winner-row-main">
+          <span class="winner-row-name"><%= shortName(w.name) %> — <%= w.home_score_prediction %>×<%= w.away_score_prediction %></span>
+          <%- include('bet-confirmed-at', { paidAt: w.paid_at }) %>
+        </div>
         <strong><%= formatCents(w.prize_amount_cents || breakdown.prizeEach) %></strong>
       </div>
     <% }); %>
@@ -50,10 +53,13 @@
   <div class="winners-list finished-bets-list">
     <% bets.forEach(function(bet) { %>
       <div class="winner-row <%= bet.is_winner ? 'winner-row--won' : '' %>">
-        <span>
-          <% if (bet.is_winner) { %>🏆 <% } %>
-          <%= firstName(bet.name) %> — <%= bet.home_score_prediction %>×<%= bet.away_score_prediction %>
-        </span>
+        <div class="winner-row-main">
+          <span class="winner-row-name">
+            <% if (bet.is_winner) { %>🏆 <% } %>
+            <%= bet.name %> — <%= bet.home_score_prediction %>×<%= bet.away_score_prediction %>
+          </span>
+          <%- include('bet-confirmed-at', { paidAt: bet.paid_at }) %>
+        </div>
         <% if (bet.is_winner) { %>
           <strong><%= formatCents(bet.prize_amount_cents || breakdown.prizeEach) %></strong>
         <% } else { %>

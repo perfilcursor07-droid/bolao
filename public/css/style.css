@@ -1397,12 +1397,47 @@ body.nav-open { overflow: hidden; }
 .winner-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 0.75rem 1rem;
   background: var(--bg-secondary);
   border-radius: 8px;
   font-size: 0.9rem;
-  gap: 0.5rem;
+  gap: 0.65rem;
+}
+
+.winner-row-main,
+.bet-public-main,
+.featured-bet-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.winner-row-name,
+.bet-public-name {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.bet-public-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.bet-public-time time {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.bet-public-score {
+  font-weight: 800;
+  color: #4ade80;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 /* ── Empty state ── */
@@ -2837,7 +2872,7 @@ td { border-top: 1px solid var(--border); }
   list-style: none;
   margin: 0;
   padding: 0.5rem;
-  max-height: 160px;
+  max-height: 220px;
   overflow-y: auto;
   background: rgba(15, 23, 42, 0.55);
   border: 1px solid rgba(34, 197, 94, 0.22);
@@ -2846,10 +2881,10 @@ td { border-top: 1px solid var(--border); }
 
 .featured-bet-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.35rem 0.25rem;
+  padding: 0.45rem 0.25rem;
   font-size: 0.78rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
@@ -3126,28 +3161,22 @@ body.modal-open {
 
 .closed-bet-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
   font-size: 0.75rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.45rem 0.5rem;
   background: rgba(15, 23, 42, 0.45);
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.closed-bet-name {
+.closed-bet-row .bet-public-name {
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
 }
 
-.closed-bet-score {
-  font-weight: 800;
-  color: #4ade80;
-  flex-shrink: 0;
+.closed-bet-row .bet-public-score {
+  align-self: center;
 }
 
 .closed-betting-empty {

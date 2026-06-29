@@ -1,4 +1,5 @@
 const express = require('express');
+const QRCode = require('qrcode');
 const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
 const { getWorldCupMatches } = require('../services/footballApi');
@@ -25,6 +26,8 @@ const {
   PAYOUT_SELECT,
 } = require('../services/prizeService');
 const { expirePendingPaymentsForClosedBetting } = require('../services/paymentGateService');
+const { buildPixPayload } = require('../services/pixPayloadService');
+const { formatCents } = require('./games');
 
 const {
   listAffiliatesForAdmin,
@@ -628,6 +631,62 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
+  }
+});
+
+// Dados para conferir e pagar prêmio (QR PIX da chave cadastrada)
+router.get('/pagamentos/:betId/pix-payout', requireAdmin, async (req, res) => {
+  try {
+    const betId = parseInt(req.params.betId, 10);
+    if (!Number.isFinite(betId)) {
+      return res.status(400).json({ error: 'Aposta inválida' });
+    }
+
+    const [rows] = await pool.query(
+      `${PAYOUT_SELECT}
+       WHERE b.id = ? AND b.prize_amount_cents > 0 AND b.prize_paid_at IS NULL`,
+      [betId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Prêmio não encontrado ou já foi pago' });
+    }
+
+    const payout = enrichPayoutRow(rows[0]);
+    if (!payout.user_pix || !String(payout.user_pix).trim()) {
+      return res.status(400).json({ error: 'Jogador sem chave PIX no cadastro' });
+    }
+
+    const pixPayload = buildPixPayload({
+      pixKey: payout.user_pix,
+      receiverName: payout.user_name,
+      amountCents: payout.prize_amount_cents,
+      txid: `BOL${payout.id}`,
+      city: process.env.PIX_PAYOUT_CITY || 'SAO PAULO',
+    });
+
+    const qrImage = await QRCode.toDataURL(pixPayload, { width: 220, margin: 1 });
+
+    res.json({
+      betId: payout.id,
+      userName: payout.user_name,
+      userPhone: payout.user_phone ? formatPhoneDisplay(payout.user_phone) : null,
+      userPhoneRaw: payout.user_phone || null,
+      pixKey: payout.user_pix,
+      amountCents: payout.prize_amount_cents,
+      amountFormatted: formatCents(payout.prize_amount_cents),
+      payoutLabel: payout.payoutLabel,
+      stakeFormatted: payout.stakeCents > 0 ? formatCents(payout.stakeCents) : null,
+      gameTitle: payout.game_title,
+      match: `${translateTeamName(payout.home_team)} × ${translateTeamName(payout.away_team)}`,
+      prediction: `${payout.home_score_prediction}×${payout.away_score_prediction}`,
+      isWinner: Boolean(payout.is_winner),
+      pixPayload,
+      qrImage,
+    });
+  } catch (err) {
+    console.error('[pix-payout]', err.message);
+    res.status(500).json({ error: err.message || 'Erro ao gerar QR PIX' });
   }
 });
 

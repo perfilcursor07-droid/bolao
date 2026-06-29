@@ -171,7 +171,9 @@
     <!-- TAB 3: Prêmios a enviar -->
     <div class="tab-content" id="tab-payouts-pending" style="display:none;">
       <h3 style="font-size:0.9rem; color:var(--gold); margin-bottom:0.5rem;">🏆 Prêmios a enviar via PIX</h3>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Valores líquidos — taxa já descontada conforme regras (<%= systemFeePercent %>% ganhador · <%= noWinnerFeePercent %>% sem ganhador)</p>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+        Conferir dados do cadastro e pagar via PIX (QR Code da chave do jogador).
+      </p>
 
       <% if (pendingPayouts.length === 0) { %>
         <div class="alert alert-success" style="text-align:center;">✓ Nenhum prêmio pendente de envio!</div>
@@ -207,11 +209,11 @@
                   </td>
                   <td class="prize-amount"><strong><%= formatCents(p.prize_amount_cents) %></strong></td>
                   <td>
-                    <form method="POST" action="/admin/pagamentos/<%= p.id %>/pagar" style="display:inline;">
-                      <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Confirmar que enviou PIX de <%= formatCents(p.prize_amount_cents) %> para <%= p.user_name %>?')">
-                        ✓ Marcar pago
-                      </button>
-                    </form>
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm btn-payout-review"
+                      data-bet-id="<%= p.id %>"
+                    >Conferir e pagar</button>
                   </td>
                 </tr>
               <% }); %>
@@ -272,6 +274,73 @@
       <% } %>
     </div>
 
+    <div class="admin-bet-modal admin-payout-modal" id="admin-payout-modal" hidden>
+      <div class="admin-bet-modal-backdrop" id="admin-payout-modal-backdrop"></div>
+      <div class="admin-bet-modal-dialog admin-payout-modal-dialog" role="dialog" aria-labelledby="admin-payout-modal-title" aria-modal="true">
+        <header class="admin-bet-modal-header">
+          <div>
+            <h2 class="admin-bet-modal-title" id="admin-payout-modal-title">Conferir e pagar</h2>
+            <p class="admin-bet-modal-sub" id="admin-payout-modal-sub">Confira se os dados batem com o cadastro antes de transferir.</p>
+          </div>
+          <button type="button" class="admin-bet-modal-close" id="admin-payout-modal-close" aria-label="Fechar">×</button>
+        </header>
+        <div class="admin-bet-modal-body admin-payout-modal-body">
+          <div id="admin-payout-loading" class="admin-payout-loading">Gerando QR Code PIX…</div>
+          <div id="admin-payout-error" class="alert alert-error" style="display:none;"></div>
+          <div id="admin-payout-content" style="display:none;">
+            <div class="admin-payout-grid">
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">Jogador</span>
+                <strong id="payout-user-name">—</strong>
+              </div>
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">WhatsApp</span>
+                <strong id="payout-user-phone">—</strong>
+              </div>
+              <div class="admin-payout-field admin-payout-field--full">
+                <span class="admin-payout-label">Chave PIX (cadastro)</span>
+                <strong id="payout-pix-key" class="admin-payout-pix-key">—</strong>
+              </div>
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">Jogo</span>
+                <strong id="payout-match">—</strong>
+              </div>
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">Palpite</span>
+                <strong id="payout-prediction">—</strong>
+              </div>
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">Tipo</span>
+                <strong id="payout-type">—</strong>
+              </div>
+              <div class="admin-payout-field">
+                <span class="admin-payout-label">Valor líquido</span>
+                <strong id="payout-amount" class="admin-payout-amount">—</strong>
+              </div>
+            </div>
+
+            <div class="admin-payout-qr-wrap">
+              <p class="admin-payout-qr-title">QR Code PIX — chave do cadastro</p>
+              <img id="payout-qr-image" class="admin-payout-qr-image" alt="QR Code PIX para transferência">
+              <p class="admin-payout-qr-hint">Escaneie no app do banco. O valor já vem preenchido.</p>
+              <button type="button" class="btn btn-outline btn-sm" id="payout-copy-payload">Copiar código PIX</button>
+            </div>
+
+            <form method="POST" action="" id="admin-payout-mark-form" class="admin-payout-mark-form">
+              <label class="admin-payout-confirm-label">
+                <input type="checkbox" id="payout-confirm-check" required>
+                Conferi nome, WhatsApp e chave PIX — já transferi este valor
+              </label>
+              <div class="admin-bet-modal-actions">
+                <button type="button" class="btn btn-outline" id="admin-payout-cancel">Fechar</button>
+                <button type="submit" class="btn btn-primary" id="payout-mark-paid-btn" disabled>✓ Marcar como pago</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <%- include('layout-close') %>
 
 <script>
@@ -281,6 +350,118 @@ function showTab(tabId, btn) {
   document.getElementById('tab-' + tabId).style.display = 'block';
   btn.classList.add('active');
 }
+
+(function () {
+  const modal = document.getElementById('admin-payout-modal');
+  if (!modal) return;
+
+  const backdrop = document.getElementById('admin-payout-modal-backdrop');
+  const closeBtn = document.getElementById('admin-payout-modal-close');
+  const cancelBtn = document.getElementById('admin-payout-cancel');
+  const loadingEl = document.getElementById('admin-payout-loading');
+  const errorEl = document.getElementById('admin-payout-error');
+  const contentEl = document.getElementById('admin-payout-content');
+  const formEl = document.getElementById('admin-payout-mark-form');
+  const confirmCheck = document.getElementById('payout-confirm-check');
+  const markBtn = document.getElementById('payout-mark-paid-btn');
+  const copyBtn = document.getElementById('payout-copy-payload');
+  let currentPayload = '';
+
+  function setField(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '—';
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.classList.remove('modal-open');
+    currentPayload = '';
+    if (confirmCheck) confirmCheck.checked = false;
+    if (markBtn) markBtn.disabled = true;
+  }
+
+  function openModal() {
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+  }
+
+  function showLoading() {
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    contentEl.style.display = 'none';
+  }
+
+  function showError(msg) {
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = msg;
+  }
+
+  function showContent(data) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    contentEl.style.display = 'block';
+
+    setField('payout-user-name', data.userName);
+    setField('payout-user-phone', data.userPhone || data.userPhoneRaw || '—');
+    setField('payout-pix-key', data.pixKey);
+    setField('payout-match', data.match);
+    setField('payout-prediction', data.prediction);
+    setField('payout-type', data.payoutLabel);
+    setField('payout-amount', data.amountFormatted);
+
+    const qrImg = document.getElementById('payout-qr-image');
+    if (qrImg) qrImg.src = data.qrImage;
+
+    currentPayload = data.pixPayload || '';
+    if (formEl) formEl.action = '/admin/pagamentos/' + data.betId + '/pagar';
+  }
+
+  async function loadPayout(betId) {
+    showLoading();
+    openModal();
+    try {
+      const res = await fetch('/admin/pagamentos/' + betId + '/pix-payout', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar');
+      showContent(data);
+    } catch (err) {
+      showError(err.message || 'Não foi possível gerar o QR PIX');
+    }
+  }
+
+  document.querySelectorAll('.btn-payout-review').forEach((btn) => {
+    btn.addEventListener('click', () => loadPayout(btn.dataset.betId));
+  });
+
+  if (confirmCheck && markBtn) {
+    confirmCheck.addEventListener('change', () => {
+      markBtn.disabled = !confirmCheck.checked;
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      if (!currentPayload) return;
+      navigator.clipboard.writeText(currentPayload).then(() => {
+        copyBtn.textContent = 'Copiado!';
+        setTimeout(() => { copyBtn.textContent = 'Copiar código PIX'; }, 2500);
+      });
+    });
+  }
+
+  backdrop?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
+})();
 </script>
 
 <style>
@@ -333,6 +514,105 @@ function showTab(tabId, btn) {
   color: var(--text-muted);
   line-height: 1.35;
   margin-top: 0.15rem;
+}
+
+.admin-payout-modal-dialog {
+  max-width: 480px;
+}
+
+.admin-payout-loading {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.admin-payout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.admin-payout-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.admin-payout-field--full {
+  grid-column: 1 / -1;
+}
+
+.admin-payout-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-payout-pix-key {
+  word-break: break-all;
+  font-size: 0.88rem;
+  color: #4ade80;
+}
+
+.admin-payout-amount {
+  color: var(--gold);
+  font-size: 1.05rem;
+}
+
+.admin-payout-qr-wrap {
+  text-align: center;
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.admin-payout-qr-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.admin-payout-qr-image {
+  width: 220px;
+  height: 220px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.35rem;
+}
+
+.admin-payout-qr-hint {
+  margin: 0.55rem 0 0.65rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-payout-confirm-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 0.85rem;
+  cursor: pointer;
+}
+
+.admin-payout-confirm-label input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.admin-payout-mark-form {
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
 }
 </style>
 </body>

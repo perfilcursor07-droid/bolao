@@ -21,10 +21,7 @@
   <% } %>
   <div class="closed-bets-list<%= typeof compact !== 'undefined' && compact ? ' closed-bets-list--compact' : '' %><%= typeof listClass !== 'undefined' && listClass ? ' ' + listClass : '' %>">
     <% bets.forEach(function(bet) { %>
-      <div class="closed-bet-row">
-        <span class="closed-bet-name"><%= bet.name %></span>
-        <span class="closed-bet-score"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></span>
-      </div>
+      <%- include('bet-public-row', { bet, rowClass: 'closed-bet-row' }) %>
     <% }); %>
   </div>
 <% } else if (typeof showEmpty !== 'undefined' && showEmpty) { %>

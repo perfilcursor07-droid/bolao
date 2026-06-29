@@ -111,4 +111,16 @@ function toDatetimeLocalBR(value) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-module.exports = { toMySQLDateTime, formatGameDateBR, toDatetimeLocalBR, TZ_BR };
+/** Data/hora em que a aposta foi confirmada (pagamento PIX). */
+function formatBetPaidAtBR(value) {
+  if (!value) return '';
+  return formatGameDateBR(value, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
+module.exports = { toMySQLDateTime, formatGameDateBR, toDatetimeLocalBR, formatBetPaidAtBR, TZ_BR };

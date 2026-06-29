@@ -1,0 +1,7 @@
+<div class="<%= typeof rowClass !== 'undefined' ? rowClass : 'bet-public-row' %>">
+  <div class="bet-public-main">
+    <span class="bet-public-name"><%= typeof bet.name !== 'undefined' ? bet.name : shortName(bet.display_name) %></span>
+    <%- include('bet-confirmed-at', { paidAt: bet.paid_at }) %>
+  </div>
+  <span class="bet-public-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+</div>

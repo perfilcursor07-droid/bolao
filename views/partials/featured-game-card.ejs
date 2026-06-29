@@ -32,7 +32,10 @@
           <ul class="featured-bets-list">
             <% featBets.forEach(function(bet) { %>
               <li class="featured-bet-item">
-                <span class="featured-bet-name"><%= firstName(bet.name) %></span>
+                <div class="featured-bet-main">
+                  <span class="featured-bet-name"><%= bet.name %></span>
+                  <%- include('bet-confirmed-at', { paidAt: bet.paid_at }) %>
+                </div>
                 <span class="featured-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
               </li>
             <% }); %>
