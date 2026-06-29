@@ -26,10 +26,13 @@ const matchResultCache = new Map();
 function extractFootballDataScores(m) {
   const ft = m.score?.fullTime;
   const rt = m.score?.regularTime;
-  // NUNCA usar halfTime como placar final — apenas fullTime ou regularTime
-  // halfTime é placar parcial (intervalo, pausa hidratação)
-  if (ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
+  // REGRA DO BOLÃO: Apenas placar do tempo regulamentar (90min + acréscimos)
+  // Prorrogação e pênaltis NÃO são considerados.
+  // regularTime = 90min. fullTime pode incluir extra time.
+  // Prioridade: regularTime > fullTime (em jogos sem prorrogação, fullTime == regularTime)
   if (rt?.home != null && rt?.away != null) return { home: rt.home, away: rt.away };
+  // fallback: fullTime só se regularTime não disponível (fase de grupos não tem prorrogação)
+  if (ft?.home != null && ft?.away != null) return { home: ft.home, away: ft.away };
   return { home: null, away: null };
 }
 
@@ -238,17 +241,28 @@ function parseApiSportsMatch(f) {
     PST: 'POSTPONED', CANC: 'CANCELLED',
   };
 
+  const st = f.fixture.status?.short;
+  // REGRA: placar dos 90min. Se AET/PEN, usar score.fulltime (que é o placar dos 90min)
+  let homeScore, awayScore;
+  if (st === 'AET' || st === 'PEN') {
+    homeScore = f.score?.fulltime?.home ?? f.goals?.home ?? null;
+    awayScore = f.score?.fulltime?.away ?? f.goals?.away ?? null;
+  } else {
+    homeScore = f.goals?.home ?? null;
+    awayScore = f.goals?.away ?? null;
+  }
+
   return {
     id: f.fixture.id,
     homeTeam: translateTeamName(f.teams.home?.name || 'A definir'),
     awayTeam: translateTeamName(f.teams.away?.name || 'A definir'),
     date: f.fixture.date,
-    status: statusMap[f.fixture.status?.short] || f.fixture.status?.short || 'SCHEDULED',
+    status: statusMap[st] || st || 'SCHEDULED',
     matchday: f.league.round,
     stage: f.league.round?.includes('Group') ? 'GROUP_STAGE' : 'KNOCKOUT',
     group: f.league.round,
-    homeScore: f.goals?.home ?? null,
-    awayScore: f.goals?.away ?? null,
+    homeScore,
+    awayScore,
   };
 }
 
@@ -285,10 +299,13 @@ async function getMatchResult(matchId, options = {}) {
         return pending;
       }
 
-      // Para finalizar, EXIGIR que fullTime ou regularTime tenham placar
+      // Para finalizar, EXIGIR que regularTime ou fullTime tenham placar
       // Nunca usar halfTime como placar definitivo
-      const ftHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
-      const ftAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
+      // REGRA: usar regularTime (90min) — fullTime pode incluir prorrogação
+      const rtHome = m.score?.regularTime?.home;
+      const rtAway = m.score?.regularTime?.away;
+      const ftHome = rtHome ?? m.score?.fullTime?.home;
+      const ftAway = rtAway ?? m.score?.fullTime?.away;
 
       // Se está finished mas não tem fullTime score ainda, não finalizar
       if (finished && (ftHome == null || ftAway == null)) {
@@ -299,6 +316,7 @@ async function getMatchResult(matchId, options = {}) {
       }
 
       // Se está ao vivo, usar o placar parcial só para exibição (NÃO para finalizar)
+      // Prioridade: regularTime > fullTime > halfTime (para display ao vivo)
       const homeScore = ftHome ?? m.score?.halfTime?.home ?? 0;
       const awayScore = ftAway ?? m.score?.halfTime?.away ?? 0;
 
@@ -335,11 +353,24 @@ async function getMatchResult(matchId, options = {}) {
       const finished = ['FT', 'AET', 'PEN'].includes(st);
       if (!live && !finished) return { finished: false, live: false, status: st };
 
+      // REGRA: usar placar do tempo regulamentar (90min)
+      // Em jogos AET/PEN, f.score.fulltime = placar dos 90min, f.goals = placar total com prorrogação
+      // Em jogos FT (sem prorrogação), f.goals == f.score.fulltime
+      let homeScore, awayScore;
+      if (st === 'AET' || st === 'PEN') {
+        // Usar fulltime (90min) e não goals (que inclui extra time)
+        homeScore = f.score?.fulltime?.home ?? f.goals?.home ?? 0;
+        awayScore = f.score?.fulltime?.away ?? f.goals?.away ?? 0;
+      } else {
+        homeScore = f.goals?.home ?? 0;
+        awayScore = f.goals?.away ?? 0;
+      }
+
       const result = {
         finished,
         live,
-        homeScore: f.goals?.home ?? 0,
-        awayScore: f.goals?.away ?? 0,
+        homeScore,
+        awayScore,
         status: st === 'HT' ? 'PAUSED' : st,
         matchMinute: f.fixture.status?.elapsed ?? null,
         matchInjuryTime: f.fixture.status?.extra ?? null,
