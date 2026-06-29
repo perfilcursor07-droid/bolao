@@ -295,6 +295,122 @@ async function notifyResultCorrection(gameId) {
   return { queued };
 }
 
+  return { queued };
+}
+
+/**
+ * Confirma por WhatsApp que o PIX do prêmio já foi transferido (apostas com prize_paid_at).
+ */
+async function notifyPrizePaidForGame(gameId, options = {}) {
+  if (!(await isNotificationsEnabled())) {
+    return { skipped: true, reason: 'notifications_disabled' };
+  }
+
+  const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [gameId, 'finished']);
+  if (games.length === 0) return { skipped: true, reason: 'game_not_finished' };
+  const game = games[0];
+
+  const [bets] = await pool.query(
+    `SELECT b.*, u.name, u.phone, u.cpf
+     FROM bets b
+     JOIN users u ON u.id = b.user_id
+     JOIN games g ON g.id = b.game_id
+     WHERE b.game_id = ?
+       AND b.is_winner = TRUE
+       AND b.prize_paid_at IS NOT NULL
+       AND b.prize_amount_cents > 0
+       AND b.home_score_prediction = g.home_score
+       AND b.away_score_prediction = g.away_score`,
+    [gameId]
+  );
+
+  if (bets.length === 0) {
+    return { skipped: true, reason: 'no_paid_winners' };
+  }
+
+  const resultLine = formatPlacar(game.home_score, game.away_score);
+  const matchLabel = `${translateTeamName(game.home_team)} × ${translateTeamName(game.away_team)}`;
+  const referenceSuffix = `_pix_paid_${game.home_score}x${game.away_score}`;
+  const force = options.force === true;
+
+  const byUser = {};
+  for (const bet of bets) {
+    const phone = cleanPhone(bet.phone);
+    if (!normalizeBrazilPhone(phone)) continue;
+    if (!byUser[bet.user_id]) {
+      byUser[bet.user_id] = {
+        name: bet.name,
+        phone: normalizeBrazilPhone(phone),
+        pixKey: bet.cpf || '',
+        bets: [],
+        totalCents: 0,
+      };
+    }
+    byUser[bet.user_id].bets.push(bet);
+    byUser[bet.user_id].totalCents += bet.prize_amount_cents || 0;
+  }
+
+  let queued = 0;
+  let duplicates = 0;
+
+  for (const [userId, group] of Object.entries(byUser)) {
+    const refKey = `game_${gameId}_user_${userId}${referenceSuffix}`;
+    if (!force) {
+      const [existing] = await pool.query(
+        `SELECT id FROM whatsapp_outbox WHERE reference_key = ? AND status IN ('pending', 'processing', 'sent') LIMIT 1`,
+        [refKey]
+      );
+      if (existing.length > 0) {
+        duplicates++;
+        continue;
+      }
+    }
+
+    const palpiteLines = group.bets.map((bet) => {
+      const palpite = formatPlacar(bet.home_score_prediction, bet.away_score_prediction);
+      return `• Palpite ${palpite} — ${formatCents(bet.prize_amount_cents)}`;
+    });
+
+    const totalLabel =
+      group.bets.length > 1
+        ? `*${formatCents(group.totalCents)}* (${group.bets.length} apostas vencedoras)`
+        : `*${formatCents(group.totalCents)}*`;
+
+    const body = [
+      '✅ *PIX do prêmio enviado!*',
+      '',
+      `Olá, ${firstName(group.name)}!`,
+      '',
+      `*${game.title}*`,
+      `Resultado final: *${resultLine}* (${matchLabel})`,
+      '',
+      `Transferimos ${totalLabel} para a chave PIX do seu cadastro:`,
+      group.pixKey ? `📌 *${group.pixKey}*` : '📌 Chave PIX cadastrada na sua conta',
+      '',
+      ...palpiteLines,
+      '',
+      'O valor já deve aparecer na sua conta. Se não visualizar em alguns minutos, verifique a chave PIX ou fale conosco.',
+      '',
+      `📲 Consultar: ${getConsultarUrl()}`,
+      `💬 Dúvidas: *${SUPPORT_PHONE_DISPLAY}*`,
+      '',
+      '_Bolão Online_',
+    ].join('\n');
+
+    const enqueueResult = await enqueueMessage({
+      userId: parseInt(userId, 10),
+      phone: group.phone,
+      messageType: 'bet_result',
+      referenceKey: refKey,
+      body,
+    });
+    if (enqueueResult.queued) queued++;
+    else if (enqueueResult.duplicate) duplicates++;
+  }
+
+  return { queued, duplicates, paidWinners: bets.length };
+}
+
 /** @deprecated Use notifyWinners — nunca envia para quem não ganhou. */
 async function notifyGameResults(gameId, options = {}) {
   if (options.winnersOnly) return notifyWinners(gameId, options);
@@ -309,4 +425,5 @@ module.exports = {
   notifyGameResults,
   notifyWinners,
   notifyResultCorrection,
+  notifyPrizePaidForGame,
 };

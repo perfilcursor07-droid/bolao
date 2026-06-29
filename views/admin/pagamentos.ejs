@@ -11,6 +11,10 @@
 <body class="page-admin">
   <%- include('layout') %>
 
+    <% if (typeof flash !== 'undefined' && flash) { %>
+      <div class="alert alert-info" style="margin-bottom: 1rem;"><%= flash %></div>
+    <% } %>
+
     <p class="admin-page-intro">
       Taxas conforme as <a href="/regras" target="_blank">regras</a>:
       <strong><%= prizeNetPercent %>%</strong> aos ganhadores (taxa <%= systemFeePercent %>%)
@@ -229,6 +233,27 @@
     <!-- TAB 4: Prêmios pagos -->
     <div class="tab-content" id="tab-payouts-paid" style="display:none;">
       <h3 style="font-size:0.9rem; color:var(--accent); margin-bottom:0.5rem;">✓ Prêmios já enviados</h3>
+
+      <% if (typeof paidWinnerGames !== 'undefined' && paidWinnerGames.length > 0) { %>
+        <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px;">
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Avisar ganhadores por WhatsApp que o PIX do prêmio já foi transferido:
+          </p>
+          <% paidWinnerGames.forEach(function(g) { %>
+            <form method="POST" action="/admin/games/<%= g.gameId %>/notify-prize-paid" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+              <input type="hidden" name="redirect" value="pagamentos">
+              <input type="hidden" name="confirm" value="1">
+              <span style="font-size: 0.85rem;"><strong><%= g.title %></strong> — <%= g.count %> ganhador(es) pagos</span>
+              <label style="font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem;">
+                <input type="checkbox" name="force" value="1"> Reenviar
+              </label>
+              <button type="submit" class="btn btn-sm btn-gold" onclick="return confirm('Enviar WhatsApp de PIX pago para <%= g.count %> ganhador(es) de <%= g.title %>?');">
+                📲 Confirmar PIX no Zap
+              </button>
+            </form>
+          <% }); %>
+        </div>
+      <% } %>
 
       <% if (paidPayouts.length === 0) { %>
         <div class="alert" style="background:rgba(100,116,139,0.1); border:1px solid var(--border); color:var(--text-secondary); text-align:center;">

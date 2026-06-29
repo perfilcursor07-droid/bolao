@@ -92,6 +92,7 @@
         <% const verifiedWinners = bets.filter(function(b) {
           return b.is_winner && b.home_score_prediction === game.home_score && b.away_score_prediction === game.away_score;
         }); %>
+        <% const paidVerifiedWinners = verifiedWinners.filter(function(b) { return b.prize_paid_at; }); %>
         <div class="card" style="background: var(--bg-secondary); border: 1px solid rgba(34, 197, 94, 0.35); margin-bottom: 1.5rem; padding: 1rem;">
           <h3 style="margin-bottom: 0.5rem;">WhatsApp — somente manual</h3>
           <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
@@ -121,6 +122,22 @@
             </form>
           <% } else { %>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Nenhum ganhador verificado para este placar.</p>
+          <% } %>
+
+          <% if (paidVerifiedWinners.length > 0) { %>
+            <form method="POST" action="/admin/games/<%= game.id %>/notify-prize-paid" style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+              <input type="hidden" name="confirm" value="1">
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                <strong><%= paidVerifiedWinners.length %></strong> ganhador(es) com prêmio já marcado como pago no sistema.
+              </p>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 0.75rem; color: var(--text-muted);">
+                <input type="checkbox" name="force" value="1">
+                Reenviar se já mandou antes
+              </label>
+              <button type="submit" class="btn btn-gold" onclick="return confirm('Enviar WhatsApp confirmando PIX pago para <%= paidVerifiedWinners.length %> ganhador(es)?');">
+                ✅ Avisar ganhadores — PIX já transferido
+              </button>
+            </form>
           <% } %>
 
           <form method="POST" action="/admin/games/<%= game.id %>/notify-correction">

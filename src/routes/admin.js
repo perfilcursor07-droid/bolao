@@ -618,6 +618,22 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
     const paidPayouts = paidPayoutRows.map(enrichPayoutRow);
     const finance = await getPaymentFinanceSummary();
 
+    const paidWinnerGames = {};
+    for (const p of paidPayouts) {
+      if (!p.is_winner || !p.game_id) continue;
+      if (!paidWinnerGames[p.game_id]) {
+        paidWinnerGames[p.game_id] = {
+          gameId: p.game_id,
+          title: p.game_title,
+          count: 0,
+        };
+      }
+      paidWinnerGames[p.game_id].count++;
+    }
+
+    const flash = req.session.flash || null;
+    delete req.session.flash;
+
     res.render('admin/pagamentos', {
       title: 'Pagamentos',
       pendingPayments,
@@ -625,7 +641,9 @@ router.get('/pagamentos', requireAdmin, async (req, res) => {
       confirmedPayments,
       pendingPayouts,
       paidPayouts,
+      paidWinnerGames: Object.values(paidWinnerGames),
       finance,
+      flash,
       user: req.session.user,
       activePage: 'pagamentos',
     });
@@ -1071,6 +1089,42 @@ router.post('/games/:id/notify-correction', requireAdmin, async (req, res) => {
   } catch (err) {
     req.session.flash = err.message || 'Erro ao enviar correção.';
     res.redirect(`/admin/games/${req.params.id}`);
+  }
+});
+
+router.post('/games/:id/notify-prize-paid', requireAdmin, async (req, res) => {
+  const { notifyPrizePaidForGame, isNotificationsEnabled } = require('../services/whatsappNotifyService');
+  const redirectTo = req.body.redirect === 'pagamentos' ? '/admin/pagamentos' : `/admin/games/${req.params.id}`;
+
+  try {
+    if (req.body.confirm !== '1') {
+      req.session.flash = 'Confirme o envio antes de continuar.';
+      return res.redirect(redirectTo);
+    }
+
+    if (!(await isNotificationsEnabled())) {
+      req.session.flash = 'Ative as notificações WhatsApp em /admin/whatsapp.';
+      return res.redirect(redirectTo);
+    }
+
+    const force = req.body.force === '1';
+    const result = await notifyPrizePaidForGame(req.params.id, { force });
+    if (result?.skipped) {
+      req.session.flash =
+        result.reason === 'no_paid_winners'
+          ? 'Nenhum ganhador com prêmio já marcado como pago.'
+          : 'Não foi possível enviar (verifique WhatsApp e status do jogo).';
+    } else if (result?.queued > 0) {
+      req.session.flash = `PIX confirmado por WhatsApp para ${result.queued} ganhador(es) (${result.paidWinners} aposta(s) pagas).`;
+    } else if (result?.duplicates > 0) {
+      req.session.flash = 'Mensagens de PIX já enviadas. Marque "reenviar" para enviar de novo.';
+    } else {
+      req.session.flash = 'Nenhum ganhador com WhatsApp válido.';
+    }
+    res.redirect(redirectTo);
+  } catch (err) {
+    req.session.flash = err.message || 'Erro ao enviar confirmação de PIX.';
+    res.redirect(redirectTo);
   }
 });
 
