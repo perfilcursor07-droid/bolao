@@ -718,6 +718,66 @@ router.post('/pagamentos/:betId/pagar', requireAdmin, async (req, res) => {
   }
 });
 
+// Enviar WhatsApp individual para ganhador via Baileys
+router.post('/pagamentos/:betId/notify-individual', requireAdmin, async (req, res) => {
+  try {
+    const { enqueueMessage } = require('../services/whatsapp/outbox');
+    const { normalizeBrazilPhone } = require('../services/whatsapp/phone');
+    const { formatCents } = require('./games');
+
+    const [rows] = await pool.query(
+      `SELECT b.*, u.name as user_name, u.phone as user_phone, u.cpf as user_pix,
+        g.home_team, g.away_team, g.title as game_title
+       FROM bets b JOIN users u ON u.id = b.user_id JOIN games g ON g.id = b.game_id
+       WHERE b.id = ? AND b.is_winner = TRUE AND b.prize_paid_at IS NOT NULL`,
+      [req.params.betId]
+    );
+
+    if (rows.length === 0) {
+      return res.redirect('/admin/pagamentos');
+    }
+
+    const bet = rows[0];
+    const phone = normalizeBrazilPhone(bet.user_phone);
+
+    if (!phone) {
+      req.session.flash = 'Telefone inválido para este ganhador.';
+      return res.redirect('/admin/pagamentos');
+    }
+
+    const nome = (bet.user_name || '').split(' ')[0] || 'Ganhador';
+    const valor = formatCents(bet.prize_amount_cents);
+    const jogo = `${bet.home_team} × ${bet.away_team}`;
+
+    const body = [
+      '✅ *PIX enviado!*',
+      '',
+      `Olá, ${nome}!`,
+      '',
+      `O prêmio de *${valor}* do bolão *${jogo}* já foi transferido para sua chave PIX.`,
+      '',
+      `Confira sua conta! 🎉`,
+      '',
+      '_Bolão Online_',
+    ].join('\n');
+
+    await enqueueMessage({
+      userId: bet.user_id,
+      phone,
+      messageType: 'prize_paid_individual',
+      referenceKey: `prize_paid_bet_${bet.id}_${Date.now()}`,
+      body,
+    });
+
+    req.session.flash = `📲 Mensagem enfileirada para ${nome} (${phone})`;
+    res.redirect('/admin/pagamentos');
+  } catch (err) {
+    console.error('Erro notify individual:', err.message);
+    req.session.flash = 'Erro ao enviar: ' + err.message;
+    res.redirect('/admin/pagamentos');
+  }
+});
+
 // Copa do Mundo - listar jogos da API
 router.get('/copa', requireAdmin, async (req, res) => {
   try {
