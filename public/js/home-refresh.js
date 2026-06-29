@@ -60,6 +60,9 @@
       if (typeof window.closeFeaturedBetsModal === 'function') {
         window.closeFeaturedBetsModal();
       }
+      if (typeof window.closeFinishedBolaoModal === 'function') {
+        window.closeFinishedBolaoModal();
+      }
 
       container.innerHTML = html;
       container.dataset.hasLive = container.querySelector('.game-row-live') ? '1' : '0';

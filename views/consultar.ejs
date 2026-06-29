@@ -33,10 +33,34 @@
 
     <% if (bets && bets.length > 0) { %>
       <% const wins = bets.filter(b => b.is_winner); %>
+      <% const pendingPayouts = bets.filter(b => (b.is_winner || (b.game_status === 'finished' && b.prize_amount_cents > 0)) && !b.prize_paid_at); %>
+
+      <div class="consultar-pix-panel card">
+        <h3 class="consultar-pix-panel-title">Sua chave PIX cadastrada</h3>
+        <% if (typeof pixKey !== 'undefined' && pixKey) { %>
+          <p class="consultar-pix-key"><%= pixKey %></p>
+          <p class="consultar-pix-note">É nesta chave que enviamos prêmios e reembolsos — a mesma informada ao participar.</p>
+        <% } else { %>
+          <p class="consultar-pix-note consultar-pix-note--warn">Chave PIX não encontrada no cadastro. Entre em contato pelo WhatsApp abaixo.</p>
+        <% } %>
+      </div>
+
+      <% if (wins.length > 0 || pendingPayouts.length > 0) { %>
+        <div class="consultar-transfer-panel card">
+          <h3 class="consultar-transfer-panel-title">Pagamento de prêmio / reembolso</h3>
+          <ul class="consultar-transfer-list">
+            <li>A transferência será realizada em <strong>até <%= prizeTransferHours %> horas</strong> após o jogo ser encerrado.</li>
+            <li>O valor vai para a <strong>chave PIX acima</strong>, confirmada no seu cadastro.</li>
+            <li>Acompanhe aqui nesta página o <strong>status de cada pagamento</strong> (pendente ou enviado).</li>
+            <li>Dúvidas: <a href="<%= supportWhatsAppUrl %>" target="_blank" rel="noopener"><%= supportPhoneDisplay %></a></li>
+          </ul>
+        </div>
+      <% } %>
+
       <% if (wins.length > 0) { %>
         <div class="consultar-win-alert">
           <strong>🏆 Parabéns, <%= userName %>! Você ganhou <%= wins.length %> bolão<%= wins.length !== 1 ? 'ões' : '' %>!</strong>
-          <p>O prêmio será enviado para a chave PIX que você informou na aposta. Guarde este WhatsApp — usamos ele para contato se necessário.</p>
+          <p>Em até <strong><%= prizeTransferHours %> horas</strong> faremos a transferência para sua chave PIX. Se precisar falar conosco: <a href="<%= supportWhatsAppUrl %>" target="_blank" rel="noopener"><%= supportPhoneDisplay %></a>.</p>
           <a href="/ganhadores" class="btn btn-outline btn-sm">Ver lista pública de ganhadores</a>
         </div>
       <% } else { %>
@@ -45,6 +69,7 @@
 
       <div class="bets-list">
         <% bets.forEach(function(bet) { %>
+          <% const hasPayout = bet.is_winner || (bet.game_status === 'finished' && bet.prize_amount_cents > 0); %>
           <div class="bet-card-mobile <%= bet.is_winner ? 'bet-card-mobile--winner' : '' %>">
             <div class="bet-card-top">
               <strong><%= bet.title %></strong>
@@ -86,6 +111,17 @@
                 </div>
               <% } %>
             </div>
+            <% if (hasPayout && bet.game_status === 'finished') { %>
+              <div class="consultar-payout-status <%= bet.prize_paid_at ? 'consultar-payout-status--paid' : 'consultar-payout-status--pending' %>">
+                <% if (bet.prize_paid_at) { %>
+                  <strong>✓ PIX enviado</strong>
+                  <span>Transferência confirmada em <%= new Date(bet.prize_paid_at).toLocaleString('pt-BR') %>.</span>
+                <% } else { %>
+                  <strong>⏳ Transferência pendente</strong>
+                  <span>Prevista em até <%= prizeTransferHours %> horas para a chave PIX cadastrada.</span>
+                <% } %>
+              </div>
+            <% } %>
           </div>
         <% }); %>
       </div>
@@ -99,9 +135,10 @@
     <div class="consultar-tips card">
       <h3>Como funciona para quem participa sem senha?</h3>
       <ul>
-        <li>Na hora da aposta você informa <strong>nome, WhatsApp e chave PIX</strong> — isso já fica salvo no sistema.</li>
-        <li>Quando o jogo termina, volte aqui e consulte pelo <strong>mesmo WhatsApp</strong>.</li>
-        <li>Se ganhar, o prêmio vai para o PIX cadastrado. Você também aparece em <a href="/ganhadores">Ganhadores</a>.</li>
+        <li>Na hora da aposta você informa <strong>nome, WhatsApp e chave PIX</strong> — isso fica salvo no sistema.</li>
+        <li>Quando o jogo termina, volte aqui e consulte pelo <strong>mesmo WhatsApp</strong> para ver se ganhou e o status do pagamento.</li>
+        <li>Prêmios e reembolsos são transferidos em <strong>até <%= prizeTransferHours %> horas</strong> para a chave PIX cadastrada.</li>
+        <li>Dúvidas: <a href="<%= supportWhatsAppUrl %>" target="_blank" rel="noopener"><%= supportPhoneDisplay %></a></li>
         <li>Quer acesso permanente? <a href="/register">Crie uma conta</a> com o mesmo PIX e defina uma senha.</li>
       </ul>
     </div>

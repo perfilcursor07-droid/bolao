@@ -59,6 +59,7 @@ router.get('/consultar', (req, res) => {
     title: 'Consultar apostas',
     bets: null,
     userName: null,
+    pixKey: '',
     phone: '',
     error: null,
     user: req.session.user || null,
@@ -81,7 +82,7 @@ router.post('/consultar', async (req, res) => {
   }
 
   try {
-    const [users] = await pool.query('SELECT id, name FROM users WHERE phone = ? LIMIT 1', [phone]);
+    const [users] = await pool.query('SELECT id, name, cpf FROM users WHERE phone = ? LIMIT 1', [phone]);
     if (users.length === 0) {
       return res.render('consultar', {
         title: 'Consultar apostas',
@@ -105,6 +106,7 @@ router.post('/consultar', async (req, res) => {
       title: 'Consultar apostas',
       bets,
       userName: user.name.split(' ')[0],
+      pixKey: user.cpf || '',
       phone: phoneDisplay,
       error: null,
       user: req.session.user || null,

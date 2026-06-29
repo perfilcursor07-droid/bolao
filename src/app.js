@@ -19,6 +19,14 @@ const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, has
 const { captureReferralCode, tryBindSessionReferral } = require('./services/affiliateService');
 const { SYSTEM_FEE_RATE, NO_WINNER_FEE_RATE } = require('./services/prizeService');
 const { gameFingerprint } = require('./services/gameDuplicateService');
+const {
+  getAppUrl,
+  getConsultarUrl,
+  getSupportWhatsAppUrl,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_E164,
+  PRIZE_TRANSFER_HOURS,
+} = require('./config/support');
 
 const app = express();
 
@@ -92,6 +100,12 @@ app.use(async (req, res, next) => {
   res.locals.prizeNetPercent = 100 - res.locals.systemFeePercent;
   res.locals.noWinnerFeePercent = Math.round(NO_WINNER_FEE_RATE * 100);
   res.locals.noWinnerRefundPercent = 100 - res.locals.noWinnerFeePercent;
+  res.locals.appUrl = getAppUrl();
+  res.locals.consultarUrl = getConsultarUrl();
+  res.locals.supportPhoneDisplay = SUPPORT_PHONE_DISPLAY;
+  res.locals.supportPhoneE164 = SUPPORT_PHONE_E164;
+  res.locals.supportWhatsAppUrl = getSupportWhatsAppUrl();
+  res.locals.prizeTransferHours = PRIZE_TRANSFER_HOURS;
   res.locals.cartCount = 0;
   res.locals.pendingPaymentsCount = 0;
 

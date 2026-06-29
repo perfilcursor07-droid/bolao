@@ -3,6 +3,11 @@ const { formatCents } = require('../routes/games');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { cleanPhone, normalizeBrazilPhone } = require('./whatsapp/phone');
 const { enqueueMessage } = require('./whatsapp/outbox');
+const {
+  getConsultarUrl,
+  SUPPORT_PHONE_DISPLAY,
+  PRIZE_TRANSFER_HOURS,
+} = require('../config/support');
 
 async function isNotificationsEnabled() {
   try {
@@ -89,7 +94,7 @@ async function notifyGameResults(gameId) {
   const game = games[0];
 
   const [bets] = await pool.query(
-    `SELECT b.*, u.name, u.phone
+    `SELECT b.*, u.name, u.phone, u.cpf
      FROM bets b
      JOIN users u ON u.id = b.user_id
      WHERE b.game_id = ?`,
@@ -105,7 +110,7 @@ async function notifyGameResults(gameId) {
     const phone = cleanPhone(bet.phone);
     if (!normalizeBrazilPhone(phone)) continue;
     if (!byUser[bet.user_id]) {
-      byUser[bet.user_id] = { name: bet.name, phone: normalizeBrazilPhone(phone), bets: [] };
+      byUser[bet.user_id] = { name: bet.name, phone: normalizeBrazilPhone(phone), pixKey: bet.cpf || '', bets: [] };
     }
     byUser[bet.user_id].bets.push(bet);
   }
@@ -135,6 +140,32 @@ async function notifyGameResults(gameId) {
       header = '📋 *Resultado do bolão*';
     }
 
+    const consultarUrl = getConsultarUrl();
+    const payoutLines = [];
+
+    if (hasWinner) {
+      payoutLines.push(
+        `💰 *Pagamento do prêmio*`,
+        `A transferência será realizada em *até ${PRIZE_TRANSFER_HOURS} horas* para a chave PIX que você confirmou no cadastro.`,
+        group.pixKey ? `📌 *Sua chave PIX:* ${group.pixKey}` : '📌 *Sua chave PIX:* (consulte em /consultar com seu WhatsApp)',
+        '',
+        `📲 *Acompanhe o status do pagamento:*`,
+        consultarUrl,
+        '(Use o mesmo WhatsApp da aposta)',
+        '',
+        `💬 Dúvidas ou contato: *${SUPPORT_PHONE_DISPLAY}*`
+      );
+    } else if (lines.some((l) => l.includes('reembolso'))) {
+      payoutLines.push(
+        `↩️ *Reembolso*`,
+        `O valor será devolvido em *até ${PRIZE_TRANSFER_HOURS} horas* para a chave PIX cadastrada.`,
+        group.pixKey ? `📌 *Sua chave PIX:* ${group.pixKey}` : '',
+        '',
+        `📲 Status: ${consultarUrl}`,
+        `💬 Contato: *${SUPPORT_PHONE_DISPLAY}*`
+      );
+    }
+
     const body = [
       header,
       '',
@@ -146,12 +177,15 @@ async function notifyGameResults(gameId) {
       '',
       ...lines,
       '',
-      hasWinner
-        ? 'O prêmio será enviado para sua chave PIX cadastrada.'
-        : 'Obrigado por participar! Boa sorte no próximo bolão. ⚽',
+      ...payoutLines,
+      ...(hasWinner || lines.some((l) => l.includes('reembolso'))
+        ? []
+        : ['Obrigado por participar! Boa sorte no próximo bolão. ⚽']),
       '',
       '_Bolão Online_',
-    ].join('\n');
+    ]
+      .filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== ''))
+      .join('\n');
 
     await enqueueMessage({
       userId: parseInt(userId, 10),

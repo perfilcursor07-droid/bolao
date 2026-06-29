@@ -2242,8 +2242,8 @@ td { border-top: 1px solid var(--border); }
 }
 
 .winner-row--won {
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .finished-score {
@@ -2269,17 +2269,327 @@ td { border-top: 1px solid var(--border); }
 }
 
 .finished-winners-badge {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent);
   padding: 0.15rem 0.5rem;
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.7rem;
+  border: none;
+  font-family: inherit;
+  line-height: 1.35;
+}
+
+.finished-winners-btn {
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.finished-winners-btn:hover,
+.finished-winners-btn:focus-visible {
+  background: rgba(16, 185, 129, 0.24);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px var(--accent-glow);
+  outline: none;
 }
 
 .finished-winners-badge--empty {
   background: rgba(100, 116, 139, 0.12);
   color: var(--text-muted);
+}
+
+.finished-winners-btn.finished-winners-badge--empty:hover,
+.finished-winners-btn.finished-winners-badge--empty:focus-visible {
+  background: rgba(100, 116, 139, 0.22);
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.15);
+}
+
+/* Bolões encerrados — twin compacto + modal */
+.finished-boloes-list--modal {
+  gap: 0.75rem;
+}
+
+.finished-bolao-twin {
+  border: none;
+  background: transparent;
+  border-radius: 14px;
+}
+
+.finished-bolao-twin-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem 1rem;
+  background: linear-gradient(160deg, rgba(34, 197, 94, 0.14) 0%, rgba(21, 128, 61, 0.05) 42%, var(--bg-card) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.38);
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(34, 197, 94, 0.12);
+  text-align: center;
+}
+
+.finished-bolao-twin--won .finished-bolao-twin-inner {
+  border-color: rgba(34, 197, 94, 0.52);
+  box-shadow: 0 8px 28px rgba(34, 197, 94, 0.16);
+}
+
+.finished-bolao-twin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.finished-bolao-twin-kicker {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f0fdf4;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  line-height: 1.3;
+}
+
+.finished-bolao-twin-date {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.finished-bolao-twin-title {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.finished-bolao-twin-match {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  padding: 0.15rem 0 0.05rem;
+}
+
+.finished-bolao-twin-team {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.finished-bolao-twin-score {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #4ade80;
+  padding: 0.12rem 0.55rem;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.32);
+  border-radius: 8px;
+  line-height: 1.2;
+}
+
+.finished-bolao-winners-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.finished-winners-twin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: min(100%, 220px);
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(16, 185, 129, 0.08));
+  color: #ecfdf5;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.25;
+  cursor: pointer;
+  box-shadow: 0 3px 16px rgba(34, 197, 94, 0.2);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.finished-winners-twin-btn:hover,
+.finished-winners-twin-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(74, 222, 128, 0.7);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.32), rgba(16, 185, 129, 0.14));
+  box-shadow: 0 5px 20px rgba(34, 197, 94, 0.28);
+  outline: none;
+}
+
+.finished-winners-twin-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.finished-winners-twin-label {
+  letter-spacing: 0.01em;
+}
+
+.finished-winners-twin-btn--empty {
+  border-color: rgba(100, 116, 139, 0.28);
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-muted);
+  box-shadow: none;
+  min-width: auto;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.95rem;
+}
+
+.finished-winners-twin-btn--empty:hover,
+.finished-winners-twin-btn--empty:focus-visible {
+  border-color: rgba(100, 116, 139, 0.4);
+  background: rgba(100, 116, 139, 0.16);
+  box-shadow: 0 2px 10px rgba(100, 116, 139, 0.12);
+}
+
+.finished-winner-prize-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #4ade80;
+  line-height: 1.3;
+}
+
+.finished-winner-prize-hint span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.finished-bolao-twin-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.finished-bolao-twin-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  padding: 0.45rem 0.35rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.finished-bolao-twin-stat small {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.finished-bolao-twin-stat strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #bbf7d0;
+}
+
+.finished-bolao-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.finished-bolao-date {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.finished-modal-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.finished-modal-team {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.finished-modal-result {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent);
+  padding: 0.15rem 0.55rem;
+  background: rgba(16, 185, 129, 0.12);
+  border-radius: 8px;
+}
+
+.finished-bolao-modal .finished-modal-badge {
+  color: #4ade80;
+}
+
+.finished-no-winners-note {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.finished-no-winners-note p {
+  margin: 0;
+}
+
+.prize-breakdown-refund span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.finished-bolao-modal-body .prize-breakdown {
+  margin-top: 0;
+}
+
+.finished-bolao-modal-body .finished-subtitle {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.finished-bolao-modal-body .finished-bolao-link {
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .finished-bolao-body {
@@ -6721,9 +7031,103 @@ body.admin-nav-open {
   color: var(--text-secondary);
 }
 
+.consultar-pix-panel,
+.consultar-transfer-panel {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: linear-gradient(160deg, rgba(34, 197, 94, 0.1), rgba(21, 128, 61, 0.04));
+}
+
+.consultar-pix-panel-title,
+.consultar-transfer-panel-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.consultar-pix-key {
+  margin: 0 0 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.consultar-pix-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.consultar-pix-note--warn {
+  color: #fbbf24;
+}
+
+.consultar-transfer-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.consultar-transfer-list li + li {
+  margin-top: 0.35rem;
+}
+
+.consultar-transfer-list a {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.consultar-payout-status {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.consultar-payout-status strong {
+  font-size: 0.82rem;
+}
+
+.consultar-payout-status span {
+  color: var(--text-secondary);
+}
+
+.consultar-payout-status--pending {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.consultar-payout-status--pending strong {
+  color: #fbbf24;
+}
+
+.consultar-payout-status--paid {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.consultar-payout-status--paid strong {
+  color: #4ade80;
+}
+
 .consultar-win-alert {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(34, 197, 94, 0.1));
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(21, 128, 61, 0.08));
+  border: 1px solid rgba(34, 197, 94, 0.35);
   border-radius: 14px;
   padding: 1rem 1.1rem;
   margin-bottom: 1rem;
@@ -6732,7 +7136,7 @@ body.admin-nav-open {
 .consultar-win-alert strong {
   display: block;
   font-size: 1rem;
-  color: var(--gold);
+  color: #4ade80;
   margin-bottom: 0.4rem;
 }
 
@@ -6741,6 +7145,11 @@ body.admin-nav-open {
   color: var(--text-secondary);
   line-height: 1.45;
   margin-bottom: 0.75rem;
+}
+
+.consultar-win-alert a {
+  color: #4ade80;
+  font-weight: 700;
 }
 
 .consultar-greeting {

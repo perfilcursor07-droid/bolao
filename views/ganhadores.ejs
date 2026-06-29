@@ -32,13 +32,15 @@
       </div>
     <% } else { %>
       <p class="ganhadores-count"><%= winnerSummaries.length %> bolão<%= winnerSummaries.length !== 1 ? 'ões' : '' %> com ganhador<%= winnerSummaries.length !== 1 ? 'es' : '' %></p>
-      <%- include('partials/finished-boloes-list', { finishedSummaries: winnerSummaries }) %>
+      <%- include('partials/finished-boloes-list', { finishedSummaries: winnerSummaries, useWinnerModal: true }) %>
       <div class="btn-center-wrap" style="margin-top:1.25rem;">
         <a href="/" class="btn btn-gold">Ver jogos abertos</a>
       </div>
     <% } %>
   </div>
 
+  <%- include('partials/finished-bolao-modal') %>
   <%- include('partials/footer') %>
+  <script src="/js/finished-boloes.js" defer></script>
 </body>
 </html>
