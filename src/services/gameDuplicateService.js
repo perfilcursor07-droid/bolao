@@ -145,20 +145,32 @@ async function removeSafeDuplicateGames() {
 }
 
 function markDuplicateIds(games) {
-  const counts = new Map();
+  const groups = new Map();
   for (const game of games) {
     const key = gameDedupeKey(game);
-    counts.set(key, (counts.get(key) || 0) + 1);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(game);
   }
 
   const duplicateIds = new Set();
-  for (const game of games) {
-    if ((counts.get(gameDedupeKey(game)) || 0) > 1) {
+  const keepIds = new Set();
+  const removeIds = new Set();
+
+  for (const group of groups.values()) {
+    if (group.length <= 1) continue;
+    const keep = pickBestGame(group);
+    keepIds.add(keep.id);
+    for (const game of group) {
       duplicateIds.add(game.id);
+      if (game.id !== keep.id) {
+        const bets = Number(game.total_bets ?? game.bet_count ?? 0);
+        const paid = Number(game.paid_count ?? 0);
+        if (bets === 0 && paid === 0) removeIds.add(game.id);
+      }
     }
   }
 
-  return duplicateIds;
+  return { duplicateIds, keepIds, removeIds };
 }
 
 module.exports = {

@@ -3503,6 +3503,13 @@ body.modal-open {
   box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
 }
 
+.participar-input.form-control.participar-input--readonly {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .participar-check {
   display: flex;
   align-items: flex-start;
@@ -6198,6 +6205,18 @@ body.admin-nav-open {
   border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 4px;
   vertical-align: middle;
+}
+
+.duplicate-badge--keep {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.duplicate-badge--warn {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 /* Sidebar recolhida (desktop) */

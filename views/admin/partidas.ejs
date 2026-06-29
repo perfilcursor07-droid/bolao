@@ -29,6 +29,12 @@
         <%= deleted %> partida<%= deleted !== 1 ? 's' : '' %> removida<%= deleted !== 1 ? 's' : '' %> com sucesso.
       </div>
     <% } %>
+    <% if (typeof duplicateRemoveCount === 'number' && duplicateRemoveCount > 0) { %>
+      <div class="alert alert-warning dedupe-hint" style="margin-bottom:1rem;">
+        <strong><%= duplicateRemoveCount %> duplicata<%= duplicateRemoveCount !== 1 ? 's' : '' %></strong> sem apostas podem ser removidas automaticamente.
+        Clique em <strong>Limpar duplicatas</strong> — a cópia com apostas/prêmio (badge <span class="duplicate-badge duplicate-badge--keep">principal</span>) será mantida.
+      </div>
+    <% } %>
     <% if (error) { %>
       <div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div>
     <% } %>
@@ -77,8 +83,12 @@
                   <td>
                     <strong><%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %></strong>
                     <% if (game.featured) { %><span style="color:var(--gold);">⭐</span><% } %>
-                    <% if (typeof duplicateIds !== 'undefined' && duplicateIds.has(game.id)) { %>
-                      <span class="duplicate-badge" title="Partida duplicada — use Limpar duplicatas ou remova manualmente">dup</span>
+                    <% if (typeof keepIds !== 'undefined' && keepIds.has(game.id)) { %>
+                      <span class="duplicate-badge duplicate-badge--keep" title="Esta cópia será mantida">principal</span>
+                    <% } else if (typeof removeIds !== 'undefined' && removeIds.has(game.id)) { %>
+                      <span class="duplicate-badge" title="Será removida ao limpar duplicatas">dup</span>
+                    <% } else if (typeof duplicateIds !== 'undefined' && duplicateIds.has(game.id)) { %>
+                      <span class="duplicate-badge duplicate-badge--warn" title="Duplicata com apostas — remova manualmente a cópia extra">dup+</span>
                     <% } %>
                   </td>
                   <td><%= gameDateBR(game.game_date) %></td>

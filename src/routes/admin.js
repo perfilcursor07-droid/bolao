@@ -178,11 +178,14 @@ router.get('/partidas', requireAdmin, async (req, res) => {
        FROM games g JOIN users u ON u.id = g.created_by
        ORDER BY g.game_date DESC`
     );
-    const duplicateIds = markDuplicateIds(games);
+    const { duplicateIds, keepIds, removeIds } = markDuplicateIds(games);
     res.render('admin/partidas', {
       title: 'Partidas',
       games,
       duplicateIds,
+      keepIds,
+      removeIds,
+      duplicateRemoveCount: removeIds.size,
       user: req.session.user,
       activePage: 'partidas',
       deleted: req.query.deleted ? parseInt(req.query.deleted, 10) : null,

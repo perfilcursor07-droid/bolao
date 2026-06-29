@@ -202,6 +202,26 @@ router.post('/games/:id/participar', async (req, res) => {
       });
     }
 
+    if (result.error === 'pix_mismatch') {
+      return res.render('participar', {
+        title: 'Participar',
+        game,
+        error: 'Este WhatsApp já está cadastrado com outra chave PIX. Use a chave original ou o mesmo WhatsApp da primeira aposta.',
+        form: req.body,
+        user: null,
+      });
+    }
+
+    if (result.error === 'pix_taken') {
+      return res.render('participar', {
+        title: 'Participar',
+        game,
+        error: 'Esta chave PIX já está cadastrada com outro WhatsApp. Use o mesmo WhatsApp da primeira aposta.',
+        form: req.body,
+        user: null,
+      });
+    }
+
     setSessionUser(req, result);
     await tryBindSessionReferral(req, result.id);
 

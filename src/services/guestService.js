@@ -29,6 +29,11 @@ function pixKeysMatch(a, b) {
   return left.length > 0 && left === right;
 }
 
+function pixKeysEqual(stored, incoming) {
+  if (!stored || !incoming) return false;
+  return normalizePixKey(stored) === normalizePixKey(incoming);
+}
+
 /** Variantes do telefone para busca (com/sem 55, normalizado). */
 function phoneLookupVariants(phone) {
   const digits = cleanPhoneDigits(phone);
@@ -60,6 +65,37 @@ async function findUserByPhone(phone) {
   return rows[0] || null;
 }
 
+async function findUserByPixKey(pixKey) {
+  const target = normalizePixKey(pixKey);
+  const trimmed = (pixKey || '').trim();
+  if (!target || target.length < 5) return null;
+
+  const [rows] = await pool.query(
+    `SELECT * FROM users WHERE cpf IS NOT NULL AND cpf != '' AND (cpf = ? OR cpf = ?) LIMIT 1`,
+    [trimmed, target]
+  );
+  if (rows[0]) return rows[0];
+
+  const [allWithPix] = await pool.query(
+    `SELECT * FROM users WHERE cpf IS NOT NULL AND cpf != ''`
+  );
+  return allWithPix.find((u) => pixKeysEqual(u.cpf, pixKey)) || null;
+}
+
+function toParticipantUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    cpf: user.cpf,
+    phone: user.phone,
+    role: user.role,
+  };
+}
+
+/**
+ * Identifica participante para apostar — NUNCA altera cadastro existente nesta tela.
+ */
 async function findOrCreateParticipant({ name, phone, cpf }) {
   const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
@@ -68,64 +104,37 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
     return { error: 'invalid_data' };
   }
 
-  // Buscar primeiro pelo telefone (identificador principal)
+  if (!pixKey || pixKey.length < 5) {
+    return { error: 'invalid_data' };
+  }
+
   const userByPhone = await findUserByPhone(phone);
+  const userByPix = await findUserByPixKey(pixKey);
 
   if (userByPhone) {
-    const user = userByPhone;
-
-    if (user.role === 'admin') {
+    if (userByPhone.role === 'admin') {
       return { error: 'admin_cpf' };
     }
 
-    // Atualizar nome e chave PIX se fornecidos
-    const updates = {};
-    if (name?.trim()) updates.name = name.trim();
-    if (pixKey) updates.cpf = pixKey;
-
-    if (Object.keys(updates).length > 0) {
-      const sets = Object.entries(updates).map(([k]) => `${k} = ?`).join(', ');
-      await pool.query(`UPDATE users SET ${sets} WHERE id = ?`, [...Object.values(updates), user.id]);
+    if (userByPix && userByPix.id !== userByPhone.id) {
+      return { error: 'pix_taken' };
     }
 
-    if (user.phone !== phoneClean) {
-      await pool.query('UPDATE users SET phone = ? WHERE id = ?', [phoneClean, user.id]);
+    if (userByPhone.cpf && !pixKeysEqual(userByPhone.cpf, pixKey)) {
+      return { error: 'pix_mismatch' };
     }
 
-    return {
-      id: user.id,
-      name: updates.name || user.name,
-      email: user.email,
-      cpf: updates.cpf || user.cpf,
-      phone: phoneClean,
-      role: user.role,
-    };
+    return toParticipantUser(userByPhone);
   }
 
-  // Buscar pela chave PIX (fallback)
-  if (pixKey) {
-    const [byPix] = await pool.query('SELECT * FROM users WHERE cpf = ?', [pixKey]);
-    if (byPix.length > 0) {
-      const user = byPix[0];
-      if (user.role === 'admin') return { error: 'admin_cpf' };
-
-      await pool.query('UPDATE users SET name = ?, phone = ? WHERE id = ?', [
-        name?.trim() || user.name, phoneClean, user.id
-      ]);
-
-      return {
-        id: user.id,
-        name: name?.trim() || user.name,
-        email: user.email,
-        cpf: user.cpf,
-        phone: phoneClean,
-        role: user.role,
-      };
+  if (userByPix) {
+    if (userByPix.role === 'admin') {
+      return { error: 'admin_cpf' };
     }
+    return { error: 'pix_taken' };
   }
 
-  // Novo participante
-  if (!name?.trim() || !pixKey || pixKey.length < 5) {
+  if (!name?.trim()) {
     return { error: 'invalid_data' };
   }
 
@@ -158,9 +167,11 @@ function setSessionUser(req, user) {
 module.exports = {
   findOrCreateParticipant,
   findUserByPhone,
+  findUserByPixKey,
   phoneLookupVariants,
   setSessionUser,
   cleanPhone,
   pixKeysMatch,
+  pixKeysEqual,
   normalizePixKey,
 };

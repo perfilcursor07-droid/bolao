@@ -87,7 +87,7 @@
                     placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>"
                     autocomplete="tel">
                 </div>
-                <small class="form-hint participar-hint-found" id="phone-hint" hidden>✓ Cadastro encontrado — dados preenchidos</small>
+                <small class="form-hint participar-hint-found" id="phone-hint" hidden>✓ Cadastro encontrado — dados bloqueados para nova aposta</small>
               </div>
 
               <div class="form-group participar-field">
@@ -288,6 +288,18 @@
 
     const phoneInput = document.getElementById('phone');
     const phoneHint = document.getElementById('phone-hint');
+    const nameInput = document.getElementById('name');
+    let existingUserLocked = false;
+
+    function setExistingUserFields(locked) {
+      existingUserLocked = locked;
+      nameInput.readOnly = locked;
+      cpfInput.readOnly = locked;
+      cpfConfirmInput.readOnly = locked;
+      nameInput.classList.toggle('participar-input--readonly', locked);
+      cpfInput.classList.toggle('participar-input--readonly', locked);
+      cpfConfirmInput.classList.toggle('participar-input--readonly', locked);
+    }
 
     phoneInput.addEventListener('input', function (e) {
       let v = e.target.value.replace(/\D/g, '');
@@ -302,34 +314,39 @@
     phoneInput.addEventListener('input', function () {
       clearTimeout(lookupTimeout);
       const digits = this.value.replace(/\D/g, '');
-      if (digits.length >= 10) {
-        lookupTimeout = setTimeout(() => {
-          fetch('/api/lookup-phone', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: digits })
-          })
-            .then(r => r.json())
-            .then(data => {
-              if (data.found) {
-                const nameEl = document.getElementById('name');
-                const cpfEl = document.getElementById('cpf');
-                nameEl.value = data.name || '';
-                if (data.cpf) {
-                  cpfEl.value = data.cpf;
-                  cpfConfirmInput.value = '';
-                }
-                phoneHint.hidden = false;
-                updateSubmitState();
-              } else {
-                phoneHint.hidden = true;
-              }
-            })
-            .catch(() => {});
-        }, 500);
-      } else {
+
+      if (digits.length < 10) {
         phoneHint.hidden = true;
+        setExistingUserFields(false);
+        return;
       }
+
+      lookupTimeout = setTimeout(() => {
+        fetch('/api/lookup-phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: digits })
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.found) {
+              nameInput.value = data.name || '';
+              if (data.cpf) {
+                cpfInput.value = data.cpf;
+                cpfConfirmInput.value = data.cpf;
+              }
+              setExistingUserFields(true);
+              phoneHint.hidden = false;
+              updateSubmitState();
+            } else {
+              phoneHint.hidden = true;
+              setExistingUserFields(false);
+            }
+          })
+          .catch(() => {
+            setExistingUserFields(false);
+          });
+      }, 500);
     });
 
     acceptRules.addEventListener('change', updateSubmitState);
