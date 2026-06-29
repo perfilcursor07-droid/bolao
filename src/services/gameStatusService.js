@@ -289,4 +289,5 @@ module.exports = {
   shouldAutoFinalize,
   isLiveGame,
   LIVE_GAME_WINDOW_MINUTES,
+  liveGamesSqlWhere,
 };
