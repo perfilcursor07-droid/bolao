@@ -1,0 +1,47 @@
+<%#
+  game — objeto com match_scorers_json (opcional)
+  compact — layout menor para cards ao vivo
+%>
+<% if (typeof game !== 'undefined' && game && typeof hasMatchScorers === 'function' && hasMatchScorers(game)) {
+  const scorers = getMatchScorers(game);
+  const isCompact = typeof compact !== 'undefined' && !!compact;
+%>
+<ul class="match-scorers<%= isCompact ? ' match-scorers--compact' : '' %>" aria-label="Gols da partida">
+  <% if (scorers.home.length) { %>
+    <li class="match-scorers-side match-scorers-side--home">
+      <% if (!isCompact) { %><span class="match-scorers-team"><%= teamPt(game.home_team) %></span><% } %>
+      <ul class="match-scorers-list">
+        <% scorers.home.forEach(function(entry) {
+          const p = parseScorerEntry(entry);
+          const tag = formatScorerTag(p.tag);
+        %>
+          <li class="match-scorer-item">
+            <span class="match-scorer-icon" aria-hidden="true">⚽</span>
+            <span class="match-scorer-name"><%= p.name || entry %></span>
+            <% if (p.minute) { %><span class="match-scorer-minute"><%= p.minute %>'</span><% } %>
+            <% if (tag) { %><span class="match-scorer-tag"><%= tag %></span><% } %>
+          </li>
+        <% }); %>
+      </ul>
+    </li>
+  <% } %>
+  <% if (scorers.away.length) { %>
+    <li class="match-scorers-side match-scorers-side--away">
+      <% if (!isCompact) { %><span class="match-scorers-team"><%= teamPt(game.away_team) %></span><% } %>
+      <ul class="match-scorers-list">
+        <% scorers.away.forEach(function(entry) {
+          const p = parseScorerEntry(entry);
+          const tag = formatScorerTag(p.tag);
+        %>
+          <li class="match-scorer-item">
+            <span class="match-scorer-icon" aria-hidden="true">⚽</span>
+            <span class="match-scorer-name"><%= p.name || entry %></span>
+            <% if (p.minute) { %><span class="match-scorer-minute"><%= p.minute %>'</span><% } %>
+            <% if (tag) { %><span class="match-scorer-tag"><%= tag %></span><% } %>
+          </li>
+        <% }); %>
+      </ul>
+    </li>
+  <% } %>
+</ul>
+<% } %>

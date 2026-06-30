@@ -7,8 +7,8 @@ const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
 const { attachMarketingPoolToGame, gameBetCountSubquery } = require('../services/marketingBetService');
-const { isBettingOpen } = require('../services/bettingRules');
-const { closeExpiredOpenGames } = require('../services/gameStatusService');
+const { isBettingOpen, hasGameStarted } = require('../services/bettingRules');
+const { closeExpiredOpenGames, syncLiveGameScores } = require('../services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
 const { normalizePhoneInput, parsePhoneForForm } = require('../services/whatsapp/phone');
 const { getCartPlacaresForGame, removePlacarFromCartByScore, removeGameFromCart } = require('../services/cartService');
@@ -303,7 +303,18 @@ router.get('/games/:id', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0) return res.redirect('/');
 
-    const game = await loadParticiparGame(games[0]);
+    let gameRow = games[0];
+    if (gameRow.status === 'closed' && gameRow.api_match_id && hasGameStarted(gameRow)) {
+      try {
+        await syncLiveGameScores({ forceRefresh: true });
+        const [refreshed] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+        if (refreshed.length) gameRow = refreshed[0];
+      } catch (err) {
+        console.warn('[game-detail] sync ao vivo:', err.message);
+      }
+    }
+
+    const game = await loadParticiparGame(gameRow);
 
     if (game.status === 'open' && isBettingOpen(game) && !req.session.user) {
       return res.redirect(`/games/${game.id}/participar`);

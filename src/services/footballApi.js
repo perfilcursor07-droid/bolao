@@ -122,6 +122,8 @@ function parsedMatchToResult(parsed) {
     live,
     homeScore: parsed.homeScore,
     awayScore: parsed.awayScore,
+    homeScorers: parsed.homeScorers || [],
+    awayScorers: parsed.awayScorers || [],
     status: paused ? 'PAUSED' : parsed.statusDetail || parsed.status,
     matchMinute: parsed.minute ?? null,
     matchInjuryTime: parsed.injuryTime ?? null,

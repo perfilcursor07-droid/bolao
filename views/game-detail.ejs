@@ -37,6 +37,8 @@
         </div>
       </div>
 
+      <%- include('partials/match-scorers', { game }) %>
+
       <div class="game-stats">
         <div class="game-stat highlight">
           <span class="game-stat-val"><%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></span>

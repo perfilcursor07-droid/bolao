@@ -29,6 +29,7 @@
           <%= teamPt(game.away_team) %>
         </span>
       </div>
+      <%- include('match-scorers', { game }) %>
       <% if (winCount > 0 && typeof prizeBreakdown !== 'undefined' && prizeBreakdown) { %>
         <p class="game-result-prize-hint">
           Cada ganhador recebeu <strong><%= formatCents(prizeBreakdown.prizeEach) %></strong>
@@ -55,6 +56,7 @@
   <% } else if (isLive) { %>
     <div class="game-result-banner game-result-banner--live">
       <span class="game-result-label">Jogo ao vivo</span>
+      <%- include('match-scorers', { game }) %>
       <p class="game-result-live-hint">Palpites abaixo — o resultado será conferido ao final da partida.</p>
     </div>
   <% } else if (game.status === 'closed' || !isBettingOpen(game)) { %>

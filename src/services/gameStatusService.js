@@ -10,6 +10,7 @@ const {
 } = require('./bettingRules');
 const { expirePendingPaymentsForGame } = require('./paymentGateService');
 const { toMySQLDateTime } = require('../utils/dateTime');
+const { buildMatchScorersJson } = require('../utils/matchScorers');
 
 /** Tempo após o apito inicial para considerar o jogo encerrado.
  * Copa 2026: 90min + pausa hidratação (2x ~3min) + intervalo (15min) + acréscimos (~10min) = ~130min
@@ -151,10 +152,13 @@ async function syncGamesFromWorldCupMatches(options = {}) {
       if (!live && !finished) continue;
     }
 
+    const scorersJson = buildMatchScorersJson(apiMatch.homeScorers, apiMatch.awayScorers);
+
     if (homeScore !== null && awayScore !== null) {
       await pool.query(
-        `UPDATE games SET home_score = ?, away_score = ?, api_match_status = ? WHERE id = ?`,
-        [homeScore, awayScore, live || finished ? apiMatch.status : game.api_match_status, game.id]
+        `UPDATE games SET home_score = ?, away_score = ?, api_match_status = ?,
+          match_scorers_json = COALESCE(?, match_scorers_json) WHERE id = ?`,
+        [homeScore, awayScore, live || finished ? apiMatch.status : game.api_match_status, scorersJson, game.id]
       );
       game.home_score = homeScore;
       game.away_score = awayScore;
@@ -248,11 +252,14 @@ async function updateGameFromApiResult(game, result) {
   const minuteChanged =
     result.matchMinute != null &&
     (result.matchMinute !== game.match_minute || result.matchInjuryTime !== game.match_injury_time);
+  const scorersJson = buildMatchScorersJson(result.homeScorers, result.awayScorers);
+  const scorersChanged = scorersJson !== (game.match_scorers_json || null);
 
-  if (changed || statusChanged || minuteChanged) {
+  if (changed || statusChanged || minuteChanged || scorersChanged) {
     await pool.query(
       `UPDATE games SET home_score = ?, away_score = ?, api_match_status = ?,
-        match_minute = COALESCE(?, match_minute), match_injury_time = COALESCE(?, match_injury_time)
+        match_minute = COALESCE(?, match_minute), match_injury_time = COALESCE(?, match_injury_time),
+        match_scorers_json = COALESCE(?, match_scorers_json)
        WHERE id = ?`,
       [
         homeScore,
@@ -260,6 +267,7 @@ async function updateGameFromApiResult(game, result) {
         result.status || game.api_match_status || null,
         result.matchMinute ?? null,
         result.matchInjuryTime ?? null,
+        scorersJson,
         game.id,
       ]
     );
@@ -273,7 +281,7 @@ async function updateGameFromApiResult(game, result) {
     console.log(`🏆 Jogo ${game.id} finalizado via API (${homeScore}×${awayScore}). Status: ${result.status}`);
   }
 
-  return { updated: changed || statusChanged || minuteChanged || finalized, finalized };
+  return { updated: changed || statusChanged || minuteChanged || scorersChanged || finalized, finalized };
 }
 
 /**

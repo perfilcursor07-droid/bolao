@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { parseUsDateAsUtcToBrazil, parseUsDateInZoneToBrazil } = require('../utils/dateTime');
+const { parseWorldCup26Scorers } = require('../utils/matchScorers');
 
 const WC26_BASE = (process.env.WORLDCUP26_API_URL || 'https://worldcup26.ir').replace(/\/$/, '');
 const WC26_ENABLED = !['0', 'false', 'no'].includes(String(process.env.WORLDCUP26_API || '1').toLowerCase());
@@ -121,6 +122,8 @@ function parseWorldCup26Game(g) {
     group: String(g.type || '').toLowerCase() === 'group' ? g.group : null,
     homeScore,
     awayScore,
+    homeScorers: parseWorldCup26Scorers(g.home_scorers),
+    awayScorers: parseWorldCup26Scorers(g.away_scorers),
     minute,
     injuryTime,
     source: 'worldcup26',
@@ -206,6 +209,8 @@ function worldCup26ToMatchResult(parsed) {
     live,
     homeScore: parsed.homeScore ?? 0,
     awayScore: parsed.awayScore ?? 0,
+    homeScorers: parsed.homeScorers || [],
+    awayScorers: parsed.awayScorers || [],
     status: paused ? 'PAUSED' : parsed.statusDetail || parsed.status,
     matchMinute: parsed.minute ?? null,
     matchInjuryTime: parsed.injuryTime ?? null,
