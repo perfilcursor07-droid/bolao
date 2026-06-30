@@ -80,23 +80,29 @@
           <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
             <div class="participar-fields">
               <div class="form-group participar-field participar-field-full">
-                <label for="phone">WhatsApp</label>
+                <label for="phone">WhatsApp <small>(só números)</small></label>
                 <div class="participar-input-wrap">
                   <span class="participar-input-icon" aria-hidden="true">📱</span>
                   <input type="tel" id="phone" name="phone" class="form-control participar-input" required
-                    placeholder="(00) 00000-0000" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>"
-                    autocomplete="tel">
+                    placeholder="63981013083" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>"
+                    inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" autocomplete="tel">
                 </div>
-                <small class="form-hint participar-hint-found" id="phone-hint" hidden>✓ Cadastro encontrado — dados bloqueados para nova aposta</small>
+                <small class="form-hint participar-hint-phone">
+                  Digite <strong>DDD</strong> + <strong>9</strong> + número do celular (11 dígitos).
+                  Ex.: DDD <strong>63</strong> + <strong>9</strong> + <strong>81013083</strong> = <strong>63981013083</strong>
+                </small>
+                <small class="form-hint participar-hint-found" id="phone-hint" hidden>
+                  ✓ Cadastro encontrado — confira ou edite nome e chave PIX abaixo
+                </small>
               </div>
 
-              <div class="form-group participar-field">
-                <label for="name">Nome</label>
+              <div class="form-group participar-field participar-field-full">
+                <label for="name">Nome completo <small>(como no PIX)</small></label>
                 <div class="participar-input-wrap">
                   <span class="participar-input-icon" aria-hidden="true">👤</span>
-                  <input type="text" id="name" name="name" class="form-control participar-input" required
-                    placeholder="Seu nome" value="<%= typeof form !== 'undefined' && form ? form.name : '' %>"
-                    autocomplete="name">
+                  <input type="text" id="name" name="name" class="form-control participar-input participar-input--uppercase" required
+                    placeholder="SEU NOME COMPLETO" value="<%= typeof form !== 'undefined' && form ? form.name : '' %>"
+                    autocomplete="name" autocapitalize="characters">
                 </div>
               </div>
 
@@ -279,6 +285,7 @@
     cpfConfirmInput.addEventListener('input', updateSubmitState);
 
     participarForm.addEventListener('submit', function (e) {
+      normalizeNameInput();
       if (!pixKeysMatch(cpfInput.value, cpfConfirmInput.value)) {
         e.preventDefault();
         updatePixMatchState();
@@ -289,25 +296,17 @@
     const phoneInput = document.getElementById('phone');
     const phoneHint = document.getElementById('phone-hint');
     const nameInput = document.getElementById('name');
-    let existingUserLocked = false;
 
-    function setExistingUserFields(locked) {
-      existingUserLocked = locked;
-      nameInput.readOnly = locked;
-      cpfInput.readOnly = locked;
-      cpfConfirmInput.readOnly = locked;
-      nameInput.classList.toggle('participar-input--readonly', locked);
-      cpfInput.classList.toggle('participar-input--readonly', locked);
-      cpfConfirmInput.classList.toggle('participar-input--readonly', locked);
+    function normalizeNameInput() {
+      nameInput.value = nameInput.value.toUpperCase();
     }
 
+    nameInput.addEventListener('input', normalizeNameInput);
+    nameInput.addEventListener('blur', normalizeNameInput);
+    normalizeNameInput();
+
     phoneInput.addEventListener('input', function (e) {
-      let v = e.target.value.replace(/\D/g, '');
-      if (v.length > 11) v = v.slice(0, 11);
-      if (v.length > 10) v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-      else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
-      else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
-      e.target.value = v;
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
     });
 
     let lookupTimeout;
@@ -317,7 +316,6 @@
 
       if (digits.length < 10) {
         phoneHint.hidden = true;
-        setExistingUserFields(false);
         return;
       }
 
@@ -330,21 +328,19 @@
           .then(r => r.json())
           .then(data => {
             if (data.found) {
-              nameInput.value = data.name || '';
+              nameInput.value = (data.name || '').toUpperCase();
               if (data.cpf) {
                 cpfInput.value = data.cpf;
                 cpfConfirmInput.value = data.cpf;
               }
-              setExistingUserFields(true);
               phoneHint.hidden = false;
               updateSubmitState();
             } else {
               phoneHint.hidden = true;
-              setExistingUserFields(false);
             }
           })
           .catch(() => {
-            setExistingUserFields(false);
+            phoneHint.hidden = true;
           });
       }, 500);
     });

@@ -21,7 +21,11 @@ router.post('/api/lookup-phone', async (req, res) => {
   try {
     const user = await findUserByPhone(phone);
     if (user) {
-      return res.json({ found: true, name: user.name, cpf: user.cpf || '' });
+      return res.json({
+        found: true,
+        name: (user.name || '').toUpperCase(),
+        cpf: user.cpf || '',
+      });
     }
     res.json({ found: false });
   } catch (err) {
@@ -189,7 +193,17 @@ router.post('/games/:id/participar', async (req, res) => {
       return res.render('participar', {
         title: 'Participar',
         game,
-        error: 'Preencha nome, telefone e chave PIX válidos',
+        error: 'Preencha nome e chave PIX válidos',
+        form: req.body,
+        user: null,
+      });
+    }
+
+    if (result.error === 'invalid_phone') {
+      return res.render('participar', {
+        title: 'Participar',
+        game,
+        error: 'WhatsApp inválido. Use só números: DDD + 9 + celular (11 dígitos). Ex.: 63981013083',
         form: req.body,
         user: null,
       });
@@ -200,16 +214,6 @@ router.post('/games/:id/participar', async (req, res) => {
         title: 'Participar',
         game,
         error: 'Chave PIX vinculada a administrador. Faça login.',
-        form: req.body,
-        user: null,
-      });
-    }
-
-    if (result.error === 'pix_mismatch') {
-      return res.render('participar', {
-        title: 'Participar',
-        game,
-        error: 'Este WhatsApp já está cadastrado com outra chave PIX. Use a chave original ou o mesmo WhatsApp da primeira aposta.',
         form: req.body,
         user: null,
       });

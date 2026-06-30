@@ -93,15 +93,21 @@ function toParticipantUser(user) {
   };
 }
 
+function normalizeParticipantName(name) {
+  return (name || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
 /**
- * Identifica participante para apostar — NUNCA altera cadastro existente nesta tela.
+ * Identifica ou atualiza participante para apostar.
+ * Permite corrigir nome e chave PIX quando o WhatsApp já está cadastrado.
  */
 async function findOrCreateParticipant({ name, phone, cpf }) {
   const pixKey = (cpf || '').trim();
   const phoneClean = cleanPhone(phone);
+  const displayName = normalizeParticipantName(name);
 
   if (!phoneClean || phoneClean.length < 10) {
-    return { error: 'invalid_data' };
+    return { error: 'invalid_phone' };
   }
 
   if (!pixKey || pixKey.length < 5) {
@@ -120,8 +126,30 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
       return { error: 'pix_taken' };
     }
 
-    if (userByPhone.cpf && !pixKeysEqual(userByPhone.cpf, pixKey)) {
-      return { error: 'pix_mismatch' };
+    if (!displayName) {
+      return { error: 'invalid_data' };
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (displayName !== userByPhone.name) {
+      updates.push('name = ?');
+      params.push(displayName);
+    }
+
+    if (!pixKeysEqual(userByPhone.cpf || '', pixKey)) {
+      updates.push('cpf = ?');
+      params.push(pixKey);
+      updates.push('email = ?');
+      params.push(guestEmail(pixKey));
+    }
+
+    if (updates.length > 0) {
+      params.push(userByPhone.id);
+      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+      const [refreshed] = await pool.query('SELECT * FROM users WHERE id = ?', [userByPhone.id]);
+      return toParticipantUser(refreshed[0]);
     }
 
     return toParticipantUser(userByPhone);
@@ -134,19 +162,19 @@ async function findOrCreateParticipant({ name, phone, cpf }) {
     return { error: 'pix_taken' };
   }
 
-  if (!name?.trim()) {
+  if (!displayName) {
     return { error: 'invalid_data' };
   }
 
   const email = guestEmail(pixKey);
   const [result] = await pool.query(
     `INSERT INTO users (name, email, password, cpf, phone, role) VALUES (?, ?, NULL, ?, ?, 'guest')`,
-    [name.trim(), email, pixKey, phoneClean]
+    [displayName, email, pixKey, phoneClean]
   );
 
   return {
     id: result.insertId,
-    name: name.trim(),
+    name: displayName,
     email,
     cpf: pixKey,
     phone: phoneClean,
@@ -174,4 +202,5 @@ module.exports = {
   pixKeysMatch,
   pixKeysEqual,
   normalizePixKey,
+  normalizeParticipantName,
 };

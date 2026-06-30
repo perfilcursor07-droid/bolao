@@ -4014,6 +4014,25 @@ body.modal-open {
   margin-top: 0.3rem;
   font-size: 0.72rem;
   color: var(--accent);
+  line-height: 1.4;
+}
+
+.participar-hint-phone {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.participar-hint-phone strong {
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.participar-input.form-control.participar-input--uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .participar-hint-found[hidden] {
