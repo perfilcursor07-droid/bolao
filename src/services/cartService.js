@@ -115,6 +115,32 @@ function clearCart(req) {
   req.session.cart = [];
 }
 
+function parsePlacaresFromBody(body) {
+  let placares = [];
+  try {
+    if (body.placares_json) {
+      const parsed = JSON.parse(body.placares_json);
+      if (Array.isArray(parsed)) placares = parsed;
+    } else if (Array.isArray(body.placares)) {
+      placares = body.placares;
+    }
+  } catch (_) {
+    placares = [];
+  }
+
+  if (placares.length === 0) {
+    const homeScore = parseInt(body.home_score, 10);
+    const awayScore = parseInt(body.away_score, 10);
+    if (!isNaN(homeScore) && !isNaN(awayScore) && homeScore >= 0 && awayScore >= 0) {
+      placares = [{ home: homeScore, away: awayScore }];
+    }
+  }
+
+  return placares
+    .map((p) => ({ home: parseInt(p.home, 10), away: parseInt(p.away, 10) }))
+    .filter((p) => !isNaN(p.home) && !isNaN(p.away) && p.home >= 0 && p.away >= 0 && p.home <= 99 && p.away <= 99);
+}
+
 module.exports = {
   getCart,
   getCartCount,
@@ -125,5 +151,5 @@ module.exports = {
   removePlacarFromCartByScore,
   getCartPlacaresForGame,
   clearCart,
-  parsePlacaresFromBody: parsePlacares,
+  parsePlacaresFromBody,
 };

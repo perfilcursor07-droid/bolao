@@ -13,6 +13,7 @@ const {
   removeGameFromCart,
   removePlacarFromCart,
   removePlacarFromCartByScore,
+  parsePlacaresFromBody,
 } = require('../services/cartService');
 
 const router = express.Router();
@@ -27,32 +28,6 @@ async function cartSummary(req) {
   const cartCount = getCartCount(req);
   const pendingPaymentsCount = await getPendingPaymentsCount(req.session.user.id);
   return { cartCount, pendingPaymentsCount, badgeTotal: cartCount + pendingPaymentsCount };
-}
-
-function parsePlacares(body) {
-  let placares = [];
-  try {
-    if (body.placares_json) {
-      const parsed = JSON.parse(body.placares_json);
-      if (Array.isArray(parsed)) placares = parsed;
-    } else if (Array.isArray(body.placares)) {
-      placares = body.placares;
-    }
-  } catch (_) {
-    placares = [];
-  }
-
-  if (placares.length === 0) {
-    const homeScore = parseInt(body.home_score, 10);
-    const awayScore = parseInt(body.away_score, 10);
-    if (!isNaN(homeScore) && !isNaN(awayScore) && homeScore >= 0 && awayScore >= 0) {
-      placares = [{ home: homeScore, away: awayScore }];
-    }
-  }
-
-  return placares
-    .map((p) => ({ home: parseInt(p.home, 10), away: parseInt(p.away, 10) }))
-    .filter((p) => !isNaN(p.home) && !isNaN(p.away) && p.home >= 0 && p.away >= 0 && p.home <= 99 && p.away <= 99);
 }
 
 router.get('/carrinho', requireAuth, async (req, res) => {
@@ -81,7 +56,7 @@ router.post('/api/cart/remove-placar', requireAuth, async (req, res) => {
 });
 
 router.post('/games/:id/cart/add', requireAuth, async (req, res) => {
-  const placares = parsePlacares(req.body);
+  const placares = parsePlacaresFromBody(req.body);
 
   try {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
