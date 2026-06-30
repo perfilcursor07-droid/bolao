@@ -9,6 +9,7 @@ const {
   isBettingOpen,
 } = require('./bettingRules');
 const { expirePendingPaymentsForGame } = require('./paymentGateService');
+const { toMySQLDateTime } = require('../utils/dateTime');
 
 /** Tempo após o apito inicial para considerar o jogo encerrado.
  * Copa 2026: 90min + pausa hidratação (2x ~3min) + intervalo (15min) + acréscimos (~10min) = ~130min
@@ -121,6 +122,16 @@ async function syncGamesFromWorldCupMatches(options = {}) {
   for (const game of games) {
     const apiMatch = byApiId.get(String(game.api_match_id));
     if (!apiMatch) continue;
+
+    if (apiMatch.date) {
+      const correctedDate = toMySQLDateTime(apiMatch.date);
+      const currentDate = toMySQLDateTime(game.game_date);
+      if (correctedDate && correctedDate !== currentDate) {
+        await pool.query(`UPDATE games SET game_date = ? WHERE id = ?`, [correctedDate, game.id]);
+        game.game_date = correctedDate;
+        console.log(`[syncWC] jogo ${game.id} horário: ${currentDate} → ${correctedDate}`);
+      }
+    }
 
     const homeScore = apiMatch.homeScore;
     const awayScore = apiMatch.awayScore;

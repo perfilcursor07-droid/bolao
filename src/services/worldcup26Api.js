@@ -41,31 +41,15 @@ function parseScore(val) {
 }
 
 /**
- * A API worldcup26.ir mistura formatos em local_date:
- * - Maioria dos jogos: horário em UTC
- * - Alguns estádios US Central (ex.: meio-dia em Dallas): horário local do estádio
+ * local_date da worldcup26.ir é relógio de parede no fuso do estádio (US/MX/CA).
+ * Converte para DATETIME em horário de Brasília.
  */
 function parseWorldCup26LocalDate(localDate, stadiumId) {
-  const m = String(localDate || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
-  if (!m) return null;
-
-  const month = +m[1];
-  const day = +m[2];
-  const hour = +m[4];
   const stadium = STADIUM_META[String(stadiumId)];
-
-  const asUtc = parseUsDateAsUtcToBrazil(localDate);
-  if (!stadium) return asUtc;
-
-  const isUsCentral = stadium.region === 'Central' && stadium.country_en === 'United States';
-  if (!isUsCentral) return asUtc;
-
-  // Central US: meio-dia local em junho (ex. Costa do Marfim × Noruega, 14h BRT)
-  if (hour < 13 && !(month === 7 && hour === 12)) {
-    return parseUsDateInZoneToBrazil(localDate, stadium.timeZone) || asUtc;
+  if (stadium?.timeZone) {
+    return parseUsDateInZoneToBrazil(localDate, stadium.timeZone);
   }
-
-  return asUtc;
+  return parseUsDateAsUtcToBrazil(localDate);
 }
 
 function parseTimeElapsed(finished, timeElapsed) {
