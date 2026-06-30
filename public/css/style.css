@@ -3827,6 +3827,26 @@ body.modal-open {
 
 .participar-hero-team-wrap {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.participar-hero-crest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ecfdf5;
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.35), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .participar-hero-team {
@@ -3917,6 +3937,30 @@ body.modal-open {
   font-size: 0.82rem;
 }
 
+.participar-hero-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 999px;
+}
+
+.participar-hero-social-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+  flex-shrink: 0;
+}
+
 /* legado — removido do template */
 .participar-hero-kicker {
   display: none;
@@ -3941,10 +3985,155 @@ body.modal-open {
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--bg-card);
+  transition: box-shadow 0.25s ease;
+}
+
+.participar-card.is-phone-step {
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.06);
+}
+
+.participar-form-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.85rem;
+  padding: 0.45rem 0.5rem;
+  background: rgba(10, 14, 23, 0.35);
+  border: 1px solid rgba(45, 58, 82, 0.5);
+  border-radius: 999px;
+}
+
+.participar-form-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.participar-form-step.is-active {
+  color: var(--accent);
+}
+
+.participar-form-step.is-done {
+  color: #86efac;
+}
+
+.participar-form-step.is-done .participar-form-step-num {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+
+.participar-form-step-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: rgba(100, 116, 139, 0.18);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.participar-form-step.is-active .participar-form-step-num {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--accent);
+}
+
+.participar-form-step-line {
+  width: 14px;
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.participar-form-step-text {
+  display: none;
+}
+
+.participar-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.participar-trust[hidden] {
+  display: none !important;
+}
+
+.participar-trust-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+}
+
+.participar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.participar-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.25), transparent);
+}
+
+.participar-view-only {
+  margin: 0.75rem 0 0;
+  text-align: center;
+  font-size: 0.74rem;
+}
+
+.participar-view-only a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.participar-view-only a:hover {
+  color: var(--accent);
 }
 
 .participar-card-head {
   margin-bottom: 1rem;
+}
+
+.participar-card.is-phone-step .participar-card-head {
+  text-align: center;
+  margin-bottom: 0.85rem;
+}
+
+.participar-card.is-phone-step .participar-input-wrap--phone .participar-input.form-control {
+  font-size: 1rem;
+  padding-top: 0.72rem;
+  padding-bottom: 0.72rem;
+}
+
+.participar-card.is-phone-step .participar-field label {
+  text-align: center;
 }
 
 .participar-card-head h2 {
@@ -4126,6 +4315,17 @@ body.modal-open {
 }
 
 .participar-country-picker--single .participar-country-chevron {
+  display: none;
+}
+
+.participar-country-picker--single .participar-country-trigger {
+  min-width: 3.4rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  justify-content: center;
+}
+
+.participar-country-picker--single .participar-country-label {
   display: none;
 }
 
@@ -4576,6 +4776,18 @@ body.modal-open {
 
   .participar-step-label {
     display: inline;
+  }
+
+  .participar-form-step-text {
+    display: inline;
+  }
+
+  .participar-hero-team-wrap {
+    align-items: stretch;
+  }
+
+  .participar-hero-crest {
+    align-self: center;
   }
 }
 

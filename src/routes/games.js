@@ -6,13 +6,23 @@ const { findOrCreateParticipant, setSessionUser, pixKeysMatch, findUserByPhone, 
 const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
-const { attachMarketingPoolToGame } = require('../services/marketingBetService');
+const { attachMarketingPoolToGame, gameBetCountSubquery } = require('../services/marketingBetService');
 const { isBettingOpen } = require('../services/bettingRules');
 const { closeExpiredOpenGames } = require('../services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
 const { normalizePhoneInput, parsePhoneForForm } = require('../services/whatsapp/phone');
 
 const router = express.Router();
+
+async function loadParticiparGame(gameRow) {
+  const game = await attachMarketingPoolToGame(gameRow);
+  const [[betStats]] = await pool.query(
+    `SELECT ${gameBetCountSubquery('g')} AS total_bets FROM games g WHERE g.id = ?`,
+    [game.id]
+  );
+  game.total_bets = betStats?.total_bets || 0;
+  return game;
+}
 
 // API: buscar dados do participante pelo telefone
 router.post('/api/lookup-phone', async (req, res) => {
@@ -163,7 +173,7 @@ router.get('/games/:id/participar', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
-    const game = await attachMarketingPoolToGame(games[0]);
+    const game = await loadParticiparGame(games[0]);
 
     if (req.session.user) {
       return res.redirect(`/games/${game.id}/placar`);
@@ -185,7 +195,7 @@ router.post('/games/:id/participar', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
 
-    const game = await attachMarketingPoolToGame(games[0]);
+    const game = await loadParticiparGame(games[0]);
 
     const existingByPhone = phoneNormalized ? await findUserByPhone(phoneNormalized) : null;
 
@@ -276,9 +286,10 @@ router.post('/games/:id/participar', async (req, res) => {
   } catch (err) {
     console.error('Erro participar:', err.message);
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
+    const game = games[0] ? await loadParticiparGame(games[0]) : null;
     res.render('participar', {
       title: 'Participar',
-      game: games[0],
+      game,
       error: 'Erro ao processar. Tente novamente.',
       form: req.body,
       user: null,
@@ -291,7 +302,7 @@ router.get('/games/:id', async (req, res) => {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
     if (games.length === 0) return res.redirect('/');
 
-    const game = await attachMarketingPoolToGame(games[0]);
+    const game = await loadParticiparGame(games[0]);
 
     if (game.status === 'open' && isBettingOpen(game) && !req.session.user) {
       return res.redirect(`/games/${game.id}/participar`);

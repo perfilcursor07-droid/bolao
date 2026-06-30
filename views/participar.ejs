@@ -42,11 +42,21 @@
           </div>
 
           <div class="participar-hero-fixture">
+            <%
+              function teamInitials(name) {
+                const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+                if (!parts.length) return '?';
+                if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+              }
+            %>
             <div class="participar-hero-team-wrap">
+              <span class="participar-hero-crest" aria-hidden="true"><%= teamInitials(teamPt(game.home_team)) %></span>
               <span class="participar-hero-team"><%= teamPt(game.home_team) %></span>
             </div>
             <span class="participar-hero-vs" aria-hidden="true">×</span>
             <div class="participar-hero-team-wrap">
+              <span class="participar-hero-crest" aria-hidden="true"><%= teamInitials(teamPt(game.away_team)) %></span>
               <span class="participar-hero-team"><%= teamPt(game.away_team) %></span>
             </div>
           </div>
@@ -65,28 +75,54 @@
               <span class="participar-hero-stat-value">🏆 <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %></span>
             </div>
           </div>
+
+          <% if (Number(game.total_bets) > 0) { %>
+            <p class="participar-hero-social">
+              <span class="participar-hero-social-dot" aria-hidden="true"></span>
+              <%= game.total_bets %> aposta<%= Number(game.total_bets) !== 1 ? 's' : '' %> neste bolão
+            </p>
+          <% } %>
         </section>
 
-        <div class="card participar-card">
+        <%
+          let formPhoneCountry = '55';
+          let formPhoneLocal = '';
+          if (typeof form !== 'undefined' && form) {
+            formPhoneCountry = form.phone_country || '55';
+            formPhoneLocal = form.phone || '';
+          }
+          const formPhoneDigits = String(formPhoneLocal).replace(/\D/g, '');
+          const showStepDetails = formPhoneDigits.length === 11 && formPhoneDigits[2] === '9';
+        %>
+
+        <div class="card participar-card<%= showStepDetails ? '' : ' is-phone-step' %>" id="participar-card">
+          <div class="participar-form-progress" aria-label="Progresso do cadastro">
+            <span class="participar-form-step is-active" id="form-step-phone">
+              <span class="participar-form-step-num">1</span>
+              <span class="participar-form-step-text">WhatsApp</span>
+            </span>
+            <span class="participar-form-step-line" aria-hidden="true"></span>
+            <span class="participar-form-step<%= showStepDetails ? ' is-active' : '' %>" id="form-step-data">
+              <span class="participar-form-step-num">2</span>
+              <span class="participar-form-step-text">Cadastro</span>
+            </span>
+            <span class="participar-form-step-line" aria-hidden="true"></span>
+            <span class="participar-form-step" id="form-step-placar">
+              <span class="participar-form-step-num">3</span>
+              <span class="participar-form-step-text">Placar</span>
+            </span>
+          </div>
+
           <div class="participar-card-head">
-            <h2>Seus dados</h2>
-            <p>Cadastro rápido para apostar. Informe o <strong>WhatsApp</strong> onde quer receber aviso de prêmio — o mesmo número usado para mensagens automáticas.</p>
+            <h2 id="participar-card-title"><%= showStepDetails ? 'Seus dados' : 'Qual é seu WhatsApp?' %></h2>
+            <p id="participar-card-desc"><%= showStepDetails
+              ? 'Confirme nome e chave PIX para receber o prêmio. O mesmo WhatsApp recebe avisos automáticos.'
+              : 'Informe o número com DDD para continuar. É rápido — menos de 1 minuto.' %></p>
           </div>
 
           <% if (error) { %>
             <div class="alert alert-error" role="alert"><%= error %></div>
           <% } %>
-
-          <%
-            let formPhoneCountry = '55';
-            let formPhoneLocal = '';
-            if (typeof form !== 'undefined' && form) {
-              formPhoneCountry = form.phone_country || '55';
-              formPhoneLocal = form.phone || '';
-            }
-            const formPhoneDigits = String(formPhoneLocal).replace(/\D/g, '');
-            const showStepDetails = formPhoneDigits.length >= 10;
-          %>
 
           <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
             <div class="participar-fields">
@@ -124,7 +160,16 @@
                 </small>
               </div>
 
+              <div class="participar-trust" id="participar-trust"<%= showStepDetails ? ' hidden' : '' %>>
+                <span class="participar-trust-item">🔒 PIX seguro</span>
+                <span class="participar-trust-item">📲 Aviso de prêmio</span>
+                <span class="participar-trust-item">⚡ Menos de 1 min</span>
+              </div>
+
               <div id="participar-step-details" class="participar-step-details<%= showStepDetails ? ' is-visible' : '' %>" aria-hidden="<%= showStepDetails ? 'false' : 'true' %>">
+              <div class="participar-section-label">
+                <span>Complete seu cadastro</span>
+              </div>
               <div class="participar-pix-panel" id="participar-pix-panel" aria-live="polite">
                 <span class="participar-pix-label">PIX cadastrada</span>
                 <span class="participar-pix-key" id="participar-pix-key"></span>
@@ -179,11 +224,15 @@
             </label>
 
             <button type="submit" class="btn btn-gold btn-block participar-submit" id="btn-submit" disabled>
-              Continuar
+              <span id="btn-submit-label">Digite seu WhatsApp</span>
               <span class="participar-submit-arrow" aria-hidden="true">→</span>
             </button>
             </div>
           </form>
+
+          <p class="participar-view-only">
+            <a href="/games/<%= game.id %>">Só quero ver o bolão →</a>
+          </p>
 
 
         </div>
@@ -306,9 +355,25 @@
     const cpfFieldGroup = document.getElementById('cpf-field-group');
     const participarStepDetails = document.getElementById('participar-step-details');
     const participarStepFooter = document.getElementById('participar-step-footer');
+    const participarCard = document.getElementById('participar-card');
+    const participarCardTitle = document.getElementById('participar-card-title');
+    const participarCardDesc = document.getElementById('participar-card-desc');
+    const participarTrust = document.getElementById('participar-trust');
+    const formStepPhone = document.getElementById('form-step-phone');
+    const formStepData = document.getElementById('form-step-data');
+    const btnSubmitLabel = document.getElementById('btn-submit-label');
     const acceptRules = document.getElementById('accept-rules');
     const btnSubmit = document.getElementById('btn-submit');
     const participarForm = document.getElementById('form-participar');
+    const phoneHint = document.getElementById('phone-hint');
+    const phoneWaHint = document.getElementById('phone-wa-hint');
+    const phoneWaError = document.getElementById('phone-wa-error');
+    const phoneFormatHint = document.getElementById('phone-format-hint');
+    const nameInput = document.getElementById('name');
+
+    let phoneWidget = null;
+    let lookupTimeout;
+    let existingUserLocked = false;
 
     function updatePixMatchState() {
       const confirm = cpfConfirmInput.value.trim();
@@ -333,16 +398,21 @@
     function updateSubmitState() {
       if (!isPhoneReady()) {
         btnSubmit.disabled = true;
+        btnSubmitLabel.textContent = 'Digite seu WhatsApp';
         return;
       }
       const pixOk = updatePixMatchState();
       const confirmFilled = cpfConfirmInput.value.trim().length >= (existingUserLocked ? 5 : 1);
       const cpfFieldOk = existingUserLocked || cpfInput.value.trim().length > 0;
-      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled || !cpfFieldOk;
+      const nameOk = nameInput.value.trim().length >= 3;
+      const allReady = acceptRules.checked && pixOk && confirmFilled && cpfFieldOk && nameOk;
+      btnSubmit.disabled = !allReady;
+      btnSubmitLabel.textContent = allReady ? 'Continuar para o placar' : 'Continuar';
     }
 
     cpfInput.addEventListener('input', updateSubmitState);
     cpfConfirmInput.addEventListener('input', updateSubmitState);
+    nameInput.addEventListener('input', updateSubmitState);
 
     participarForm.addEventListener('submit', function (e) {
       normalizeNameInput();
@@ -365,16 +435,6 @@
         cpfConfirmInput.focus();
       }
     });
-
-    const phoneHint = document.getElementById('phone-hint');
-    const phoneWaHint = document.getElementById('phone-wa-hint');
-    const phoneWaError = document.getElementById('phone-wa-error');
-    const phoneFormatHint = document.getElementById('phone-format-hint');
-    const nameInput = document.getElementById('name');
-
-    let phoneWidget = null;
-    let lookupTimeout;
-    let existingUserLocked = false;
 
     function setPixPanelVisible(show, pixKey) {
       const key = (pixKey || '').trim();
@@ -447,6 +507,18 @@
       participarStepFooter.classList.toggle('is-visible', show);
       participarStepDetails.setAttribute('aria-hidden', show ? 'false' : 'true');
       participarStepFooter.setAttribute('aria-hidden', show ? 'false' : 'true');
+      participarCard.classList.toggle('is-phone-step', !show);
+      if (participarTrust) participarTrust.hidden = show;
+      formStepData.classList.toggle('is-active', show);
+      formStepPhone.classList.toggle('is-done', show);
+      if (participarCardTitle) {
+        participarCardTitle.textContent = show ? 'Seus dados' : 'Qual é seu WhatsApp?';
+      }
+      if (participarCardDesc) {
+        participarCardDesc.textContent = show
+          ? 'Confirme nome e chave PIX para receber o prêmio. O mesmo WhatsApp recebe avisos automáticos.'
+          : 'Informe o número com DDD para continuar. É rápido — menos de 1 minuto.';
+      }
     }
 
     function updatePhoneStep() {
@@ -458,7 +530,10 @@
         setExistingUserLocked(false);
         setPixPanelVisible(false);
       } else if (wasHidden && !existingUserLocked) {
-        setTimeout(() => nameInput.focus(), 120);
+        setTimeout(() => {
+          participarStepDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          nameInput.focus();
+        }, 120);
       }
       updateSubmitState();
     }
@@ -514,7 +589,11 @@
     }
 
     setPixPanelVisible(false);
-    setStepDetailsVisible(false);
+    if (!<%= showStepDetails ? 'true' : 'false' %>) {
+      setStepDetailsVisible(false);
+    } else {
+      setStepDetailsVisible(true);
+    }
 
     phoneWidget = PhoneInput.init({
       countryPicker: '#phone-country-picker',
@@ -533,6 +612,13 @@
 
     acceptRules.addEventListener('change', updateSubmitState);
     updateSubmitState();
+
+    if (participarCard.classList.contains('is-phone-step')) {
+      const phoneEl = document.getElementById('phone');
+      if (phoneEl && !phoneEl.value.trim()) {
+        setTimeout(() => phoneEl.focus(), 200);
+      }
+    }
   </script>
 </body>
 </html>
