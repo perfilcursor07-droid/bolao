@@ -154,7 +154,9 @@
         triggerFlag.appendChild(createFlagImg(country.iso, country.label));
       }
       if (triggerLabel) {
-        triggerLabel.textContent = `+${country.dial} ${country.label}`;
+        triggerLabel.textContent = singleCountry
+          ? `+${country.dial}`
+          : `+${country.dial} ${country.label}`;
       }
       menu.querySelectorAll('.participar-country-option').forEach((btn) => {
         const selected = btn.dataset.dial === dial;

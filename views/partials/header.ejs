@@ -1,9 +1,8 @@
 <header class="site-header">
   <div class="container home-container site-header-inner">
     <nav class="navbar" aria-label="Principal">
-      <a href="/" class="navbar-brand">
-        <%- include('logo') %>
-        <span class="brand-text">Bolão <span class="brand-accent">Online</span></span>
+      <a href="/" class="navbar-brand" aria-label="Bolão Pix — início">
+        <%- include('brand-wordmark') %>
       </a>
 
       <div class="navbar-center" id="navbar-nav">
@@ -92,8 +91,9 @@
       </button>
     </nav>
   </div>
+</header>
 
-  <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
+<div class="nav-mobile" id="nav-mobile" aria-hidden="true">
     <% if (typeof user !== 'undefined' && user) { %>
       <div class="nav-mobile-user">
         <a href="/painel" class="nav-mobile-user-link">
@@ -147,7 +147,6 @@
       </div>
     <% } %>
   </div>
-</header>
 
 <script>
   (function () {

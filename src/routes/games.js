@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
     const data = await loadHomeData(req.session.user?.id, { withApiSync: true });
 
     res.render('index', {
-      title: 'Bolão Online',
+      title: 'Bolão Pix',
       ...data,
       user: req.session.user || null,
     });

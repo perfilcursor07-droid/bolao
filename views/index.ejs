@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= title %> | Bolão Online</title>
+  <title><%= title %> | Bolão Pix</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
@@ -11,16 +11,48 @@
 <body class="page-home">
   <%- include('partials/header') %>
 
-  <!-- Hero -->
+  <% const hs = typeof heroStats !== 'undefined' ? heroStats : { paidPrizesCents: 0, paidWinners: 0, activePoolCents: 0, openGamesCount: 0, totalBets: 0 }; %>
+  <% const showPaid = hs.paidPrizesCents > 0; %>
+  <% const prizeHighlight = showPaid ? hs.paidPrizesCents : hs.activePoolCents; %>
+
   <section class="hero-twin" aria-label="Apresentação do bolão">
     <div class="hero-twin-inner">
-      <p class="hero-twin-kicker">Bolão online · pague com PIX</p>
-
+      <p class="hero-twin-kicker">
+        <span class="hero-twin-kicker-pix">PIX</span>
+        <span class="hero-twin-kicker-dot" aria-hidden="true">·</span>
+        <span>bolão online</span>
+      </p>
       <h1 class="hero-twin-title">
         Acerte o placar. <span class="hero-twin-win">Ganhe.</span>
       </h1>
 
-      <p class="hero-twin-sub">Pague no PIX, acerte o placar e leve o prêmio.</p>
+      <div class="hero-twin-stats" aria-label="Destaques do bolão">
+        <div class="hero-twin-stat hero-twin-stat--prize">
+          <span class="hero-twin-stat-icon" aria-hidden="true">🏆</span>
+          <div class="hero-twin-stat-body">
+            <strong class="hero-twin-stat-value"><%= formatCents(prizeHighlight) %></strong>
+            <span class="hero-twin-stat-label"><%= showPaid ? 'pagos' : 'no ar' %></span>
+          </div>
+        </div>
+        <% if (hs.paidWinners > 0) { %>
+          <div class="hero-twin-stat">
+            <span class="hero-twin-stat-icon" aria-hidden="true">✓</span>
+            <div class="hero-twin-stat-body">
+              <strong class="hero-twin-stat-value"><%= hs.paidWinners %></strong>
+              <span class="hero-twin-stat-label">ganhadores</span>
+            </div>
+          </div>
+        <% } %>
+        <% if (hs.openGamesCount > 0) { %>
+          <div class="hero-twin-stat">
+            <span class="hero-twin-stat-icon" aria-hidden="true">⚽</span>
+            <div class="hero-twin-stat-body">
+              <strong class="hero-twin-stat-value"><%= hs.openGamesCount %></strong>
+              <span class="hero-twin-stat-label">abertos</span>
+            </div>
+          </div>
+        <% } %>
+      </div>
 
       <div class="hero-twin-flow" aria-label="Como funciona">
         <span class="hero-twin-flow-item">🎯 Placar</span>
@@ -29,11 +61,6 @@
         <span class="hero-twin-flow-sep" aria-hidden="true"></span>
         <span class="hero-twin-flow-item hero-twin-flow-item--accent">🏆 Prêmio</span>
       </div>
-
-      <p id="home-refresh-status" class="home-refresh-status hero-twin-live" aria-live="polite">
-        <span class="home-refresh-dot" aria-hidden="true"></span>
-        <span class="home-refresh-text">Atualização automática ativa</span>
-      </p>
     </div>
   </section>
 

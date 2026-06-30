@@ -91,6 +91,23 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
     }
   }
 
+  const [[paidRow]] = await pool.query(
+    `SELECT COALESCE(SUM(prize_amount_cents), 0) AS total_cents,
+            COUNT(*) AS winners
+     FROM bets WHERE prize_paid_at IS NOT NULL AND prize_amount_cents > 0`
+  );
+  const activePoolCents = openGames.reduce(
+    (sum, g) => sum + (g.display_prize_pool_cents ?? g.prize_pool_cents ?? 0),
+    0
+  );
+  const heroStats = {
+    paidPrizesCents: parseInt(paidRow?.total_cents, 10) || 0,
+    paidWinners: parseInt(paidRow?.winners, 10) || 0,
+    activePoolCents,
+    openGamesCount: openGames.length,
+    totalBets: games.reduce((sum, g) => sum + (parseInt(g.total_bets, 10) || 0), 0),
+  };
+
   return {
     upcomingGames,
     otherOpenGames,
@@ -105,6 +122,7 @@ async function loadHomeData(userId, { withApiSync = false } = {}) {
     closedBettingMap,
     featuredBetsMap,
     hasLiveGames: liveGames.length > 0,
+    heroStats,
   };
 }
 

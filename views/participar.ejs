@@ -106,10 +106,10 @@
           </div>
 
           <div class="participar-card-head">
-            <h2 id="participar-card-title"><%= showStepDetails ? 'Seus dados' : 'Qual é seu WhatsApp?' %></h2>
-            <p id="participar-card-desc"><%= showStepDetails
-              ? 'Confirme nome e chave PIX para receber o prêmio. O mesmo WhatsApp recebe avisos automáticos.'
-              : 'Informe o número com DDD para continuar. É rápido — menos de 1 minuto.' %></p>
+            <h2 id="participar-card-title"><%= showStepDetails ? 'Seus dados' : 'Seu WhatsApp' %></h2>
+            <p id="participar-card-desc" class="participar-card-desc<%= showStepDetails ? '' : ' is-hidden-phone' %>"<%= showStepDetails ? '' : ' hidden' %>><%= showStepDetails
+              ? 'Nome e PIX para receber o prêmio.'
+              : '' %></p>
           </div>
 
           <% if (error) { %>
@@ -118,41 +118,40 @@
 
           <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
             <div class="participar-fields">
-              <div class="form-group participar-field participar-field-full">
-                <label for="phone-country">WhatsApp</label>
+              <div class="form-group participar-field participar-field-full participar-field-phone">
+                <label for="phone" class="participar-sr-only">WhatsApp com DDD</label>
                 <div class="participar-phone-row">
                   <div class="participar-country-picker" id="phone-country-picker">
                     <input type="hidden" id="phone-country" name="phone_country" value="<%= formPhoneCountry %>">
                     <button type="button" class="participar-country-trigger" id="phone-country-trigger"
-                      aria-haspopup="listbox" aria-expanded="false" aria-label="País do WhatsApp">
+                      aria-haspopup="listbox" aria-expanded="false" aria-label="País do WhatsApp" tabindex="-1">
                       <span class="participar-country-flag"></span>
-                      <span class="participar-country-label">+55 Brasil</span>
+                      <span class="participar-country-label">+55</span>
                       <span class="participar-country-chevron" aria-hidden="true"></span>
                     </button>
                     <ul class="participar-country-menu" id="phone-country-menu" role="listbox" hidden></ul>
                   </div>
                   <div class="participar-input-wrap participar-input-wrap--phone">
-                    <span class="participar-input-icon" aria-hidden="true">📱</span>
                     <input type="tel" id="phone" name="phone" class="form-control participar-input" required
                       placeholder="(11) 98114-1234" value="<%= formPhoneLocal %>"
-                      inputmode="tel" autocomplete="tel">
+                      inputmode="tel" autocomplete="tel" aria-label="WhatsApp com DDD">
                   </div>
                 </div>
-                <small class="form-hint participar-hint-phone" id="phone-format-hint">
-                  Brasil: <strong>(DDD)</strong> + <strong>9</strong> + celular — ex. <strong>(11) 98114-1234</strong>
+                <small class="form-hint participar-hint-phone participar-hint-phone--quiet" id="phone-format-hint" hidden>
+                  Ex.: (11) 98114-1234
                 </small>
                 <small class="form-hint participar-hint-wa" id="phone-wa-hint" hidden>
-                  ✓ Formato válido para receber mensagem no WhatsApp
+                  ✓ Número válido
                 </small>
                 <small class="form-hint participar-hint-error" id="phone-wa-error" hidden>
-                  Número incompleto — celular BR precisa de 11 dígitos com o 9 após o DDD
+                  Celular com DDD — 11 dígitos
                 </small>
                 <small class="form-hint participar-hint-found" id="phone-hint" hidden>
                   Cadastro encontrado — confira sua chave PIX abaixo e confirme para continuar.
                 </small>
               </div>
 
-              <div class="participar-trust" id="participar-trust"<%= showStepDetails ? ' hidden' : '' %>>
+              <div class="participar-trust participar-trust--desktop" id="participar-trust"<%= showStepDetails ? ' hidden' : '' %>>
                 <span class="participar-trust-item">🔒 PIX seguro</span>
                 <span class="participar-trust-item">📲 Aviso de prêmio</span>
                 <span class="participar-trust-item">⚡ Menos de 1 min</span>
@@ -222,8 +221,8 @@
             </div>
           </form>
 
-          <p class="participar-view-only">
-            <a href="/games/<%= game.id %>">Só quero ver o bolão →</a>
+          <p class="participar-view-only participar-view-only--subtle">
+            <a href="/games/<%= game.id %>">Ver bolão sem apostar</a>
           </p>
 
 
@@ -504,12 +503,18 @@
       formStepData.classList.toggle('is-active', show);
       formStepPhone.classList.toggle('is-done', show);
       if (participarCardTitle) {
-        participarCardTitle.textContent = show ? 'Seus dados' : 'Qual é seu WhatsApp?';
+        participarCardTitle.textContent = show ? 'Seus dados' : 'Seu WhatsApp';
       }
       if (participarCardDesc) {
-        participarCardDesc.textContent = show
-          ? 'Confirme nome e chave PIX para receber o prêmio. O mesmo WhatsApp recebe avisos automáticos.'
-          : 'Informe o número com DDD para continuar. É rápido — menos de 1 minuto.';
+        if (show) {
+          participarCardDesc.hidden = false;
+          participarCardDesc.classList.remove('is-hidden-phone');
+          participarCardDesc.textContent = 'Nome e PIX para receber o prêmio.';
+        } else {
+          participarCardDesc.textContent = '';
+          participarCardDesc.hidden = true;
+          participarCardDesc.classList.add('is-hidden-phone');
+        }
       }
     }
 
@@ -567,14 +572,12 @@
 
     function onPhoneDigitsChange(digits, countryDial) {
       if (countryDial === '55') {
-        phoneFormatHint.innerHTML = 'Brasil: <strong>(DDD)</strong> + <strong>9</strong> + celular — ex. <strong>(11) 98114-1234</strong>';
         const ok = digits.length === 11 && digits[2] === '9';
         phoneWaHint.hidden = !ok;
         phoneWaError.hidden = ok || digits.length < 8;
       } else {
-        phoneFormatHint.textContent = 'Digite o número com DDD/área local, sem o código do país.';
-        phoneWaHint.hidden = digits.length < 8;
         phoneWaError.hidden = digits.length >= 8;
+        phoneWaHint.hidden = digits.length < 8;
       }
       updatePhoneStep();
       scheduleLookup(digits, countryDial);

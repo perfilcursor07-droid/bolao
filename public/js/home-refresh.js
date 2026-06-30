@@ -5,8 +5,6 @@
   const container = document.getElementById('home-dynamic');
   if (!container) return;
 
-  const statusEl = document.getElementById('home-refresh-status');
-  const statusText = statusEl && statusEl.querySelector('.home-refresh-text');
   let timer = null;
   let busy = false;
 
@@ -24,14 +22,6 @@
       const el = container.querySelector(`details[data-game-id="${id}"]`);
       if (el) el.open = true;
     });
-  }
-
-  function setStatus(text, fresh) {
-    if (!statusText) return;
-    statusText.textContent = text;
-    if (statusEl) {
-      statusEl.classList.toggle('is-fresh', Boolean(fresh));
-    }
   }
 
   function schedule() {
@@ -67,10 +57,6 @@
       container.innerHTML = html;
       container.dataset.hasLive = container.querySelector('.live-game-card, .game-row-live') ? '1' : '0';
       restoreOpenDetails(openIds);
-
-      const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      setStatus('Atualizado às ' + now, true);
-      setTimeout(() => setStatus('Atualização automática ativa', false), 2500);
     } catch (_) {
       /* silencioso — tenta de novo no próximo ciclo */
     } finally {
