@@ -157,16 +157,7 @@
                 <span class="participar-trust-item">⚡ Menos de 1 min</span>
               </div>
 
-              <div id="participar-step-details" class="participar-step-details<%= showStepDetails ? ' is-visible' : '' %>" aria-hidden="<%= showStepDetails ? 'false' : 'true' %>">
-              <div class="participar-section-label">
-                <span>Complete seu cadastro</span>
-              </div>
-              <div class="participar-pix-panel" id="participar-pix-panel" aria-live="polite">
-                <span class="participar-pix-label">PIX cadastrada</span>
-                <span class="participar-pix-key" id="participar-pix-key"></span>
-                <small class="participar-pix-note">Para alterar, fale com o suporte.</small>
-              </div>
-
+              <div id="participar-step-details" class="participar-step-details participar-field-full<%= showStepDetails ? ' is-visible' : '' %>" aria-hidden="<%= showStepDetails ? 'false' : 'true' %>">
               <div class="form-group participar-field participar-field-full">
                 <label for="name">Nome completo <small>(como no PIX)</small></label>
                 <div class="participar-input-wrap">
@@ -177,30 +168,46 @@
                 </div>
               </div>
 
-              <div class="form-group participar-field participar-field-full" id="cpf-field-group">
-                <label for="cpf">Chave PIX <small>(prêmio)</small></label>
-                <div class="participar-input-wrap">
-                  <span class="participar-input-icon" aria-hidden="true">💰</span>
-                  <input type="text" id="cpf" name="cpf" class="form-control participar-input" required
-                    placeholder="CPF, telefone ou e-mail"
-                    value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>"
-                    autocomplete="off">
-                </div>
+              <div class="participar-section-label">
+                <span>Complete seu cadastro</span>
               </div>
 
-              <div class="form-group participar-field participar-field-full">
-                <label for="cpf_confirm">Confirmar chave PIX</label>
-                <div class="participar-input-wrap">
-                  <span class="participar-input-icon" aria-hidden="true">✓</span>
-                  <input type="text" id="cpf_confirm" name="cpf_confirm" class="form-control participar-input" required
-                    placeholder="Digite a chave PIX novamente"
-                    value="<%= typeof form !== 'undefined' && form ? form.cpf_confirm : '' %>"
-                    autocomplete="off">
+              <div class="participar-pix-row">
+                <div class="participar-pix-row-col participar-pix-row-col--key">
+                  <div class="participar-pix-panel" id="participar-pix-panel" aria-live="polite">
+                    <span class="participar-pix-label">PIX cadastrada</span>
+                    <span class="participar-pix-key" id="participar-pix-key"></span>
+                    <small class="participar-pix-note">Para alterar, fale com o suporte.</small>
+                  </div>
+
+                  <div class="form-group participar-field participar-field-full" id="cpf-field-group">
+                    <label for="cpf">Chave PIX <small>(prêmio)</small></label>
+                    <div class="participar-input-wrap">
+                      <span class="participar-input-icon" aria-hidden="true">💰</span>
+                      <input type="text" id="cpf" name="cpf" class="form-control participar-input" required
+                        placeholder="CPF, telefone ou e-mail"
+                        value="<%= typeof form !== 'undefined' && form ? form.cpf : '' %>"
+                        autocomplete="off">
+                    </div>
+                  </div>
                 </div>
-                <small class="form-hint participar-hint-error" id="pix-mismatch-hint" hidden>As chaves PIX não conferem</small>
-                <small class="form-hint participar-hint-phone" id="pix-confirm-locked-hint" hidden>
-                  Digite a <strong>chave PIX cadastrada</strong>.
-                </small>
+
+                <div class="participar-pix-row-col participar-pix-row-col--confirm">
+                  <div class="form-group participar-field participar-field-full">
+                    <label for="cpf_confirm">Confirmar chave PIX</label>
+                    <div class="participar-input-wrap">
+                      <span class="participar-input-icon" aria-hidden="true">✓</span>
+                      <input type="text" id="cpf_confirm" name="cpf_confirm" class="form-control participar-input" required
+                        placeholder="Digite a chave PIX novamente"
+                        value="<%= typeof form !== 'undefined' && form ? form.cpf_confirm : '' %>"
+                        autocomplete="off">
+                    </div>
+                    <small class="form-hint participar-hint-error" id="pix-mismatch-hint" hidden>As chaves PIX não conferem</small>
+                    <small class="form-hint participar-hint-phone" id="pix-confirm-locked-hint" hidden>
+                      Digite a <strong>chave PIX cadastrada</strong>.
+                    </small>
+                  </div>
+                </div>
               </div>
               </div>
             </div>
@@ -469,7 +476,7 @@
         cpfInput.removeAttribute('name');
         cpfInput.removeAttribute('required');
         cpfConfirmInput.value = '';
-        cpfConfirmInput.placeholder = 'Digite sua chave PIX cadastrada';
+        cpfConfirmInput.placeholder = 'Chave PIX cadastrada';
         if (pixKey.trim().length >= 5) {
           setTimeout(() => cpfConfirmInput.focus(), 100);
         }

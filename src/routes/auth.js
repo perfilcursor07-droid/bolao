@@ -2,14 +2,28 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 const { requireGuest } = require('../middleware/auth');
+const { findUserByPhone, setSessionUser } = require('../services/guestService');
+const { normalizePhoneInput } = require('../services/whatsapp/phone');
 
 const router = express.Router();
+
+function redirectAfterLogin(req, res, user) {
+  setSessionUser(req, user);
+  const returnTo = req.session.returnTo || (user.role === 'admin' ? '/admin' : '/painel');
+  delete req.session.returnTo;
+  res.redirect(returnTo);
+}
+
+function renderLogin(res, { error = null, loginTab = 'email' } = {}) {
+  res.render('login', { title: 'Entrar', error, loginTab });
+}
 
 router.get('/login', requireGuest, (req, res) => {
   if (req.query.returnTo && String(req.query.returnTo).startsWith('/')) {
     req.session.returnTo = req.query.returnTo;
   }
-  res.render('login', { title: 'Entrar', error: null });
+  const loginTab = req.query.tab === 'telefone' ? 'telefone' : 'email';
+  renderLogin(res, { loginTab });
 });
 
 router.post('/login', requireGuest, async (req, res) => {
@@ -17,36 +31,52 @@ router.post('/login', requireGuest, async (req, res) => {
   try {
     const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
     if (users.length === 0) {
-      return res.render('login', { title: 'Entrar', error: 'E-mail ou senha inválidos' });
+      return renderLogin(res, { error: 'E-mail ou senha inválidos' });
     }
 
     const user = users[0];
 
     if (!user.password || user.role === 'guest') {
-      return res.render('login', {
-        title: 'Entrar',
-        error: 'Esta conta é de participação rápida. Use "Participar" na página inicial ou crie uma conta com senha.',
+      return renderLogin(res, {
+        error: 'Esta conta é de participação rápida. Entre com seu WhatsApp ou crie uma conta com senha.',
+        loginTab: 'email',
       });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return res.render('login', { title: 'Entrar', error: 'E-mail ou senha inválidos' });
+      return renderLogin(res, { error: 'E-mail ou senha inválidos' });
     }
 
-    req.session.user = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isGuest: false,
-    };
-
-    const returnTo = req.session.returnTo || (user.role === 'admin' ? '/admin' : '/');
-    delete req.session.returnTo;
-    res.redirect(returnTo);
+    redirectAfterLogin(req, res, user);
   } catch (err) {
-    res.render('login', { title: 'Entrar', error: 'Erro ao fazer login' });
+    renderLogin(res, { error: 'Erro ao fazer login' });
+  }
+});
+
+router.post('/login/telefone', requireGuest, async (req, res) => {
+  const countryDial = String(req.body.phone_country || '55').replace(/\D/g, '') || '55';
+  const phoneNormalized = normalizePhoneInput(countryDial, req.body.phone);
+
+  if (!phoneNormalized) {
+    return renderLogin(res, {
+      error: 'Informe um WhatsApp válido com DDD.',
+      loginTab: 'telefone',
+    });
+  }
+
+  try {
+    const user = await findUserByPhone(phoneNormalized);
+    if (!user) {
+      return renderLogin(res, {
+        error: 'WhatsApp não encontrado. Participe de um bolão ou crie uma conta.',
+        loginTab: 'telefone',
+      });
+    }
+
+    redirectAfterLogin(req, res, user);
+  } catch (err) {
+    renderLogin(res, { error: 'Erro ao entrar com WhatsApp', loginTab: 'telefone' });
   }
 });
 

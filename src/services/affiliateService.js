@@ -291,6 +291,15 @@ async function getUserDashboard(userId) {
     [userId]
   );
 
+  const [pendingPaymentsList] = await pool.query(
+    `SELECT p.id, p.amount_cents, p.created_at, g.title, g.home_team, g.away_team
+     FROM payments p JOIN games g ON g.id = p.game_id
+     WHERE p.user_id = ? AND p.status = 'pending'
+       AND p.qr_code_text IS NOT NULL AND p.qr_code_text != ''
+     ORDER BY p.created_at DESC LIMIT 5`,
+    [userId]
+  );
+
   const affiliate = await getAffiliateByUserId(userId);
   const affiliateDashboard = affiliate ? await getAffiliateDashboard(userId) : null;
 
@@ -302,6 +311,7 @@ async function getUserDashboard(userId) {
       pendingPayments: pendingPayments[0]?.c || 0,
     },
     recentBets,
+    pendingPaymentsList,
     affiliate,
     affiliateDashboard,
   };

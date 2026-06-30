@@ -11,260 +11,460 @@
 <body class="page-painel page-green">
   <%- include('partials/header') %>
 
-  <div class="container home-container dashboard-page">
-    <a href="/" class="back-link">← Voltar aos jogos</a>
+  <%
+    const dashTab = typeof activeTab !== 'undefined' ? activeTab : 'inicio';
+    const cartItems = typeof cartCount !== 'undefined' ? Number(cartCount) : 0;
+    const pendingPix = typeof pendingPaymentsCount !== 'undefined' ? Number(pendingPaymentsCount) : 0;
+    const cartBadge = cartItems + pendingPix;
+  %>
 
-    <header class="dashboard-hero">
-      <p class="dashboard-kicker">Minha conta</p>
-      <h1>Olá, <%= firstName(user.name) %> 👋</h1>
-      <p class="dashboard-lead">Acompanhe apostas, pagamentos e ganhos de afiliado em um só lugar. Você pode apostar e ser afiliado ao mesmo tempo.</p>
-    </header>
+  <div class="dash-shell">
+    <div class="dash-overlay" id="dash-overlay" hidden></div>
 
-    <% if (applied) { %>
-      <div class="alert alert-success">Solicitação de afiliado enviada! Aguarde aprovação.</div>
-    <% } %>
+    <aside class="dash-sidebar" id="dash-sidebar" aria-label="Menu do painel">
+      <div class="dash-sidebar-user">
+        <span class="nav-avatar nav-avatar--lg"><%= user.name.charAt(0).toUpperCase() %></span>
+        <div>
+          <strong><%= firstName(user.name) %></strong>
+          <small>Minha conta</small>
+        </div>
+      </div>
 
-    <div class="dashboard-stats">
-      <div class="dashboard-stat-card">
-        <span class="dashboard-stat-value"><%= stats.totalBets %></span>
-        <span class="dashboard-stat-label">Apostas</span>
-      </div>
-      <div class="dashboard-stat-card">
-        <span class="dashboard-stat-value"><%= stats.wins %></span>
-        <span class="dashboard-stat-label">Vitórias</span>
-      </div>
-      <div class="dashboard-stat-card dashboard-stat-card--accent">
-        <span class="dashboard-stat-value"><%= formatCents(stats.totalPrizes) %></span>
-        <span class="dashboard-stat-label">Prêmios ganhos</span>
-      </div>
-      <div class="dashboard-stat-card<%= stats.pendingPayments > 0 ? ' dashboard-stat-card--warn' : '' %>">
-        <span class="dashboard-stat-value"><%= stats.pendingPayments %></span>
-        <span class="dashboard-stat-label">PIX pendentes</span>
-      </div>
-    </div>
+      <nav class="dash-nav" id="dash-nav">
+        <button type="button" class="dash-nav-item<%= dashTab === 'inicio' ? ' is-active' : '' %>" data-dash-tab="inicio">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V9.5z"/></svg>
+          <span>Início</span>
+        </button>
+        <button type="button" class="dash-nav-item<%= dashTab === 'apostas' ? ' is-active' : '' %>" data-dash-tab="apostas">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+          <span>Apostas</span>
+          <% if (stats.totalBets > 0) { %><span class="dash-nav-badge"><%= stats.totalBets %></span><% } %>
+        </button>
+        <button type="button" class="dash-nav-item<%= dashTab === 'pagamentos' ? ' is-active' : '' %>" data-dash-tab="pagamentos">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          <span>Pagamentos</span>
+          <% if (stats.pendingPayments > 0) { %><span class="dash-nav-badge dash-nav-badge--warn"><%= stats.pendingPayments %></span><% } %>
+        </button>
+        <button type="button" class="dash-nav-item<%= dashTab === 'afiliados' ? ' is-active' : '' %>" data-dash-tab="afiliados">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Afiliados</span>
+        </button>
+      </nav>
 
-    <div class="dashboard-actions">
-      <a href="/" class="dashboard-action-btn">🎯 Jogos abertos</a>
-      <a href="/my-bets" class="dashboard-action-btn">🎟️ Minhas apostas</a>
-      <a href="/my-payments" class="dashboard-action-btn">💳 Pagamentos</a>
-      <a href="/carrinho" class="dashboard-action-btn">🛒 Carrinho</a>
-    </div>
-
-    <section class="dashboard-section">
-      <div class="dashboard-section-head">
-        <h2>Últimas apostas</h2>
-        <a href="/my-bets" class="dashboard-section-link">Ver todas</a>
+      <div class="dash-sidebar-foot">
+        <p class="dash-sidebar-foot-label">Atalhos</p>
+        <a href="/" class="dash-sidebar-link">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 2.8 4 6 4 9s-1.5 6.2-4 9"/></svg>
+          Jogos abertos
+        </a>
+        <a href="/carrinho" class="dash-sidebar-link">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          Carrinho
+          <% if (cartBadge > 0) { %><span class="dash-nav-badge<%= pendingPix > 0 && cartItems === 0 ? ' dash-nav-badge--warn' : '' %>"><%= cartBadge %></span><% } %>
+        </a>
+        <a href="/boloes-encerrados" class="dash-sidebar-link">
+          <svg class="dash-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          Encerrados
+        </a>
       </div>
-      <% if (recentBets.length === 0) { %>
-        <div class="card affiliate-card dashboard-empty-card">
-          <p>Você ainda não apostou em nenhum bolão.</p>
-          <div class="btn-center-wrap">
-            <a href="/" class="btn btn-gold">Participar agora</a>
+    </aside>
+
+    <div class="dash-main">
+      <header class="dash-topbar">
+        <button type="button" class="dash-menu-toggle" id="dash-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="dash-topbar-titles">
+          <h1 class="dash-topbar-title" id="dash-topbar-title">Início</h1>
+          <p class="dash-topbar-sub" id="dash-topbar-sub">Resumo da sua conta</p>
+        </div>
+        <a href="/" class="dash-topbar-exit">← Jogos</a>
+      </header>
+
+      <% if (applied) { %>
+        <div class="alert alert-success dash-alert">Solicitação de afiliado enviada! Aguarde aprovação.</div>
+      <% } %>
+
+      <!-- Início -->
+      <section class="dash-panel<%= dashTab === 'inicio' ? ' is-active' : '' %>" id="dash-panel-inicio" data-dash-title="Início" data-dash-sub="Resumo da sua conta">
+        <div class="dashboard-stats">
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-value"><%= stats.totalBets %></span>
+            <span class="dashboard-stat-label">Apostas</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="dashboard-stat-value"><%= stats.wins %></span>
+            <span class="dashboard-stat-label">Vitórias</span>
+          </div>
+          <div class="dashboard-stat-card dashboard-stat-card--accent">
+            <span class="dashboard-stat-value"><%= formatCents(stats.totalPrizes) %></span>
+            <span class="dashboard-stat-label">Prêmios</span>
+          </div>
+          <div class="dashboard-stat-card<%= stats.pendingPayments > 0 ? ' dashboard-stat-card--warn' : '' %>">
+            <span class="dashboard-stat-value"><%= stats.pendingPayments %></span>
+            <span class="dashboard-stat-label">PIX pendentes</span>
           </div>
         </div>
-      <% } else { %>
-        <div class="dashboard-bets-list">
-          <% recentBets.forEach(function(bet) { %>
-            <a href="/games/<%= bet.game_id %>" class="dashboard-bet-row">
-              <div class="dashboard-bet-main">
-                <strong><%= bet.title %></strong>
-                <small><%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %></small>
-              </div>
-              <div class="dashboard-bet-score">
-                <%= bet.home_score_prediction %> × <%= bet.away_score_prediction %>
-              </div>
-              <div class="dashboard-bet-status">
-                <% if (bet.is_winner) { %>
-                  <span class="card-badge open">🏆 <%= formatCents(bet.prize_amount_cents) %></span>
-                <% } else if (bet.game_status === 'finished') { %>
-                  <span class="card-badge finished">Encerrado</span>
-                <% } else { %>
-                  <span class="card-badge closed">Aguardando</span>
-                <% } %>
-              </div>
-            </a>
-          <% }); %>
+
+        <div class="dash-quick-grid">
+          <button type="button" class="dash-quick-card" data-dash-goto="apostas">
+            <span class="dash-quick-icon">🎟️</span>
+            <strong>Minhas apostas</strong>
+            <small><%= stats.totalBets %> registrada<%= stats.totalBets !== 1 ? 's' : '' %></small>
+          </button>
+          <button type="button" class="dash-quick-card<%= stats.pendingPayments > 0 ? ' dash-quick-card--warn' : '' %>" data-dash-goto="pagamentos">
+            <span class="dash-quick-icon">💳</span>
+            <strong>Pagamentos</strong>
+            <small><%= stats.pendingPayments > 0 ? stats.pendingPayments + ' PIX aguardando' : 'Histórico PIX' %></small>
+          </button>
+          <button type="button" class="dash-quick-card" data-dash-goto="afiliados">
+            <span class="dash-quick-icon">👥</span>
+            <strong>Afiliados</strong>
+            <small><%= affiliate && affiliate.status === 'active' ? 'Link ativo' : 'Indique e ganhe' %></small>
+          </button>
+          <a href="/" class="dash-quick-card dash-quick-card--link">
+            <span class="dash-quick-icon">⚽</span>
+            <strong>Jogos abertos</strong>
+            <small>Participar de bolões</small>
+          </a>
         </div>
-      <% } %>
-    </section>
 
-    <section class="dashboard-section dashboard-affiliate" id="afiliados">
-      <div class="dashboard-section-head">
-        <h2>Programa de afiliados</h2>
-        <% if (!affiliate) { %>
-          <a href="/afiliado" class="dashboard-section-link">Saiba mais</a>
-        <% } %>
-      </div>
-
-      <% if (!affiliate) { %>
-        <div class="card affiliate-card affiliate-cta-card">
-          <h3>Ganhe indicando amigos</h3>
-          <p>Compartilhe seu link exclusivo e receba comissão quando alguém pagar a primeira aposta via PIX.</p>
-          <p class="affiliate-note">Cadastre-se como afiliado — continua apostando normalmente.</p>
-          <form method="POST" action="/afiliado/cadastro" class="affiliate-apply-form">
-            <div class="form-group">
-              <label for="code">Código do link <small>(opcional)</small></label>
-              <input type="text" id="code" name="code" class="form-control" placeholder="Ex: SEUNOME10" maxlength="20" pattern="[A-Za-z0-9]+">
+        <% if (recentBets.length > 0) { %>
+          <div class="dash-panel-block">
+            <div class="dashboard-section-head">
+              <h2>Últimas apostas</h2>
+              <button type="button" class="dashboard-section-link dash-link-btn" data-dash-goto="apostas">Ver todas</button>
             </div>
-            <button type="submit" class="btn btn-gold btn-block">Quero ser afiliado</button>
-          </form>
+            <div class="dashboard-bets-list">
+              <% recentBets.slice(0, 3).forEach(function(bet) { %>
+                <a href="/games/<%= bet.game_id %>" class="dashboard-bet-row">
+                  <div class="dashboard-bet-main">
+                    <strong><%= bet.title %></strong>
+                    <small><%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %></small>
+                  </div>
+                  <div class="dashboard-bet-score"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></div>
+                  <div class="dashboard-bet-status">
+                    <% if (bet.is_winner) { %>
+                      <span class="card-badge open">🏆 <%= formatCents(bet.prize_amount_cents) %></span>
+                    <% } else if (bet.game_status === 'finished') { %>
+                      <span class="card-badge finished">Encerrado</span>
+                    <% } else { %>
+                      <span class="card-badge closed">Aguardando</span>
+                    <% } %>
+                  </div>
+                </a>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+      </section>
+
+      <!-- Apostas -->
+      <section class="dash-panel<%= dashTab === 'apostas' ? ' is-active' : '' %>" id="dash-panel-apostas" data-dash-title="Apostas" data-dash-sub="Seus palpites nos bolões">
+        <div class="dash-panel-actions">
+          <a href="/my-bets" class="btn btn-gold btn-sm">Ver lista completa</a>
+          <a href="/" class="btn btn-outline btn-sm">Novos jogos</a>
         </div>
-      <% } else if (affiliate.status === 'pending') { %>
-        <div class="card affiliate-card">
-          <p class="affiliate-panel-status">
-            Status: <span class="card-badge closed">Aguardando aprovação</span>
-            · Código <strong><%= affiliate.code %></strong>
-          </p>
-          <p class="affiliate-note">Assim que o admin aprovar, seu link de indicação será liberado aqui.</p>
+
+        <% if (recentBets.length === 0) { %>
+          <div class="card affiliate-card dashboard-empty-card">
+            <p>Você ainda não apostou em nenhum bolão.</p>
+            <div class="btn-center-wrap">
+              <a href="/" class="btn btn-gold">Participar agora</a>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="dashboard-bets-list">
+            <% recentBets.forEach(function(bet) { %>
+              <a href="/games/<%= bet.game_id %>" class="dashboard-bet-row">
+                <div class="dashboard-bet-main">
+                  <strong><%= bet.title %></strong>
+                  <small><%= teamPt(bet.home_team) %> × <%= teamPt(bet.away_team) %></small>
+                </div>
+                <div class="dashboard-bet-score"><%= bet.home_score_prediction %> × <%= bet.away_score_prediction %></div>
+                <div class="dashboard-bet-status">
+                  <% if (bet.is_winner) { %>
+                    <span class="card-badge open">🏆 <%= formatCents(bet.prize_amount_cents) %></span>
+                  <% } else if (bet.game_status === 'finished') { %>
+                    <span class="card-badge finished">Encerrado</span>
+                  <% } else { %>
+                    <span class="card-badge closed">Aguardando</span>
+                  <% } %>
+                </div>
+              </a>
+            <% }); %>
+          </div>
+          <% if (stats.totalBets > recentBets.length) { %>
+            <p class="dash-panel-note">Mostrando as <%= recentBets.length %> mais recentes de <%= stats.totalBets %>.</p>
+          <% } %>
+        <% } %>
+      </section>
+
+      <!-- Pagamentos -->
+      <section class="dash-panel<%= dashTab === 'pagamentos' ? ' is-active' : '' %>" id="dash-panel-pagamentos" data-dash-title="Pagamentos" data-dash-sub="PIX e confirmação de apostas">
+        <div class="dash-panel-actions">
+          <a href="/my-payments" class="btn btn-gold btn-sm">Histórico completo</a>
+          <a href="/carrinho" class="btn btn-outline btn-sm">Carrinho<% if (cartBadge > 0) { %> (<%= cartBadge %>)<% } %></a>
         </div>
-      <% } else if (affiliate.status === 'rejected') { %>
-        <div class="card affiliate-card">
-          <p>Cadastro não aprovado. Entre em contato com o administrador.</p>
-        </div>
-      <% } else {
-        const ad = affiliateDashboard;
-      %>
-        <div class="affiliate-panel-head">
-          <div>
+
+        <% if (pendingPaymentsList && pendingPaymentsList.length > 0) { %>
+          <div class="dash-panel-block">
+            <h2 class="dash-block-title">PIX aguardando pagamento</h2>
+            <div class="dashboard-bets-list">
+              <% pendingPaymentsList.forEach(function(pay) { %>
+                <a href="/payment/<%= pay.id %>" class="dashboard-bet-row dashboard-bet-row--pay">
+                  <div class="dashboard-bet-main">
+                    <strong><%= pay.title %></strong>
+                    <small><%= teamPt(pay.home_team) %> × <%= teamPt(pay.away_team) %></small>
+                  </div>
+                  <div class="dashboard-bet-score"><%= formatCents(pay.amount_cents) %></div>
+                  <div class="dashboard-bet-status">
+                    <span class="card-badge closed">Pagar PIX</span>
+                  </div>
+                </a>
+              <% }); %>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="card affiliate-card dashboard-empty-card">
+            <p>Nenhum PIX pendente no momento.</p>
+            <div class="btn-center-wrap">
+              <a href="/my-payments" class="btn btn-outline btn-sm">Ver histórico</a>
+            </div>
+          </div>
+        <% } %>
+      </section>
+
+      <!-- Afiliados -->
+      <section class="dash-panel<%= dashTab === 'afiliados' ? ' is-active' : '' %>" id="dash-panel-afiliados" data-dash-title="Afiliados" data-dash-sub="Indique amigos e ganhe comissão">
+        <% if (!affiliate) { %>
+          <div class="card affiliate-card affiliate-cta-card">
+            <h3>Ganhe indicando amigos</h3>
+            <p>Compartilhe seu link exclusivo e receba comissão quando alguém pagar a primeira aposta via PIX.</p>
+            <p class="affiliate-note">Cadastre-se como afiliado — continua apostando normalmente.</p>
+            <form method="POST" action="/afiliado/cadastro" class="affiliate-apply-form">
+              <div class="form-group">
+                <label for="code">Código do link <small>(opcional)</small></label>
+                <input type="text" id="code" name="code" class="form-control" placeholder="Ex: SEUNOME10" maxlength="20" pattern="[A-Za-z0-9]+">
+              </div>
+              <button type="submit" class="btn btn-gold btn-block">Quero ser afiliado</button>
+            </form>
+            <p class="dash-panel-note" style="margin-top:0.75rem;"><a href="/afiliado">Saiba mais sobre o programa</a></p>
+          </div>
+        <% } else if (affiliate.status === 'pending') { %>
+          <div class="card affiliate-card">
             <p class="affiliate-panel-status">
-              Status: <span class="card-badge open">Ativo</span>
+              Status: <span class="card-badge closed">Aguardando aprovação</span>
               · Código <strong><%= affiliate.code %></strong>
             </p>
+            <p class="affiliate-note">Assim que o admin aprovar, seu link de indicação será liberado aqui.</p>
           </div>
-          <div class="affiliate-balance-card">
-            <span class="affiliate-balance-label">Saldo disponível</span>
-            <span class="affiliate-balance-value"><%= formatCents(affiliate.balance_cents) %></span>
-            <small>Saque mín. <%= formatCents(minPayoutCents) %> · via PIX</small>
-          </div>
-        </div>
-
-        <div class="card affiliate-card">
-          <h3>Seu link de indicação</h3>
-          <div class="affiliate-link-row">
-            <input type="text" class="form-control" id="affiliate-link" readonly value="<%= affiliateLink %>">
-            <button type="button" class="btn btn-gold" id="btn-copy-affiliate">Copiar</button>
-          </div>
-          <div class="btn-center-wrap dashboard-share-row">
-            <a href="https://wa.me/?text=<%= encodeURIComponent('Aposte no bolão online e concorra a prêmios! Entre pelo meu link: ' + affiliateLink) %>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Compartilhar no WhatsApp</a>
-          </div>
-          <p class="affiliate-note">A comissão vale quando o indicado paga a primeira aposta via PIX.</p>
-        </div>
-
-        <div class="affiliate-grid-twin">
+        <% } else if (affiliate.status === 'rejected') { %>
           <div class="card affiliate-card">
-            <h3>Resumo</h3>
-            <div class="affiliate-stats">
-              <div class="affiliate-stat">
-                <span class="affiliate-stat-value"><%= affiliate.total_paid_referrals %></span>
-                <span class="affiliate-stat-label">Indicações pagas</span>
-              </div>
-              <div class="affiliate-stat">
-                <span class="affiliate-stat-value"><%= ad.referrals.length %></span>
-                <span class="affiliate-stat-label">Total indicados</span>
-              </div>
-              <div class="affiliate-stat">
-                <span class="affiliate-stat-value"><%= formatCents(affiliate.total_earned_cents) %></span>
-                <span class="affiliate-stat-label">Total ganho</span>
-              </div>
+            <p>Cadastro não aprovado. Entre em contato com o administrador.</p>
+          </div>
+        <% } else {
+          const ad = affiliateDashboard;
+        %>
+          <div class="affiliate-panel-head">
+            <div>
+              <p class="affiliate-panel-status">
+                Status: <span class="card-badge open">Ativo</span>
+                · Código <strong><%= affiliate.code %></strong>
+              </p>
             </div>
-            <% if (ad.nextMilestone) { %>
-              <p class="affiliate-note">Próxima meta: <strong><%= ad.nextMilestone.count %> indicações pagas</strong> → bônus <%= formatCents(ad.nextMilestone.bonusCents) %></p>
+            <div class="affiliate-balance-card">
+              <span class="affiliate-balance-label">Saldo disponível</span>
+              <span class="affiliate-balance-value"><%= formatCents(affiliate.balance_cents) %></span>
+              <small>Saque mín. <%= formatCents(minPayoutCents) %> · via PIX</small>
+            </div>
+          </div>
+
+          <div class="card affiliate-card">
+            <h3>Seu link de indicação</h3>
+            <div class="affiliate-link-row">
+              <input type="text" class="form-control" id="affiliate-link" readonly value="<%= affiliateLink %>">
+              <button type="button" class="btn btn-gold" id="btn-copy-affiliate">Copiar</button>
+            </div>
+            <div class="btn-center-wrap dashboard-share-row">
+              <a href="https://wa.me/?text=<%= encodeURIComponent('Aposte no bolão online e concorra a prêmios! Entre pelo meu link: ' + affiliateLink) %>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Compartilhar no WhatsApp</a>
+            </div>
+            <p class="affiliate-note">A comissão vale quando o indicado paga a primeira aposta via PIX.</p>
+          </div>
+
+          <div class="affiliate-grid-twin">
+            <div class="card affiliate-card">
+              <h3>Resumo</h3>
+              <div class="affiliate-stats">
+                <div class="affiliate-stat">
+                  <span class="affiliate-stat-value"><%= affiliate.total_paid_referrals %></span>
+                  <span class="affiliate-stat-label">Indicações pagas</span>
+                </div>
+                <div class="affiliate-stat">
+                  <span class="affiliate-stat-value"><%= ad.referrals.length %></span>
+                  <span class="affiliate-stat-label">Total indicados</span>
+                </div>
+                <div class="affiliate-stat">
+                  <span class="affiliate-stat-value"><%= formatCents(affiliate.total_earned_cents) %></span>
+                  <span class="affiliate-stat-label">Total ganho</span>
+                </div>
+              </div>
+              <% if (ad.nextMilestone) { %>
+                <p class="affiliate-note">Próxima meta: <strong><%= ad.nextMilestone.count %> indicações pagas</strong> → bônus <%= formatCents(ad.nextMilestone.bonusCents) %></p>
+              <% } else { %>
+                <p class="affiliate-note">Todas as metas atingidas. 🎉</p>
+              <% } %>
+            </div>
+
+            <div class="card affiliate-card">
+              <h3>Comissões</h3>
+              <ul class="affiliate-commission-list">
+                <li><%= formatCents(firstBetCommissionCents) %> por 1ª aposta PIX paga</li>
+                <% milestones.forEach(function(m) { %>
+                  <li>Meta <%= m.count %> indicações: +<%= formatCents(m.bonusCents) %></li>
+                <% }); %>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card affiliate-card">
+            <h3>Quem você indicou</h3>
+            <% if (ad.referrals.length === 0) { %>
+              <p class="affiliate-empty">Nenhuma indicação ainda. Compartilhe seu link!</p>
             <% } else { %>
-              <p class="affiliate-note">Todas as metas atingidas. 🎉</p>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr><th>Nome</th><th>Cadastro</th><th>1ª aposta</th><th>Pagou</th><th>Você ganhou</th></tr>
+                  </thead>
+                  <tbody>
+                    <% ad.referrals.forEach(function(r) { %>
+                      <tr>
+                        <td><%= r.referred_name %></td>
+                        <td style="font-size:0.78rem;color:var(--text-muted);"><%= new Date(r.created_at).toLocaleDateString('pt-BR') %></td>
+                        <td>
+                          <% if (r.first_paid_at) { %>
+                            <span class="card-badge open">✓ <%= new Date(r.first_paid_at).toLocaleDateString('pt-BR') %></span>
+                          <% } else { %>
+                            <span class="card-badge closed">Aguardando PIX</span>
+                          <% } %>
+                        </td>
+                        <td><%= r.paid_count %> aposta<%= r.paid_count !== 1 ? 's' : '' %></td>
+                        <td><strong><%= formatCents(r.earned_cents || 0) %></strong></td>
+                      </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
             <% } %>
           </div>
 
-          <div class="card affiliate-card">
-            <h3>Comissões</h3>
-            <ul class="affiliate-commission-list">
-              <li><%= formatCents(firstBetCommissionCents) %> por 1ª aposta PIX paga</li>
-              <% milestones.forEach(function(m) { %>
-                <li>Meta <%= m.count %> indicações: +<%= formatCents(m.bonusCents) %></li>
-              <% }); %>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card affiliate-card">
-          <h3>Quem você indicou</h3>
-          <% if (ad.referrals.length === 0) { %>
-            <p class="affiliate-empty">Nenhuma indicação ainda. Compartilhe seu link!</p>
-          <% } else { %>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr><th>Nome</th><th>Cadastro</th><th>1ª aposta</th><th>Pagou</th><th>Você ganhou</th></tr>
-                </thead>
-                <tbody>
-                  <% ad.referrals.forEach(function(r) { %>
-                    <tr>
-                      <td><%= r.referred_name %></td>
-                      <td style="font-size:0.78rem;color:var(--text-muted);"><%= new Date(r.created_at).toLocaleDateString('pt-BR') %></td>
-                      <td>
-                        <% if (r.first_paid_at) { %>
-                          <span class="card-badge open">✓ <%= new Date(r.first_paid_at).toLocaleDateString('pt-BR') %></span>
-                        <% } else { %>
-                          <span class="card-badge closed">Aguardando PIX</span>
-                        <% } %>
-                      </td>
-                      <td><%= r.paid_count %> aposta<%= r.paid_count !== 1 ? 's' : '' %></td>
-                      <td><strong><%= formatCents(r.earned_cents || 0) %></strong></td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
+          <% if (ad.commissions.length > 0) { %>
+            <div class="card affiliate-card">
+              <h3>Histórico de ganhos</h3>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    <% ad.commissions.forEach(function(c) { %>
+                      <tr>
+                        <td style="font-size:0.78rem;"><%= new Date(c.created_at).toLocaleString('pt-BR') %></td>
+                        <td><%= c.type === 'milestone' ? 'Meta ' + c.milestone_count : '1ª aposta' %></td>
+                        <td><strong><%= formatCents(c.amount_cents) %></strong></td>
+                        <td>
+                          <% if (c.status === 'paid') { %>
+                            <span class="card-badge finished">Pago</span>
+                          <% } else { %>
+                            <span class="card-badge open">Disponível</span>
+                          <% } %>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
             </div>
           <% } %>
-        </div>
-
-        <% if (ad.commissions.length > 0) { %>
-          <div class="card affiliate-card">
-            <h3>Histórico de ganhos</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  <% ad.commissions.forEach(function(c) { %>
-                    <tr>
-                      <td style="font-size:0.78rem;"><%= new Date(c.created_at).toLocaleString('pt-BR') %></td>
-                      <td><%= c.type === 'milestone' ? 'Meta ' + c.milestone_count : '1ª aposta' %></td>
-                      <td><strong><%= formatCents(c.amount_cents) %></strong></td>
-                      <td>
-                        <% if (c.status === 'paid') { %>
-                          <span class="card-badge finished">Pago</span>
-                        <% } else { %>
-                          <span class="card-badge open">Disponível</span>
-                        <% } %>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
         <% } %>
-      <% } %>
-    </section>
+      </section>
+    </div>
   </div>
 
   <%- include('partials/footer') %>
 
   <script>
-    document.getElementById('btn-copy-affiliate')?.addEventListener('click', function () {
-      const input = document.getElementById('affiliate-link');
-      if (!input) return;
-      navigator.clipboard.writeText(input.value).then(() => {
-        this.textContent = '✓ Copiado';
-        setTimeout(() => { this.textContent = 'Copiar'; }, 2500);
-      });
-    });
+    (function () {
+      const panels = document.querySelectorAll('.dash-panel');
+      const navItems = document.querySelectorAll('.dash-nav-item');
+      const titleEl = document.getElementById('dash-topbar-title');
+      const subEl = document.getElementById('dash-topbar-sub');
+      const sidebar = document.getElementById('dash-sidebar');
+      const overlay = document.getElementById('dash-overlay');
+      const menuToggle = document.getElementById('dash-menu-toggle');
 
-    if (window.location.hash === '#afiliados') {
-      const el = document.getElementById('afiliados');
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-    }
+      function closeSidebar() {
+        sidebar?.classList.remove('is-open');
+        overlay?.setAttribute('hidden', '');
+        menuToggle?.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('dash-sidebar-open');
+      }
+
+      function openSidebar() {
+        sidebar?.classList.add('is-open');
+        overlay?.removeAttribute('hidden');
+        menuToggle?.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('dash-sidebar-open');
+      }
+
+      function setTab(tab, pushUrl) {
+        const id = tab || 'inicio';
+        panels.forEach((p) => p.classList.toggle('is-active', p.id === 'dash-panel-' + id));
+        navItems.forEach((n) => n.classList.toggle('is-active', n.dataset.dashTab === id));
+        const active = document.getElementById('dash-panel-' + id);
+        if (active && titleEl && subEl) {
+          titleEl.textContent = active.dataset.dashTitle || 'Painel';
+          subEl.textContent = active.dataset.dashSub || '';
+        }
+        if (pushUrl !== false) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('tab', id);
+          url.hash = '';
+          history.replaceState(null, '', url.pathname + url.search);
+        }
+        closeSidebar();
+      }
+
+      navItems.forEach((btn) => {
+        btn.addEventListener('click', () => setTab(btn.dataset.dashTab));
+      });
+
+      document.querySelectorAll('[data-dash-goto]').forEach((el) => {
+        el.addEventListener('click', () => setTab(el.dataset.dashGoto));
+      });
+
+      menuToggle?.addEventListener('click', () => {
+        if (sidebar?.classList.contains('is-open')) closeSidebar();
+        else openSidebar();
+      });
+
+      overlay?.addEventListener('click', closeSidebar);
+
+      document.getElementById('btn-copy-affiliate')?.addEventListener('click', function () {
+        const input = document.getElementById('affiliate-link');
+        if (!input) return;
+        navigator.clipboard.writeText(input.value).then(() => {
+          this.textContent = '✓ Copiado';
+          setTimeout(() => { this.textContent = 'Copiar'; }, 2500);
+        });
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      let initial = params.get('tab');
+      if (!initial && window.location.hash === '#afiliados') initial = 'afiliados';
+      if (initial) setTab(initial, false);
+    })();
   </script>
 </body>
 </html>

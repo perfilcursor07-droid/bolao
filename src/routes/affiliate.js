@@ -40,13 +40,13 @@ router.post('/afiliado/cadastro', requireAuth, async (req, res) => {
     const result = await applyForAffiliate(req.session.user.id, preferredCode || null);
 
     if (result.error === 'already_applied') {
-      return res.redirect('/painel#afiliados');
+      return res.redirect('/painel?tab=afiliados');
     }
     if (result.error === 'pix_required') {
       return res.redirect('/afiliado?error=' + encodeURIComponent('Cadastre sua chave PIX antes (participe de um bolão ou atualize seu perfil).'));
     }
 
-    res.redirect('/painel?applied=1#afiliados');
+    res.redirect('/painel?applied=1&tab=afiliados');
   } catch (err) {
     res.redirect('/afiliado?error=' + encodeURIComponent('Erro ao solicitar cadastro. Tente novamente.'));
   }
@@ -70,6 +70,9 @@ router.get('/painel', requireAuth, async (req, res) => {
       minPayoutCents: MIN_PAYOUT_CENTS,
       user: req.session.user,
       applied: req.query.applied === '1',
+      activeTab: ['inicio', 'apostas', 'pagamentos', 'afiliados'].includes(req.query.tab)
+        ? req.query.tab
+        : 'inicio',
     });
   } catch (err) {
     res.status(500).render('error', { title: 'Erro', message: err.message, user: req.session.user });
@@ -77,7 +80,7 @@ router.get('/painel', requireAuth, async (req, res) => {
 });
 
 router.get('/afiliado/painel', requireAuth, (req, res) => {
-  res.redirect('/painel#afiliados');
+  res.redirect('/painel?tab=afiliados');
 });
 
 module.exports = router;

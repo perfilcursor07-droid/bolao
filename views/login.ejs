@@ -49,7 +49,16 @@
         <div class="auth-card auth-card-login">
           <div class="auth-card-header">
             <h2>Bem-vindo de volta</h2>
-            <p class="subtitle">Entre com seu e-mail e senha</p>
+            <p class="subtitle" id="auth-login-subtitle">Entre com e-mail ou WhatsApp</p>
+          </div>
+
+          <div class="auth-login-tabs" role="tablist" aria-label="Forma de entrar">
+            <button type="button" class="auth-login-tab<%= (typeof loginTab === 'undefined' || loginTab === 'email') ? ' is-active' : '' %>" role="tab" id="auth-tab-email" aria-selected="<%= (typeof loginTab === 'undefined' || loginTab === 'email') ? 'true' : 'false' %>" aria-controls="auth-panel-email" data-auth-tab="email">
+              E-mail
+            </button>
+            <button type="button" class="auth-login-tab<%= loginTab === 'telefone' ? ' is-active' : '' %>" role="tab" id="auth-tab-telefone" aria-selected="<%= loginTab === 'telefone' ? 'true' : 'false' %>" aria-controls="auth-panel-telefone" data-auth-tab="telefone">
+              WhatsApp
+            </button>
           </div>
 
           <% if (error) { %>
@@ -59,31 +68,63 @@
             </div>
           <% } %>
 
-          <form method="POST" action="/login" class="auth-form">
-            <div class="form-group auth-field">
-              <label for="email">E-mail</label>
-              <div class="auth-input-wrap">
-                <span class="auth-input-icon" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 8l8 5 8-5M4 8v10h16V8"/></svg>
-                </span>
-                <input type="email" id="email" name="email" class="form-control auth-input" required placeholder="seu@email.com" autocomplete="email">
+          <div class="auth-login-panel<%= (typeof loginTab === 'undefined' || loginTab === 'email') ? ' is-active' : '' %>" id="auth-panel-email" role="tabpanel" aria-labelledby="auth-tab-email"<%= loginTab === 'telefone' ? ' hidden' : '' %>>
+            <form method="POST" action="/login" class="auth-form">
+              <div class="form-group auth-field">
+                <label for="email">E-mail</label>
+                <div class="auth-input-wrap">
+                  <span class="auth-input-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 8l8 5 8-5M4 8v10h16V8"/></svg>
+                  </span>
+                  <input type="email" id="email" name="email" class="form-control auth-input" required placeholder="seu@email.com" autocomplete="email">
+                </div>
               </div>
-            </div>
 
-            <div class="form-group auth-field">
-              <label for="password">Senha</label>
-              <div class="auth-input-wrap">
-                <span class="auth-input-icon" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-                </span>
-                <input type="password" id="password" name="password" class="form-control auth-input" required placeholder="Sua senha" autocomplete="current-password">
+              <div class="form-group auth-field">
+                <label for="password">Senha</label>
+                <div class="auth-input-wrap">
+                  <span class="auth-input-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                  </span>
+                  <input type="password" id="password" name="password" class="form-control auth-input" required placeholder="Sua senha" autocomplete="current-password">
+                </div>
               </div>
-            </div>
 
-            <button type="submit" class="btn btn-accent btn-block btn-xl auth-submit">
-              Entrar na conta
-            </button>
-          </form>
+              <button type="submit" class="btn btn-accent btn-block btn-xl auth-submit">
+                Entrar com e-mail
+              </button>
+            </form>
+          </div>
+
+          <div class="auth-login-panel<%= loginTab === 'telefone' ? ' is-active' : '' %>" id="auth-panel-telefone" role="tabpanel" aria-labelledby="auth-tab-telefone"<%= loginTab !== 'telefone' ? ' hidden' : '' %>>
+            <form method="POST" action="/login/telefone" class="auth-form auth-form-phone" id="form-login-phone">
+              <div class="form-group auth-field">
+                <label for="login-phone">WhatsApp</label>
+                <div class="auth-phone-row">
+                  <div class="participar-country-picker" id="login-phone-country-picker">
+                    <input type="hidden" id="login-phone-country" name="phone_country" value="55">
+                    <button type="button" class="participar-country-trigger" id="login-phone-country-trigger"
+                      aria-haspopup="listbox" aria-expanded="false" aria-label="País do WhatsApp" tabindex="-1">
+                      <span class="participar-country-flag"></span>
+                      <span class="participar-country-label">+55</span>
+                      <span class="participar-country-chevron" aria-hidden="true"></span>
+                    </button>
+                    <ul class="participar-country-menu" id="login-phone-country-menu" role="listbox" hidden></ul>
+                  </div>
+                  <div class="auth-input-wrap auth-input-wrap--phone">
+                    <input type="tel" id="login-phone" name="phone" class="form-control auth-input auth-input--phone" required
+                      placeholder="(11) 98114-1234" inputmode="tel" autocomplete="tel"
+                      aria-label="WhatsApp com DDD">
+                  </div>
+                </div>
+                <small class="form-hint auth-phone-hint">O mesmo número usado ao participar do bolão.</small>
+              </div>
+
+              <button type="submit" class="btn btn-accent btn-block btn-xl auth-submit" id="btn-login-phone">
+                Entrar com WhatsApp
+              </button>
+            </form>
+          </div>
 
           <div class="auth-divider"><span>ou</span></div>
 
@@ -114,5 +155,80 @@
   </main>
 
   <%- include('partials/footer') %>
+
+  <script src="/js/phone-input.js"></script>
+  <script>
+    (function () {
+      const tabs = document.querySelectorAll('.auth-login-tab');
+      const panels = {
+        email: document.getElementById('auth-panel-email'),
+        telefone: document.getElementById('auth-panel-telefone'),
+      };
+      const subtitle = document.getElementById('auth-login-subtitle');
+
+      function setTab(name) {
+        tabs.forEach((t) => {
+          const active = t.dataset.authTab === name;
+          t.classList.toggle('is-active', active);
+          t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        Object.entries(panels).forEach(([key, panel]) => {
+          if (!panel) return;
+          const active = key === name;
+          panel.classList.toggle('is-active', active);
+          panel.hidden = !active;
+        });
+        const emailInput = document.getElementById('email');
+        const passInput = document.getElementById('password');
+        const phoneInput = document.getElementById('login-phone');
+        if (name === 'telefone') {
+          emailInput?.removeAttribute('required');
+          passInput?.removeAttribute('required');
+          phoneInput?.setAttribute('required', '');
+        } else {
+          phoneInput?.removeAttribute('required');
+          emailInput?.setAttribute('required', '');
+          passInput?.setAttribute('required', '');
+        }
+        if (subtitle) {
+          subtitle.textContent = name === 'telefone'
+            ? 'Digite o WhatsApp do seu cadastro'
+            : 'Entre com e-mail e senha';
+        }
+        const url = new URL(window.location.href);
+        if (name === 'telefone') url.searchParams.set('tab', 'telefone');
+        else url.searchParams.delete('tab');
+        history.replaceState(null, '', url.pathname + url.search);
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => setTab(tab.dataset.authTab));
+      });
+
+      const initialTab = document.querySelector('.auth-login-tab.is-active')?.dataset.authTab || 'email';
+      setTab(initialTab);
+
+      if (window.PhoneInput) {
+        PhoneInput.init({
+          countryPicker: '#login-phone-country-picker',
+          phoneInput: '#login-phone',
+          defaultCountry: '55',
+          initialCountry: '55',
+        });
+      }
+
+      const phoneForm = document.getElementById('form-login-phone');
+      phoneForm?.addEventListener('submit', function () {
+        const emailPanel = panels.email;
+        if (emailPanel) emailPanel.querySelectorAll('[required]').forEach((el) => el.removeAttribute('required'));
+      });
+
+      const emailForm = panels.email?.querySelector('form');
+      emailForm?.addEventListener('submit', function () {
+        const phoneInput = document.getElementById('login-phone');
+        if (phoneInput) phoneInput.removeAttribute('required');
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -65,13 +65,13 @@
         <h2>Você já é afiliado</h2>
         <p>Acesse seu painel para copiar o link e acompanhar ganhos.</p>
         <div class="btn-center-wrap">
-          <a href="/painel#afiliados" class="btn btn-gold">Abrir meu painel</a>
+          <a href="/painel?tab=afiliados" class="btn btn-gold">Abrir meu painel</a>
         </div>
       <% } else if (affiliate && affiliate.status === 'pending') { %>
         <h2>Solicitação em análise</h2>
         <p>Seu código <strong><%= affiliate.code %></strong> será liberado após aprovação.</p>
         <div class="btn-center-wrap">
-          <a href="/painel#afiliados" class="btn btn-outline">Ver status</a>
+          <a href="/painel?tab=afiliados" class="btn btn-outline">Ver status</a>
         </div>
       <% } else if (affiliate && affiliate.status === 'rejected') { %>
         <h2>Cadastro não aprovado</h2>
