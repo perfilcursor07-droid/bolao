@@ -320,10 +320,15 @@
       b.onclick = () => add(+b.dataset.h, +b.dataset.a, { quick: true });
     });
 
-    $('placar-form').addEventListener('submit', function () {
+    $('placar-form').addEventListener('submit', function (e) {
+      if (elPay.classList.contains('is-loading')) {
+        e.preventDefault();
+        return;
+      }
       noErr();
       elJson.value = JSON.stringify(placares);
-      elPay.disabled = true;
+      elPay.classList.add('is-loading');
+      elPay.setAttribute('aria-busy', 'true');
       elPay.textContent = '⏳ Gerando PIX...';
     });
 

@@ -7282,6 +7282,12 @@ body.modal-open {
   transform: scale(0.98);
 }
 
+.placar-sticky-footer .btn-pay.is-loading {
+  pointer-events: none;
+  opacity: 0.9;
+  cursor: wait;
+}
+
 .placar-cart-link {
   display: inline-flex;
   align-items: center;

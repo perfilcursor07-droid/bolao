@@ -125,10 +125,15 @@
   <script>
     const btnCheckout = document.getElementById('btn-checkout');
     if (btnCheckout) {
-      btnCheckout.closest('form').onsubmit = function () {
-        btnCheckout.disabled = true;
+      btnCheckout.closest('form').addEventListener('submit', function (e) {
+        if (btnCheckout.classList.contains('is-loading')) {
+          e.preventDefault();
+          return;
+        }
+        btnCheckout.classList.add('is-loading');
+        btnCheckout.setAttribute('aria-busy', 'true');
         btnCheckout.textContent = '⏳ Gerando PIX...';
-      };
+      });
     }
   </script>
 </body>

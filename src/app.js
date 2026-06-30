@@ -34,6 +34,10 @@ const {
 
 const app = express();
 
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 let lastGameStatusCheck = 0;
 
 app.set('view engine', 'ejs');
