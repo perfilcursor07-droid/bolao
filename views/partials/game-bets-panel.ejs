@@ -1,0 +1,113 @@
+<%
+  const isFinished = game.status === 'finished';
+  const isLive = game.status === 'closed' && hasGameStarted(game);
+  const betsList = typeof sortedBets !== 'undefined' ? sortedBets : (bets || []);
+  const winCount = betsList.filter(function (b) { return b.is_winner; }).length;
+  const showPanel = betsList.length > 0 || isFinished || isLive || game.status === 'closed' || !isBettingOpen(game);
+%>
+
+<% if (showPanel) { %>
+<section class="game-bets-panel" aria-label="Palpites do bolão">
+  <% if (isFinished && game.home_score !== null) { %>
+    <div class="game-result-banner <%= winCount > 0 ? 'game-result-banner--won' : 'game-result-banner--empty' %>">
+      <div class="game-result-banner-top">
+        <span class="game-result-label">Resultado final</span>
+        <% if (winCount > 0) { %>
+          <span class="game-result-winners-pill">🏆 <%= winCount %> acerto<%= winCount !== 1 ? 's' : '' %></span>
+        <% } else { %>
+          <span class="game-result-winners-pill game-result-winners-pill--empty">Sem acertos</span>
+        <% } %>
+      </div>
+      <div class="game-result-scoreline">
+        <span class="game-result-team"><%= teamPt(game.home_team) %></span>
+        <span class="game-result-score"><%= game.home_score %> × <%= game.away_score %></span>
+        <span class="game-result-team"><%= teamPt(game.away_team) %></span>
+      </div>
+      <% if (winCount > 0 && typeof prizeBreakdown !== 'undefined' && prizeBreakdown) { %>
+        <p class="game-result-prize-hint">
+          Cada ganhador recebeu <strong><%= formatCents(prizeBreakdown.prizeEach) %></strong>
+        </p>
+      <% } %>
+    </div>
+
+    <% if (typeof prizeBreakdown !== 'undefined' && prizeBreakdown) { %>
+      <div class="prize-breakdown prize-breakdown--game-detail">
+        <div class="prize-breakdown-row">
+          <span>Total arrecadado</span>
+          <strong><%= formatCents(prizeBreakdown.totalPool) %></strong>
+        </div>
+        <div class="prize-breakdown-row prize-breakdown-fee">
+          <span>Taxa do sistema (<%= prizeBreakdown.feePercent %>%)</span>
+          <strong>− <%= formatCents(prizeBreakdown.feeCents) %></strong>
+        </div>
+        <div class="prize-breakdown-row prize-breakdown-net">
+          <span>Prêmio líquido (<%= prizeBreakdown.netPercent %>%)</span>
+          <strong><%= formatCents(prizeBreakdown.netPool) %></strong>
+        </div>
+      </div>
+    <% } %>
+  <% } else if (isLive) { %>
+    <div class="game-result-banner game-result-banner--live">
+      <span class="game-result-label">Jogo ao vivo</span>
+      <p class="game-result-live-hint">Palpites abaixo — o resultado será conferido ao final da partida.</p>
+    </div>
+  <% } else if (game.status === 'closed' || !isBettingOpen(game)) { %>
+    <div class="game-result-banner game-result-banner--waiting">
+      <span class="game-result-label">Aguardando resultado</span>
+      <p class="game-result-live-hint">Apostas encerradas. Confira os palpites abaixo.</p>
+    </div>
+  <% } %>
+
+  <div class="game-bets-head">
+    <h3 class="section-title game-bets-title">
+      <%= isFinished ? 'Quem apostou o quê' : 'Apostas realizadas' %>
+    </h3>
+    <% if (betsList.length > 0) { %>
+      <div class="game-bets-badges">
+        <span class="game-bets-badge"><%= betsList.length %> palpite<%= betsList.length !== 1 ? 's' : '' %></span>
+        <% if (isFinished && winCount > 0) { %>
+          <span class="game-bets-badge game-bets-badge--win"><%= winCount %> ganhou<%= winCount !== 1 ? 'ram' : '' %></span>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (betsList.length > 0) { %>
+    <div class="game-bets-list">
+      <% betsList.forEach(function (bet) { %>
+        <div class="game-bet-row<%= bet.is_winner ? ' game-bet-row--winner' : (isFinished ? ' game-bet-row--miss' : '') %>">
+          <div class="game-bet-row-main">
+            <% if (bet.is_winner) { %>
+              <span class="game-bet-trophy" aria-hidden="true">🏆</span>
+            <% } %>
+            <div class="game-bet-row-text">
+              <span class="game-bet-name"><%= bet.name %></span>
+              <%- include('bet-confirmed-at', { paidAt: bet.paid_at }) %>
+            </div>
+          </div>
+          <div class="game-bet-row-end">
+            <span class="game-bet-score"><%= bet.home_score_prediction %>×<%= bet.away_score_prediction %></span>
+            <% if (isFinished && bet.is_winner) { %>
+              <strong class="game-bet-prize"><%= formatCents(bet.prize_amount_cents || (prizeBreakdown && prizeBreakdown.prizeEach)) %></strong>
+            <% } else if (isFinished) { %>
+              <span class="game-bet-status game-bet-status--miss">Não acertou</span>
+            <% } else if (isLive) { %>
+              <span class="game-bet-status game-bet-status--live">Ao vivo</span>
+            <% } else if (game.status === 'closed' || !isBettingOpen(game)) { %>
+              <span class="game-bet-status game-bet-status--wait">Aguardando</span>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <p class="closed-betting-empty">Nenhuma aposta neste bolão ainda.</p>
+  <% } %>
+
+  <% if (isFinished && winCount === 0) { %>
+    <div class="alert alert-refund game-bets-refund">
+      Ninguém acertou o placar final. O valor foi <strong>devolvido proporcionalmente</strong> aos apostadores (<%= noWinnerRefundPercent %>% de cada aposta, taxa de <%= noWinnerFeePercent %>%).
+    </div>
+  <% } %>
+</section>
+<% } %>

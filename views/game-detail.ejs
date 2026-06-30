@@ -46,24 +46,11 @@
         </div>
       </div>
 
-      <% const showPublicBets = typeof publicBets !== 'undefined' && publicBets && (publicBets.bets.length > 0 || game.status === 'closed' || !isBettingOpen(game)); %>
-      <% if (showPublicBets) { %>
-        <section class="public-bets-section" aria-label="Apostas realizadas neste bolão">
-          <div class="public-bets-head">
-            <h3 class="section-title public-bets-title">Apostas realizadas</h3>
-            <% if (publicBets.bets.length > 0) { %>
-              <span class="public-bets-count"><%= publicBets.bets.length %></span>
-            <% } %>
-          </div>
-          <%- include('partials/closed-betting-panel', {
-            breakdown: null,
-            bets: publicBets.bets,
-            showEmpty: true,
-            betsTitle: null,
-            listClass: 'public-bets-list',
-          }) %>
-        </section>
-      <% } %>
+      <%- include('partials/game-bets-panel', {
+        game,
+        sortedBets: typeof sortedBets !== 'undefined' ? sortedBets : (publicBets && publicBets.bets) || [],
+        prizeBreakdown: typeof prizeBreakdown !== 'undefined' ? prizeBreakdown : null,
+      }) %>
 
       <% if (success) { %>
         <div class="alert alert-success">🎉 Aposta confirmada! Pode fazer outra se quiser.</div>
@@ -165,47 +152,6 @@
         <a href="/games/<%= game.id %>/participar" class="btn btn-gold btn-block btn-xl" style="margin-top: 1rem;">
           Participar — <%= formatCents(game.entry_fee_cents) %>
         </a>
-      <% } %>
-
-      <% if (game.status === 'finished' && typeof prizeBreakdown !== 'undefined') { %>
-        <div class="prize-breakdown prize-breakdown-card" id="ganhadores">
-          <p class="prize-breakdown-title">Distribuição do prêmio</p>
-          <div class="prize-breakdown-row">
-            <span>Total arrecadado</span>
-            <strong><%= formatCents(prizeBreakdown.totalPool) %></strong>
-          </div>
-          <div class="prize-breakdown-row prize-breakdown-fee">
-            <span>Taxa do sistema (<%= prizeBreakdown.feePercent %>%)</span>
-            <strong>− <%= formatCents(prizeBreakdown.feeCents) %></strong>
-          </div>
-          <div class="prize-breakdown-row prize-breakdown-net">
-            <span>Prêmio líquido (<%= prizeBreakdown.netPercent %>%)</span>
-            <strong><%= formatCents(prizeBreakdown.netPool) %></strong>
-          </div>
-          <% if (winners.length > 0) { %>
-            <div class="prize-breakdown-row prize-breakdown-each">
-              <span>Por ganhador (÷ <%= winners.length %>)</span>
-              <strong class="prize-each-value"><%= formatCents(prizeBreakdown.prizeEach) %></strong>
-            </div>
-          <% } %>
-        </div>
-      <% } %>
-
-      <% if (winners.length > 0) { %>
-        <h3 class="section-title" style="margin-top: 2rem;">🏆 Ganhadores</h3>
-        <div class="winners-list">
-          <% winners.forEach(function(w) { %>
-            <div class="winner-row">
-              <span><%= w.name %></span>
-              <span><%= w.home_score_prediction %> × <%= w.away_score_prediction %></span>
-              <span class="prize-amount"><%= formatCents(w.prize_amount_cents) %></span>
-            </div>
-          <% }); %>
-        </div>
-      <% } else if (game.status === 'finished') { %>
-        <div class="alert alert-refund" style="margin-top: 1.25rem; text-align: center;">
-          Nenhum ganhador neste jogo. O valor foi <strong>devolvido proporcionalmente</strong> aos apostadores (<%= noWinnerRefundPercent %>% de cada aposta, taxa de <%= noWinnerFeePercent %>%).
-        </div>
       <% } %>
     </div>
   </div>

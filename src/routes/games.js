@@ -312,6 +312,14 @@ router.get('/games/:id', async (req, res) => {
 
     const betsMap = await loadBetsForGames([game]);
     const publicBets = betsMap[game.id] || { bets: [], breakdown: prizeBreakdown };
+    const sortedBets = game.status === 'finished'
+      ? [...(publicBets.bets || [])].sort((a, b) => {
+          if (Boolean(a.is_winner) !== Boolean(b.is_winner)) {
+            return b.is_winner ? 1 : -1;
+          }
+          return 0;
+        })
+      : (publicBets.bets || []);
 
     res.render('game-detail', {
       title: game.title,
@@ -320,6 +328,7 @@ router.get('/games/:id', async (req, res) => {
       winners,
       prizeBreakdown,
       publicBets,
+      sortedBets,
       closedBetting: publicBets,
       user: req.session.user || null,
       success: req.query.success === '1',
