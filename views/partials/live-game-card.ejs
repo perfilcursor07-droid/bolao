@@ -1,44 +1,38 @@
 <article class="live-game-card">
   <a href="/games/<%= game.id %>" class="live-game-card-link">
     <div class="live-game-card-inner">
-      <header class="live-game-head">
-        <div class="live-game-head-left">
-          <span class="live-game-badge">
-            <span class="live-dot" aria-hidden="true"></span>
-            AO VIVO
+      <div class="live-game-top">
+        <span class="live-game-badge">
+          <span class="live-dot" aria-hidden="true"></span>
+          AO VIVO
+        </span>
+        <time class="live-game-date"><%= gameDateBR(game.game_date) %></time>
+      </div>
+
+      <div class="live-game-body">
+        <div class="live-game-match">
+          <span class="live-game-team">
+            <%- include('team-flag', { name: game.home_team, size: 'sm' }) %>
+            <span class="live-game-team-name"><%= teamPt(game.home_team) %></span>
+          </span>
+          <% if (game.home_score !== null && game.away_score !== null) { %>
+            <span class="live-game-score"><%= game.home_score %>×<%= game.away_score %></span>
+          <% } else { %>
+            <span class="live-game-score live-game-score--pending">×</span>
+          <% } %>
+          <span class="live-game-team">
+            <%- include('team-flag', { name: game.away_team, size: 'sm' }) %>
+            <span class="live-game-team-name"><%= teamPt(game.away_team) %></span>
           </span>
         </div>
-        <time class="live-game-date"><%= gameDateBR(game.game_date) %></time>
-      </header>
 
-      <% if (game.title) { %>
-        <p class="live-game-title"><%= game.title %></p>
-      <% } %>
-
-      <div class="live-game-match">
-        <span class="live-game-team">
-          <%- include('team-flag', { name: game.home_team, size: 'md' }) %>
-          <%= teamPt(game.home_team) %>
-        </span>
-        <% if (game.home_score !== null && game.away_score !== null) { %>
-          <span class="live-game-score"><%= game.home_score %> × <%= game.away_score %></span>
-        <% } else { %>
-          <span class="live-game-score live-game-score--pending">×</span>
-        <% } %>
-        <span class="live-game-team">
-          <%- include('team-flag', { name: game.away_team, size: 'md' }) %>
-          <%= teamPt(game.away_team) %>
-        </span>
+        <div class="live-game-aside">
+          <span class="live-game-prize">
+            🏆 <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %>
+          </span>
+          <span class="live-game-cta" aria-hidden="true">→</span>
+        </div>
       </div>
-
-      <div class="live-game-prize">
-        <span class="live-game-prize-label">🏆 Prêmio acumulado</span>
-        <strong class="live-game-prize-value">
-          <%= formatCents(game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents) %>
-        </strong>
-      </div>
-
-      <span class="live-game-cta">Acompanhar bolão →</span>
     </div>
   </a>
 </article>
