@@ -55,12 +55,20 @@ router.get('/register', requireGuest, (req, res) => {
 });
 
 router.post('/register', requireGuest, async (req, res) => {
-  const { name, email, password, cpf, phone } = req.body;
+  const { name, email, password, password_confirm, cpf, phone } = req.body;
   const pixKey = (cpf || '').trim();
   const cleanPhone = (phone || '').replace(/\D/g, '');
 
-  if (!name || !email || !password || pixKey.length < 5) {
+  if (!name || !email || !password || !password_confirm || pixKey.length < 5) {
     return res.render('register', { title: 'Cadastrar', error: 'Preencha todos os campos corretamente' });
+  }
+
+  if (password.length < 6) {
+    return res.render('register', { title: 'Cadastrar', error: 'A senha deve ter no mínimo 6 caracteres' });
+  }
+
+  if (password !== password_confirm) {
+    return res.render('register', { title: 'Cadastrar', error: 'As senhas não coincidem' });
   }
 
   try {

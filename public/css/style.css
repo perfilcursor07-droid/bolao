@@ -5982,7 +5982,66 @@ body.modal-open {
 }
 
 .page-register .auth-card-register {
-  padding: 1.5rem 1.35rem;
+  max-width: 400px;
+  padding: 1.25rem 1.15rem;
+}
+
+.page-register .auth-card-header {
+  margin-bottom: 1rem;
+}
+
+.page-register .auth-card-header h2 {
+  font-size: 1.2rem;
+}
+
+.page-register .auth-card-header .subtitle {
+  font-size: 0.8rem;
+}
+
+.page-register .auth-form-grid {
+  gap: 0.6rem;
+}
+
+.page-register .auth-field label {
+  font-size: 0.76rem;
+  margin-bottom: 0.28rem;
+}
+
+.page-register .auth-input-icon {
+  left: 0.7rem;
+}
+
+.page-register .auth-input-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.page-register .auth-input.form-control,
+.page-register .auth-input-wrap .form-control {
+  padding: 0.58rem 0.7rem 0.58rem 2.2rem;
+  font-size: 0.86rem;
+  border-radius: 10px;
+}
+
+.page-register .auth-submit--register {
+  margin-top: 0.65rem;
+  padding: 0.72rem 1rem;
+  font-size: 0.92rem;
+  border-radius: 10px;
+}
+
+.page-register .auth-divider {
+  margin: 0.85rem 0;
+}
+
+.page-register .auth-guest-card {
+  padding: 0.75rem 0.85rem;
+  gap: 0.65rem;
+}
+
+.page-register .auth-footer {
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .auth-shell-grid--register {
@@ -6040,7 +6099,7 @@ body.modal-open {
 
 @media (min-width: 768px) {
   .page-register .auth-card-register {
-    padding: 2rem 1.75rem;
+    padding: 1.35rem 1.4rem;
   }
 }
 
