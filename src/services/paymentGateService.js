@@ -19,6 +19,7 @@ async function expirePendingPaymentsForGame(gameId, executor = pool) {
 /**
  * Expira PIX pendentes de jogos que já não aceitam aposta
  * (bolão fechado, jogo iniciado ou passou do prazo de 5 min antes).
+ * PROTEÇÃO: nunca expira se faltam mais de 30 min para o jogo.
  */
 async function expirePendingPaymentsForClosedBetting() {
   const [rows] = await pool.query(
@@ -29,8 +30,17 @@ async function expirePendingPaymentsForClosedBetting() {
   );
 
   let expired = 0;
+  const now = Date.now();
+
   for (const row of rows) {
     const game = { id: row.id, status: row.status, game_date: row.game_date };
+
+    // PROTEÇÃO: se faltam mais de 30 min para o jogo, NUNCA expirar
+    const kickoff = new Date(row.game_date).getTime();
+    if (!isNaN(kickoff) && kickoff - now > 30 * 60 * 1000) {
+      continue; // jogo ainda longe, não expira
+    }
+
     if (!canAcceptPaymentForGame(game)) {
       const [result] = await pool.query(
         `UPDATE payments SET status = 'expired' WHERE id = ? AND status = 'pending'`,

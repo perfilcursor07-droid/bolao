@@ -6,7 +6,13 @@ function parseGameDate(game) {
   if (!game || !game.game_date) return null;
   const d = game.game_date;
   if (d instanceof Date) return d;
-  const parsed = new Date(d);
+  // MySQL retorna DATETIME sem timezone — forçar interpretação como UTC
+  let str = String(d);
+  // Se não tem Z ou offset, é UTC vindo do banco
+  if (!str.endsWith('Z') && !str.includes('+') && !str.includes('T')) {
+    str = str.replace(' ', 'T') + 'Z';
+  }
+  const parsed = new Date(str);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
