@@ -5983,6 +5983,17 @@ body.modal-open {
   border: 1px solid rgba(16, 185, 129, 0.28);
 }
 
+.copa-match-live-create {
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.copa-match-badge-live-create {
+  color: #fca5a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .copa-check--disabled {
   opacity: 0.35;
   cursor: not-allowed;

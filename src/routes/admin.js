@@ -2,7 +2,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
-const { getWorldCupMatches } = require('../services/footballApi');
+const { getWorldCupMatches, getMatchResult } = require('../services/footballApi');
 const { syncGamesFromWorldCupMatches } = require('../services/gameStatusService');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
@@ -779,6 +779,78 @@ router.post('/pagamentos/:betId/notify-individual', requireAdmin, async (req, re
 });
 
 // Copa do Mundo - listar jogos da API
+function isCopaMatchLive(apiStatus) {
+  return ['IN_PLAY', 'PAUSED', 'LIVE'].includes(String(apiStatus || '').toUpperCase());
+}
+
+async function createCopaBolaoFromMatch(m, entryFeeCents, createdBy) {
+  if (!m.home_team || !m.away_team || !m.game_date) {
+    return { created: false, reason: 'invalid' };
+  }
+
+  const home = translateTeamName(m.home_team);
+  const away = translateTeamName(m.away_team);
+  const kickoffMs = new Date(m.game_date).getTime();
+  const live = isCopaMatchLive(m.api_status);
+
+  if (kickoffMs <= Date.now() && !live) {
+    return { created: false, reason: 'past_not_live' };
+  }
+
+  const existing = await findExistingGame({
+    apiMatchId: m.api_match_id,
+    homeTeam: home,
+    awayTeam: away,
+    gameDate: m.game_date,
+  });
+  if (existing) return { created: false, reason: 'duplicate' };
+
+  let status = 'open';
+  let homeScore = null;
+  let awayScore = null;
+  let apiMatchStatus = m.api_status || null;
+
+  if (live) {
+    status = 'closed';
+    homeScore = m.home_score != null ? Number(m.home_score) : null;
+    awayScore = m.away_score != null ? Number(m.away_score) : null;
+
+    if (m.api_match_id && (homeScore === null || awayScore === null)) {
+      try {
+        const api = await getMatchResult(m.api_match_id, { forceRefresh: true });
+        if (api && (api.live || api.finished)) {
+          homeScore = api.homeScore;
+          awayScore = api.awayScore;
+          apiMatchStatus = api.status;
+        }
+      } catch (err) {
+        console.warn('[copa] placar ao vivo:', err.message);
+      }
+    }
+  }
+
+  const title = `Copa 2026 - ${home} x ${away}`;
+  await pool.query(
+    `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured, status, home_score, away_score, api_match_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+    [
+      title,
+      home,
+      away,
+      toMySQLDateTime(m.game_date),
+      entryFeeCents,
+      m.api_match_id || null,
+      createdBy,
+      status,
+      homeScore,
+      awayScore,
+      apiMatchStatus,
+    ]
+  );
+
+  return { created: true, live };
+}
+
 router.get('/copa', requireAdmin, async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === '1';
@@ -790,6 +862,9 @@ router.get('/copa', requireAdmin, async (req, res) => {
     const { apiMatchIds: existingApiMatchIds, fingerprints: existingFingerprints } =
       await loadExistingGameKeys();
 
+    const flash = req.session.flash || null;
+    delete req.session.flash;
+
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches,
@@ -797,6 +872,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       cachedAt,
       fromCache,
       hasLive,
+      flash,
       existingApiMatchIds,
       existingFingerprints,
       user: req.session.user,
@@ -829,7 +905,6 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
   const { game_date, api_match_id, entry_fee } = req.body;
   const defaultCents = await getDefaultEntryFeeCents();
   const entryFeeCents = Math.round(parseFloat(entry_fee || defaultCents / 100) * 100);
-  const title = `Copa 2026 - ${home} x ${away}`;
 
   try {
     if (api_match_id) {
@@ -847,11 +922,20 @@ router.post('/copa/create-game', requireAdmin, async (req, res) => {
       if (existing) return res.redirect('/admin/copa');
     }
 
-    await pool.query(
-      `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-      [title, home, away, toMySQLDateTime(game_date), entryFeeCents, api_match_id || null, req.session.user.id]
+    const result = await createCopaBolaoFromMatch(
+      {
+        home_team: home,
+        away_team: away,
+        game_date,
+        api_match_id,
+        api_status: req.body.api_status,
+        home_score: req.body.home_score,
+        away_score: req.body.away_score,
+      },
+      entryFeeCents,
+      req.session.user.id
     );
+    if (!result.created) return res.redirect('/admin/copa');
     res.redirect('/admin');
   } catch (err) {
     console.error('Erro ao criar jogo da Copa:', err.message);
@@ -878,40 +962,27 @@ router.post('/copa/create-bulk', requireAdmin, async (req, res) => {
   }
 
   let created = 0;
+  let skippedLive = 0;
   for (const raw of matches) {
     try {
       const m = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (!m.home_team || !m.away_team || !m.game_date) continue;
-      if (new Date(m.game_date).getTime() <= Date.now()) continue;
-
-      const home = translateTeamName(m.home_team);
-      const away = translateTeamName(m.away_team);
-
-      const existing = await findExistingGame({
-        apiMatchId: m.api_match_id,
-        homeTeam: home,
-        awayTeam: away,
-        gameDate: m.game_date,
-      });
-      if (existing) continue;
-
-      const title = `Copa 2026 - ${home} x ${away}`;
-      await pool.query(
-        `INSERT INTO games (title, home_team, away_team, game_date, entry_fee_cents, api_match_id, created_by, featured)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-        [title, home, away, toMySQLDateTime(m.game_date), entryFeeCents, m.api_match_id || null, req.session.user.id]
-      );
-      created++;
+      const result = await createCopaBolaoFromMatch(m, entryFeeCents, req.session.user.id);
+      if (result.created) created++;
+      else if (result.reason === 'past_not_live') skippedLive++;
     } catch (err) {
-      // Ignora duplicados silenciosamente
       if (err.code !== 'ER_DUP_ENTRY') {
         console.error('Erro ao criar jogo bulk:', err.message);
       }
     }
   }
 
+  if (created > 0) {
+    req.session.flash = `${created} bolão(ões) criado(s).${skippedLive > 0 ? ` ${skippedLive} ignorado(s) (já encerrados).` : ''}`;
+  } else if (skippedLive > 0) {
+    req.session.flash = 'Nenhum bolão criado — jogos selecionados já haviam terminado.';
+  }
   console.log(`Bulk: ${created}/${matches.length} jogos criados`);
-  res.redirect('/admin');
+  res.redirect(created > 0 ? '/admin' : '/admin/copa');
 });
 
 // Toggle destaque

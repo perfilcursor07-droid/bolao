@@ -30,8 +30,12 @@
     <p class="copa-sync-hint">
       Marque jogos para criar bolões.
       Jogos com <strong>✓ Bolão criado</strong> ficam desativados para não duplicar.
-      Pode criar bolão em qualquer jogo que ainda não terminou.
+      <strong>Jogos ao vivo</strong> também podem ser adicionados — entram como encerrados para apostas, com placar sincronizado.
     </p>
+
+    <% if (typeof flash !== 'undefined' && flash) { %>
+      <div class="alert alert-info"><%= flash %></div>
+    <% } %>
 
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
@@ -100,10 +104,10 @@
               <% var matchFp = gameFingerprint(m.homeTeam, m.awayTeam, toMySQLDateTime(m.date)); %>
               <% var alreadyCreated = existingIds.indexOf(String(m.id)) !== -1 || existingFps.indexOf(matchFp) !== -1; %>
               <% var canCreateBolao = matchNotFinished && hasTeams && !alreadyCreated; %>
-              <label class="copa-match-item copa-match-selectable<%= alreadyCreated ? ' copa-match-already' : '' %><%= !canCreateBolao && !alreadyCreated ? ' copa-match-unavailable' : '' %>" data-stage="<%= stage %>">
+              <label class="copa-match-item copa-match-selectable<%= alreadyCreated ? ' copa-match-already' : '' %><%= !canCreateBolao && !alreadyCreated ? ' copa-match-unavailable' : '' %><%= (m.status === 'IN_PLAY' || m.status === 'PAUSED') && canCreateBolao ? ' copa-match-live-create' : '' %>" data-stage="<%= stage %>">
                 <% if (canCreateBolao) { %>
                   <input type="checkbox" class="copa-check" name="matches[]"
-                    value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id) }).replace(/"/g, '&quot;') %>">
+                    value="<%- JSON.stringify({ home_team: m.homeTeam, away_team: m.awayTeam, game_date: toMySQLDateTime(m.date), api_match_id: String(m.id), api_status: m.status, home_score: m.homeScore, away_score: m.awayScore }).replace(/"/g, '&quot;') %>">
                 <% } else { %>
                   <input type="checkbox" disabled class="copa-check copa-check--disabled"
                     title="<%= alreadyCreated ? 'Bolão já criado para este jogo' : !matchNotFinished ? 'Jogo finalizado ou cancelado' : !hasTeams ? 'Times ainda não definidos' : 'Indisponível' %>">
@@ -124,6 +128,9 @@
                     <time><%= gameDateBR(m.date) %></time>
                     <span class="copa-match-status <%= m.status === 'FINISHED' || m.status === 'AWARDED' ? 'finished' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? 'live' : '' %>">
                       <%= m.status === 'SCHEDULED' || m.status === 'TIMED' ? 'Agendado' : m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE' ? '🔴 AO VIVO' : m.status === 'FINISHED' || m.status === 'AWARDED' ? 'Finalizado' : m.status %>
+                      <% if ((m.status === 'IN_PLAY' || m.status === 'PAUSED') && canCreateBolao) { %>
+                        <span class="copa-match-badge-live-create" title="Pode criar bolão — apostas encerradas"> · pode adicionar</span>
+                      <% } %>
                       <% if (alreadyCreated) { %>
                         <span class="copa-match-badge-created">✓ Bolão criado</span>
                       <% } %>
