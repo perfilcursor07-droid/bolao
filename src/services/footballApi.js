@@ -1,6 +1,14 @@
 const axios = require('axios');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { enrichKnockoutMatches } = require('./worldCupBracket');
+const {
+  isWorldCup26Enabled,
+  fetchWorldCup26Games,
+  fetchWorldCup26LiveMatches,
+  getWorldCup26MatchResult,
+  invalidateWorldCup26Cache,
+  getWorldCup26CacheInfo,
+} = require('./worldcup26Api');
 
 // ═══ api-sports.io (PRINCIPAL — melhor para live, 100 req/dia free) ═══
 // score.fulltime = placar dos 90 minutos
@@ -47,6 +55,16 @@ function useApiSportsForWc2026() {
 }
 
 function getFootballApiStatus() {
+  if (isWorldCup26Enabled()) {
+    return {
+      primary: 'worldcup26',
+      label: 'worldcup26.ir (Copa 2026 ao vivo)',
+      hasApiSports: Boolean(AS_KEY),
+      hasFootballData: Boolean(FD_KEY),
+      hasWorldCup26: true,
+      wc2026Source: 'worldcup26',
+    };
+  }
   if (useApiSportsForWc2026()) {
     return {
       primary: 'api-sports',
@@ -173,6 +191,10 @@ async function fetchFootballDataLiveFixtures(options = {}) {
  * Lista unificada de jogos ao vivo (prioriza API com dados da Copa 2026).
  */
 async function fetchLiveWorldCupFixtures(options = {}) {
+  if (isWorldCup26Enabled()) {
+    const { matches } = await fetchWorldCup26LiveMatches(options);
+    if (matches) return matches;
+  }
   const asLive = await fetchApiSportsLiveFixtures(options);
   if (asLive.length > 0) return asLive;
   return fetchFootballDataLiveFixtures(options);
@@ -230,9 +252,13 @@ function invalidateWorldCupCache() {
   worldCupCache.expiresAt = 0;
   liveFixturesCache.expiresAt = 0;
   fdLiveFixturesCache.expiresAt = 0;
+  invalidateWorldCup26Cache();
 }
 
 function getWorldCupCacheInfo() {
+  if (isWorldCup26Enabled()) {
+    return getWorldCup26CacheInfo();
+  }
   return {
     fetchedAt: worldCupCache.fetchedAt || null,
     expiresAt: worldCupCache.expiresAt || null,
@@ -313,7 +339,26 @@ async function getWorldCupMatches(options = {}) {
 
   const errors = [];
 
-  // PRINCIPAL: api-sports.io (dados melhores ao vivo, score.fulltime separado)
+  // PRINCIPAL: worldcup26.ir — Copa 2026 pública, sem API key
+  if (isWorldCup26Enabled()) {
+    try {
+      const wc26 = await fetchWorldCup26Games({ forceRefresh });
+      if (wc26.matches?.length) {
+        const matches = enrichKnockoutMatches(wc26.matches);
+        const result = { matches, error: wc26.error || null };
+        return {
+          ...result,
+          cachedAt: wc26.fetchedAt,
+          fromCache: wc26.fromCache,
+        };
+      }
+      if (wc26.error) errors.push(`worldcup26.ir: ${wc26.error}`);
+    } catch (err) {
+      errors.push(`worldcup26.ir: ${err.message}`);
+    }
+  }
+
+  // FALLBACK: api-sports.io (dados melhores ao vivo, score.fulltime separado)
   if (AS_KEY) {
     try {
       const res = await axios.get(`${AS_BASE}/fixtures`, {
@@ -495,6 +540,20 @@ async function getMatchResult(matchId, options = {}) {
   }
 
   if (Date.now() < rateLimitedUntil) return null;
+
+  if (isWorldCup26Enabled()) {
+    try {
+      const wc26Result = await getWorldCup26MatchResult(matchId, options);
+      if (wc26Result) {
+        if (wc26Result.finished || wc26Result.live) {
+          cacheMatchResult(matchId, wc26Result);
+        }
+        return wc26Result;
+      }
+    } catch (err) {
+      console.error('[worldcup26.ir] Match result erro:', err.message);
+    }
+  }
 
   // API-Football — só se o fixture for da Copa 2026 (IDs não são compatíveis com football-data)
   if (AS_KEY && useApiSportsForWc2026()) {

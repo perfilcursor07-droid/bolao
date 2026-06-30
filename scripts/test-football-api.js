@@ -5,10 +5,12 @@
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const { getWorldCupMatches } = require('../src/services/footballApi');
+const { getWorldCupMatches, getFootballApiStatus } = require('../src/services/footballApi');
 
 (async () => {
   console.log('--- Teste API Copa ---');
+  const status = getFootballApiStatus();
+  console.log('Fonte:', status.label);
   const { matches, error } = await getWorldCupMatches();
   if (error) {
     console.error('❌', error);

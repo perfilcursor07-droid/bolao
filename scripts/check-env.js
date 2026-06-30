@@ -20,8 +20,10 @@ console.log('WEBHOOK_URL:', process.env.WEBHOOK_URL || '(não definido)');
 
 const fdKey = (process.env.FOOTBALL_API_KEY || '').trim();
 const asKey = (process.env.APISPORTS_KEY || '').trim();
-console.log('FOOTBALL_API_KEY:', fdKey ? `${fdKey.length} caracteres` : '❌ VAZIO');
-console.log('APISPORTS_KEY:', asKey ? `${asKey.length} caracteres` : '(vazio — opcional)');
+const wc26 = String(process.env.WORLDCUP26_API ?? '1').toLowerCase();
+console.log('WORLDCUP26_API:', ['0', 'false', 'no'].includes(wc26) ? 'desligada' : 'ativa (worldcup26.ir)');
+console.log('FOOTBALL_API_KEY:', fdKey ? `${fdKey.length} caracteres (fallback)` : '(vazio — opcional)');
+console.log('APISPORTS_KEY:', asKey ? `${asKey.length} caracteres (fallback)` : '(vazio — opcional)');
 
 if (pixEnv === 'sandbox' && token.length > 80) {
   console.log('\n⚠️  Token longo + sandbox: provavelmente token de PRODUÇÃO.');
