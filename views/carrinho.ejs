@@ -28,11 +28,39 @@
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
+    <% if (typeof pendingPayments !== 'undefined' && pendingPayments.length > 0) { %>
+      <section class="carrinho-pending card" aria-label="Apostas aguardando pagamento PIX">
+        <div class="carrinho-pending-head">
+          <h2>⏳ Aguardando pagamento</h2>
+          <span class="carrinho-pending-count"><%= pendingPayments.length %> PIX pendente<%= pendingPayments.length !== 1 ? 's' : '' %></span>
+        </div>
+        <p class="carrinho-pending-hint">Pague para confirmar suas apostas no bolão.</p>
+        <ul class="carrinho-pending-list">
+          <% pendingPayments.forEach(function(payment) { %>
+            <li class="carrinho-pending-item">
+              <div class="carrinho-pending-info">
+                <strong><%= teamPt(payment.home_team) %> × <%= teamPt(payment.away_team) %></strong>
+                <small><%= payment.title %></small>
+              </div>
+              <a href="/payment/<%= payment.id %>" class="btn btn-gold btn-sm carrinho-pending-pay">
+                Pagar <%= formatCents(payment.amount_cents) %>
+              </a>
+            </li>
+          <% }); %>
+        </ul>
+      </section>
+    <% } %>
+
     <% if (cart.length === 0) { %>
       <div class="empty-state carrinho-empty">
         <div class="empty-icon">🛒</div>
-        <p>Seu carrinho está vazio</p>
-        <small>Escolha placares nos jogos abertos e adicione aqui antes de pagar.</small>
+        <% if (typeof pendingPayments !== 'undefined' && pendingPayments.length > 0) { %>
+          <p>Nenhum palpite novo no carrinho</p>
+          <small>Use os botões acima para pagar os PIX pendentes e confirmar suas apostas.</small>
+        <% } else { %>
+          <p>Seu carrinho está vazio</p>
+          <small>Escolha placares nos jogos abertos e adicione aqui antes de pagar.</small>
+        <% } %>
         <a href="/" class="btn btn-gold" style="margin-top:1rem;">Ver jogos abertos</a>
       </div>
     <% } else { %>

@@ -12,9 +12,6 @@
       <a href="/my-bets" class="nav-pill">Apostas</a>
       <a href="/regras" class="nav-pill">Regras</a>
       <a href="/afiliado" class="nav-pill">Afiliados</a>
-      <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-pill nav-pill-admin">Admin</a>
-      <% } %>
     <% } else { %>
       <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
       <a href="/ganhadores" class="nav-pill">Ganhadores</a>
@@ -24,27 +21,34 @@
     <% } %>
   </div>
 
-  <% if (typeof user !== 'undefined' && user) { %>
-    <div class="navbar-tools navbar-tools--bar">
-      <%- include('nav-tools') %>
-    </div>
-  <% } %>
-
-  <div class="navbar-actions">
+  <div class="navbar-right">
     <% if (typeof user !== 'undefined' && user) { %>
-      <div class="navbar-tools navbar-tools--desktop">
-        <%- include('nav-tools') %>
-      </div>
-      <div class="nav-user" title="<%= user.name %>">
-        <a href="/painel" class="nav-user-link">
+      <%- include('nav-tools') %>
+      <div class="nav-user-menu" id="nav-user-menu">
+        <button type="button" class="nav-user-trigger" id="nav-user-trigger"
+          aria-haspopup="menu" aria-expanded="false" aria-controls="nav-user-dropdown">
           <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-          <span class="nav-user-name"><%= user.name.split(' ')[0] %></span>
-        </a>
+          <span class="nav-user-trigger-name"><%= user.name.split(' ')[0] %></span>
+          <span class="nav-user-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="nav-user-dropdown" id="nav-user-dropdown" role="menu" hidden>
+          <div class="nav-user-dropdown-head">
+            <span class="nav-avatar nav-avatar--lg"><%= user.name.charAt(0).toUpperCase() %></span>
+            <div>
+              <strong><%= user.name.split(' ')[0] %></strong>
+              <small>Minha conta</small>
+            </div>
+          </div>
+          <a href="/painel" class="nav-user-dropdown-item" role="menuitem">Painel</a>
+          <% if (user.role === 'admin') { %>
+            <a href="/admin" class="nav-user-dropdown-item nav-user-dropdown-item--admin" role="menuitem">Administração</a>
+          <% } %>
+          <a href="/logout" class="nav-user-dropdown-item nav-user-dropdown-item--exit" role="menuitem">Sair</a>
+        </div>
       </div>
-      <a href="/logout" class="nav-link-quiet">Sair</a>
     <% } else { %>
-      <a href="/login" class="nav-link-quiet">Entrar</a>
-      <a href="/register" class="nav-btn-cta">Cadastrar</a>
+      <a href="/login" class="nav-account-exit nav-account-exit--guest">Entrar</a>
+      <a href="/register" class="nav-btn-cta nav-btn-cta--compact">Cadastrar</a>
     <% } %>
   </div>
 
@@ -60,32 +64,30 @@
         <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
         <div>
           <strong><%= user.name.split(' ')[0] %></strong>
-          <small>Minha conta</small>
+          <small>Meu painel</small>
         </div>
       </a>
     </div>
     <nav class="nav-mobile-links">
-      <a href="/painel" class="nav-mobile-link"><span class="nav-mobile-link-label">Minha conta</span></a>
       <a href="/" class="nav-mobile-link"><span class="nav-mobile-link-label">Jogos</span></a>
       <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
       <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
       <a href="/carrinho" class="nav-mobile-link">
-        <span class="nav-mobile-link-label">Carrinho</span>
-        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
-          <span class="nav-mobile-badge"><%= cartCount %></span>
+        <span class="nav-mobile-link-label">Carrinho / PIX pendente</span>
+        <%
+          const mCart = typeof cartCount !== 'undefined' ? Number(cartCount) : 0;
+          const mPending = typeof pendingPaymentsCount !== 'undefined' ? Number(pendingPaymentsCount) : 0;
+          const mTotal = mCart + mPending;
+        %>
+        <% if (mTotal > 0) { %>
+          <span class="nav-mobile-badge<%= mPending > 0 && mCart === 0 ? ' nav-mobile-badge--warn' : '' %>"><%= mTotal %></span>
         <% } %>
       </a>
-      <a href="/my-bets" class="nav-mobile-link"><span class="nav-mobile-link-label">Apostas</span></a>
-      <a href="/my-payments" class="nav-mobile-link">
-        <span class="nav-mobile-link-label">Pagamentos</span>
-        <% if (typeof pendingPaymentsCount !== 'undefined' && pendingPaymentsCount > 0) { %>
-          <span class="nav-mobile-badge nav-mobile-badge--warn"><%= pendingPaymentsCount %></span>
-        <% } %>
-      </a>
+      <a href="/my-bets" class="nav-mobile-link"><span class="nav-mobile-link-label">Minhas apostas</span></a>
       <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
       <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">Afiliados</span></a>
       <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">Admin</span></a>
+        <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">Administração</span></a>
       <% } %>
     </nav>
     <div class="nav-mobile-footer">
@@ -97,6 +99,7 @@
       <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
       <a href="/consultar" class="nav-mobile-link"><span class="nav-mobile-link-label">Consultar apostas</span></a>
       <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
+      <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">Afiliados</span></a>
     </nav>
     <div class="nav-mobile-guest">
       <p class="nav-mobile-guest-title">Bem-vindo</p>
@@ -113,20 +116,56 @@
   (function () {
     const toggle = document.getElementById('nav-toggle');
     const menu = document.getElementById('nav-mobile');
-    if (!toggle || !menu) return;
+    if (toggle && menu) {
+      function setOpen(open) {
+        menu.classList.toggle('open', open);
+        toggle.classList.toggle('open', open);
+        document.body.classList.toggle('nav-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
 
-    function setOpen(open) {
-      menu.classList.toggle('open', open);
-      toggle.classList.toggle('open', open);
-      document.body.classList.toggle('nav-open', open);
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      menu.setAttribute('aria-hidden', open ? 'false' : 'true');
+      toggle.addEventListener('click', () => setOpen(!menu.classList.contains('open')));
+
+      menu.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => setOpen(false));
+      });
     }
 
-    toggle.addEventListener('click', () => setOpen(!menu.classList.contains('open')));
+    const userMenu = document.getElementById('nav-user-menu');
+    const userTrigger = document.getElementById('nav-user-trigger');
+    const userDropdown = document.getElementById('nav-user-dropdown');
+    if (!userMenu || !userTrigger || !userDropdown) return;
 
-    menu.querySelectorAll('a').forEach((link) => {
-      link.addEventListener('click', () => setOpen(false));
+    function closeUserMenu() {
+      userDropdown.hidden = true;
+      userMenu.classList.remove('is-open');
+      userTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function openUserMenu() {
+      userDropdown.hidden = false;
+      userMenu.classList.add('is-open');
+      userTrigger.setAttribute('aria-expanded', 'true');
+    }
+
+    userTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (userDropdown.hidden) openUserMenu();
+      else closeUserMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!userMenu.contains(e.target)) closeUserMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeUserMenu();
+    });
+
+    userDropdown.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => closeUserMenu());
     });
   })();
 </script>

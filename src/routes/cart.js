@@ -4,6 +4,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar } = require('../services/prizeService');
 const { isBettingOpen } = require('../services/gameStatusService');
+const { getPendingPaymentsForUser } = require('../services/paymentsService');
 const {
   getCart,
   getCartCount,
@@ -39,13 +40,15 @@ function parsePlacares(body) {
     .filter((p) => !isNaN(p.home) && !isNaN(p.away) && p.home >= 0 && p.away >= 0 && p.home <= 99 && p.away <= 99);
 }
 
-router.get('/carrinho', requireAuth, (req, res) => {
+router.get('/carrinho', requireAuth, async (req, res) => {
   const cart = getCart(req);
+  const pendingPayments = await getPendingPaymentsForUser(req.session.user.id);
   res.render('carrinho', {
     title: 'Meu Carrinho',
     cart,
     cartCount: getCartCount(req),
     cartTotal: getCartTotalCents(req),
+    pendingPayments,
     user: req.session.user,
     added: req.query.added === '1',
     error: req.query.error || null,
