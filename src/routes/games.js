@@ -79,14 +79,15 @@ router.get('/consultar', (req, res) => {
 });
 
 router.post('/consultar', async (req, res) => {
-  const phone = cleanPhone(req.body.phone);
   const phoneDisplay = req.body.phone || '';
+  const phone = normalizePhoneInput('55', phoneDisplay);
 
-  if (phone.length < 10) {
+  if (!phone) {
     return res.render('consultar', {
       title: 'Consultar apostas',
       bets: null,
       userName: null,
+      pixKey: '',
       phone: phoneDisplay,
       error: 'Informe um WhatsApp válido com DDD.',
       user: req.session.user || null,
@@ -94,19 +95,18 @@ router.post('/consultar', async (req, res) => {
   }
 
   try {
-    const [users] = await pool.query('SELECT id, name, cpf FROM users WHERE phone = ? LIMIT 1', [phone]);
-    if (users.length === 0) {
+    const user = await findUserByPhone(phone);
+    if (!user) {
       return res.render('consultar', {
         title: 'Consultar apostas',
         bets: null,
         userName: null,
+        pixKey: '',
         phone: phoneDisplay,
         error: 'Nenhuma aposta encontrada com este WhatsApp.',
         user: req.session.user || null,
       });
     }
-
-    const user = users[0];
     const [bets] = await pool.query(
       `SELECT b.*, g.title, g.home_team, g.away_team, g.home_score, g.away_score, g.status as game_status, g.prize_pool_cents
        FROM bets b JOIN games g ON g.id = b.game_id
