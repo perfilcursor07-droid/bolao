@@ -15,9 +15,9 @@
     <a href="/" class="back-link">← Voltar aos jogos</a>
 
     <div class="card game-detail-card">
-      <% const liveMinute = formatLiveMatchMinute(game); %>
-      <span class="card-badge <%= game.status === 'open' ? 'open' : game.status === 'closed' && liveMinute ? 'live' : game.status === 'closed' ? 'closed' : 'finished' %>">
-        <%= game.status === 'open' ? 'Aberto' : game.status === 'closed' && liveMinute ? ('AO VIVO · ' + liveMinute) : game.status === 'closed' ? 'Aguardando resultado' : 'Finalizado' %>
+      <% const isLiveBolao = game.status === 'closed' && hasGameStarted(game); %>
+      <span class="card-badge <%= game.status === 'open' ? 'open' : isLiveBolao ? 'live' : game.status === 'closed' ? 'closed' : 'finished' %>">
+        <%= game.status === 'open' ? 'Aberto' : isLiveBolao ? 'AO VIVO' : game.status === 'closed' ? 'Aguardando resultado' : 'Finalizado' %>
       </span>
 
       <h1 class="game-title"><%= game.title %></h1>

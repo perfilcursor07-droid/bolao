@@ -7,10 +7,6 @@
             <span class="live-dot" aria-hidden="true"></span>
             AO VIVO
           </span>
-          <% const liveMinute = formatLiveMatchMinute(game); %>
-          <% if (liveMinute) { %>
-            <span class="live-game-minute" aria-label="Minuto do jogo"><%= liveMinute %></span>
-          <% } %>
         </div>
         <time class="live-game-date"><%= gameDateBR(game.game_date) %></time>
       </header>

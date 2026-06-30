@@ -68,6 +68,15 @@
             <button type="submit" class="btn btn-gold">Finalizar e Distribuir Prêmio</button>
           </form>
         </div>
+      <% } else if (game.status === 'closed' && game.home_score !== null) { %>
+        <div class="card" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.35); margin-bottom: 1.5rem; padding: 1rem;">
+          <h3 style="margin-bottom: 0.5rem;">Jogo ao vivo / aguardando apito final</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
+            Placar atual: <strong><%= game.home_score %>×<%= game.away_score %></strong>.
+            Quando a API confirmar o fim da partida, o bolão <strong>finaliza sozinho</strong> e calcula os ganhadores.
+            O <strong>WhatsApp</strong> para ganhadores só é enviado quando você clicar no botão — após o status mudar para <em>finished</em> e conferir o placar.
+          </p>
+        </div>
       <% } else if (game.status === 'finished') { %>
         <div class="card" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.35); margin-bottom: 1.5rem;">
           <h3 style="margin-bottom: 0.5rem;">Corrigir placar e recalcular ganhadores</h3>
