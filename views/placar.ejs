@@ -12,13 +12,9 @@
   <%- include('partials/header') %>
 
   <div class="container home-container placar-page">
-    <a href="/carrinho" class="placar-cart-link" id="placar-cart-link" style="<%= typeof cartCount !== 'undefined' && cartCount > 0 ? '' : 'display:none' %>">
-      🛒 Carrinho <span class="placar-cart-badge"><%= typeof cartCount !== 'undefined' ? cartCount : 0 %></span>
-    </a>
-
     <% if (typeof novo !== 'undefined' && novo) { %>
       <div class="alert alert-success placar-welcome">
-        Cadastro feito! Escolha seu(s) placar(es) abaixo. Você pode apostar em mais bolões antes de pagar.
+        Cadastro feito! Escolha seu(s) placar(es) abaixo. Ao adicionar, o palpite vai para o carrinho 🛒 no topo.
       </div>
     <% } %>
 
@@ -39,7 +35,6 @@
       </div>
     <% } %>
 
-    <!-- Score picker compacto -->
     <p class="placar-flow-hint">Ajuste o placar, toque em <strong>Adicionar</strong> e repita quantas vezes quiser.</p>
     <div class="placar-picker-card" id="placar-picker-card">
       <div class="placar-picker-teams">
@@ -67,7 +62,6 @@
       <p class="placar-picker-reset-hint" id="picker-hint">Após adicionar, o placar volta para 0×0.</p>
     </div>
 
-    <!-- Quick scores -->
     <div class="placar-quick-section">
       <p class="placar-quick-label">⚡ Atalhos — toque para adicionar na hora</p>
       <div class="placar-quick-grid" id="quick-grid">
@@ -82,19 +76,20 @@
       </div>
     </div>
 
-    <!-- Lista de palpites -->
     <div class="placar-cart" id="placar-cart">
       <div class="placar-cart-header">
-        <span>🎟️ Palpites</span>
+        <span>🎟️ Palpites no carrinho</span>
         <span class="placar-cart-count" id="cart-count">0</span>
       </div>
       <div class="placar-cart-empty" id="cart-empty">
         Nenhum palpite ainda — use os botões acima para montar sua lista
       </div>
       <ul class="placar-cart-list" id="placar-list"></ul>
+      <p class="placar-cart-hint" id="placar-cart-hint" style="display:none;">
+        Você também pode pagar agora pelo botão fixo no rodapé.
+      </p>
     </div>
 
-    <!-- Share compacto -->
     <div class="share-mini" id="share-mini">
       <button type="button" class="share-mini-btn" id="btn-share">📤 Compartilhar este bolão</button>
       <div class="share-mini-panel" id="share-panel" style="display:none;">
@@ -110,51 +105,101 @@
     </div>
 
     <div class="placar-bottom-spacer" id="bottom-spacer"></div>
-
-    <!-- Footer fixo -->
-    <form method="POST" action="/games/<%= game.id %>/placar" id="placar-form" class="placar-sticky-footer" style="display:none;">
-      <input type="hidden" name="placares_json" id="placares_json" value="[]">
-      <div class="placar-sticky-info">
-        <span id="sticky-count">0</span>
-        <strong id="sticky-total">R$ 0,00</strong>
-      </div>
-      <div class="placar-sticky-actions">
-        <button type="submit" formaction="/games/<%= game.id %>/cart/add" formmethod="POST" class="btn btn-outline btn-cart" id="btn-cart" disabled>
-          + Carrinho
-        </button>
-        <button type="submit" class="btn btn-gold btn-pay" id="btn-pay" disabled>
-          Pagar PIX
-        </button>
-      </div>
-    </form>
   </div>
+
+  <form method="POST" action="/games/<%= game.id %>/placar" id="placar-form" class="placar-sticky-footer" style="display:none;">
+    <input type="hidden" name="placares_json" id="placares_json" value="[]">
+    <div class="placar-sticky-info">
+      <span id="sticky-count">0</span>
+      <strong id="sticky-total">R$ 0,00</strong>
+    </div>
+    <div class="placar-sticky-actions placar-sticky-actions--solo">
+      <button type="submit" class="btn btn-gold btn-pay" id="btn-pay">
+        Pagar agora
+      </button>
+    </div>
+  </form>
 
   <script>
     const FEE = <%= game.entry_fee_cents %>;
+    const GAME_ID = <%= game.id %>;
     const HT = <%- JSON.stringify(teamPt(game.home_team)) %>;
     const AT = <%- JSON.stringify(teamPt(game.away_team)) %>;
 
-    let placares = [];
+    let placares = <%- JSON.stringify(cartPlacares || []) %>;
     let cH = 0, cA = 0;
+    let cartBusy = false;
 
     const $ = id => document.getElementById(id);
     const elH = $('cur-home'), elA = $('cur-away');
     const elPrev = $('add-preview');
     const elList = $('placar-list'), elEmpty = $('cart-empty');
-    const elJson = $('placares_json');
-    const elPay = $('btn-pay'), elCart = $('btn-cart');
     const elCount = $('cart-count');
+    const elJson = $('placares_json');
+    const elPay = $('btn-pay');
     const elSCount = $('sticky-count'), elSTotal = $('sticky-total');
     const elForm = $('placar-form'), elSpacer = $('bottom-spacer');
     const elErr = $('client-error');
     const elPickerCard = $('placar-picker-card');
     const elPickerHint = $('picker-hint');
     const elPlacarCart = $('placar-cart');
+    const elCartHint = $('placar-cart-hint');
+    const elBtnAdd = $('btn-add-placar');
 
     const fmt = c => (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
     function err(m) { elErr.textContent=m; elErr.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
     function noErr() { elErr.style.display='none'; }
+
+    function updateCartBadges(data) {
+      const total = (data.badgeTotal != null)
+        ? data.badgeTotal
+        : (data.cartCount || 0) + (data.pendingPaymentsCount || 0);
+
+      const cartBtn = document.querySelector('.nav-cart-btn');
+      if (cartBtn) {
+        let badge = cartBtn.querySelector('.nav-cart-badge');
+        if (total > 0) {
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'nav-cart-badge';
+            cartBtn.appendChild(badge);
+          }
+          badge.textContent = total;
+          cartBtn.setAttribute('aria-label', 'Carrinho, ' + total + ' pendente' + (total !== 1 ? 's' : ''));
+        } else if (badge) {
+          badge.remove();
+          cartBtn.setAttribute('aria-label', 'Carrinho');
+        }
+      }
+
+      const mobileLink = document.querySelector('.nav-mobile-link[href="/carrinho"]');
+      if (mobileLink) {
+        let mbadge = mobileLink.querySelector('.nav-mobile-badge');
+        if (total > 0) {
+          if (!mbadge) {
+            mbadge = document.createElement('span');
+            mbadge.className = 'nav-mobile-badge';
+            mobileLink.appendChild(mbadge);
+          }
+          mbadge.textContent = total;
+        } else if (mbadge) {
+          mbadge.remove();
+        }
+      }
+    }
+
+    async function pushToCart(h, a) {
+      const res = await fetch('/games/' + GAME_ID + '/cart/add', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ placares: [{ home: h, away: a }] }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || 'cart');
+      return data;
+    }
 
     function flashPicker(msg) {
       if (!elPickerHint) return;
@@ -182,64 +227,86 @@
 
     function dup(h,a) { return placares.some(p=>p.home===h&&p.away===a); }
 
-    function add(h,a, opts) {
+    function setBusy(busy) {
+      cartBusy = busy;
+      if (elBtnAdd) elBtnAdd.disabled = busy;
+      document.querySelectorAll('.pq-btn').forEach(b => { b.disabled = busy; });
+    }
+
+    async function add(h, a, opts) {
       const fromQuick = opts && opts.quick;
       if (dup(h,a)) {
         flashPicker('⚠️ ' + h + '×' + a + ' já está na lista');
         if (!fromQuick) resetPicker();
         return false;
       }
-      placares.push({home:h,away:a});
-      noErr();
-      render();
-      resetPicker();
-      flashPicker('✓ ' + h + '×' + a + ' adicionado! Escolha o próximo.');
-      const lastItem = elList.lastElementChild;
-      if (lastItem) {
-        lastItem.classList.add('pc-item--new');
-        setTimeout(() => lastItem.classList.remove('pc-item--new'), 1200);
+
+      setBusy(true);
+      try {
+        const data = await pushToCart(h, a);
+        placares.push({ home: h, away: a });
+        noErr();
+        render();
+        updateCartBadges(data);
+        resetPicker();
+        flashPicker('✓ ' + h + '×' + a + ' no carrinho!');
+        const lastItem = elList.lastElementChild;
+        if (lastItem) {
+          lastItem.classList.add('pc-item--new');
+          setTimeout(() => lastItem.classList.remove('pc-item--new'), 1200);
+        }
+        if (elPlacarCart && placares.length === 1) {
+          elPlacarCart.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        return true;
+      } catch (_) {
+        err('Não foi possível adicionar ao carrinho. Tente de novo.');
+        return false;
+      } finally {
+        setBusy(false);
       }
-      if (elPlacarCart && placares.length === 1) {
-        elPlacarCart.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-      return true;
     }
 
     function render() {
       elList.innerHTML = '';
-      placares.forEach((p,i) => {
+      placares.forEach((p) => {
         const li = document.createElement('li');
         li.className = 'pc-item';
-        li.innerHTML = `<span class="pc-score"><b>${HT}</b> ${p.home} × ${p.away} <b>${AT}</b></span><span class="pc-fee">${fmt(FEE)}</span><button type="button" class="pc-rm" data-i="${i}">✕</button>`;
+        li.innerHTML =
+          '<span class="pc-score"><b>' + HT + '</b> ' + p.home + ' × ' + p.away + ' <b>' + AT + '</b></span>' +
+          '<span class="pc-fee">' + fmt(FEE) + '</span>' +
+          '<form method="POST" action="/games/' + GAME_ID + '/placar/remove" class="pc-rm-form">' +
+            '<input type="hidden" name="home" value="' + p.home + '">' +
+            '<input type="hidden" name="away" value="' + p.away + '">' +
+            '<button type="submit" class="pc-rm" aria-label="Remover palpite">✕</button>' +
+          '</form>';
         elList.appendChild(li);
       });
 
       const n = placares.length;
-      elEmpty.style.display = n ? 'none':'block';
+      elEmpty.style.display = n ? 'none' : 'block';
       elCount.textContent = n;
       elJson.value = JSON.stringify(placares);
-      elPay.disabled = !n;
-      if (elCart) elCart.disabled = !n;
+      if (elCartHint) elCartHint.style.display = n ? 'block' : 'none';
+      document.body.classList.toggle('has-placar-pay', n > 0);
 
       if (n) {
         elForm.style.display = 'flex';
         elSpacer.style.display = 'block';
         elSCount.textContent = n + ' palpite' + (n > 1 ? 's' : '');
-        elSTotal.textContent = fmt(FEE*n);
-        elPay.textContent = 'Pagar ' + fmt(FEE*n);
-        if (elCart) elCart.textContent = '+ Carrinho';
+        elSTotal.textContent = fmt(FEE * n);
+        elPay.disabled = cartBusy;
+        elPay.textContent = 'Pagar ' + fmt(FEE * n);
       } else {
         elForm.style.display = 'none';
         elSpacer.style.display = 'none';
+        elPay.disabled = true;
       }
 
       document.querySelectorAll('.pq-btn').forEach(b => {
         const bh=+b.dataset.h, ba=+b.dataset.a;
         b.classList.toggle('added', dup(bh,ba));
-      });
-
-      elList.querySelectorAll('.pc-rm').forEach(b => {
-        b.onclick = () => { placares.splice(+b.dataset.i,1); render(); };
+        b.disabled = cartBusy;
       });
     }
 
@@ -247,27 +314,22 @@
     $('btn-home-minus').onclick = ()=>{ if(cH>0){cH--;upd();} };
     $('btn-away-plus').onclick = ()=>{ if(cA<20){cA++;upd();} };
     $('btn-away-minus').onclick = ()=>{ if(cA>0){cA--;upd();} };
-    $('btn-add-placar').onclick = ()=> add(cH, cA);
+    elBtnAdd.onclick = () => add(cH, cA);
 
     document.querySelectorAll('.pq-btn').forEach(b => {
-      b.onclick = ()=> add(+b.dataset.h, +b.dataset.a, { quick: true });
+      b.onclick = () => add(+b.dataset.h, +b.dataset.a, { quick: true });
     });
 
-    $('placar-form').onsubmit = (e) => {
+    $('placar-form').addEventListener('submit', function () {
       noErr();
-      if (!placares.length) { placares.push({home:cH,away:cA}); render(); }
       elJson.value = JSON.stringify(placares);
-      if (!placares.length) { e.preventDefault(); err('Adicione pelo menos um palpite.'); return false; }
+      elPay.disabled = true;
+      elPay.textContent = '⏳ Gerando PIX...';
+    });
 
-      const isCart = e.submitter && e.submitter.id === 'btn-cart';
-      const btn = isCart ? elCart : elPay;
-      if (btn) { btn.disabled = true; btn.textContent = isCart ? '⏳ Adicionando...' : '⏳ Gerando PIX...'; }
-      return true;
-    };
+    upd();
+    render();
 
-    upd(); render();
-
-    // Share
     const shareUrl = window.location.origin + '/games/<%= game.id %>/participar';
     const shareTxt = 'Bolão: ' + HT + ' × ' + AT + ' — ' + fmt(FEE) + '/placar!';
     $('share-link').value = shareUrl;

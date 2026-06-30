@@ -11,6 +11,7 @@ const { isBettingOpen } = require('../services/bettingRules');
 const { closeExpiredOpenGames } = require('../services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
 const { normalizePhoneInput, parsePhoneForForm } = require('../services/whatsapp/phone');
+const { getCartPlacaresForGame, removePlacarFromCartByScore, removeGameFromCart } = require('../services/cartService');
 
 const router = express.Router();
 
@@ -367,6 +368,7 @@ router.get('/games/:id/placar', requireAuth, async (req, res) => {
       game,
       user: req.session.user,
       userStatus,
+      cartPlacares: getCartPlacaresForGame(req, game.id),
       novo: req.query.novo === '1',
       added: req.query.added === '1',
       error: req.query.error === 'payment'
@@ -384,6 +386,11 @@ router.get('/games/:id/placar', requireAuth, async (req, res) => {
   }
 });
 
+router.post('/games/:id/placar/remove', requireAuth, (req, res) => {
+  removePlacarFromCartByScore(req, req.params.id, req.body.home, req.body.away);
+  res.redirect(`/games/${req.params.id}/placar`);
+});
+
 router.post('/games/:id/placar', requireAuth, async (req, res) => {
   let placares = [];
 
@@ -397,6 +404,10 @@ router.post('/games/:id/placar', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('Erro ao parsear placares_json:', e.message);
     placares = [];
+  }
+
+  if (placares.length === 0) {
+    placares = getCartPlacaresForGame(req, req.params.id);
   }
 
   // Fallback: se veio via campos individuais (compatibilidade)
@@ -422,6 +433,7 @@ router.post('/games/:id/placar', requireAuth, async (req, res) => {
       game: games[0],
       user: req.session.user,
       userStatus,
+      cartPlacares: getCartPlacaresForGame(req, req.params.id),
       error: 'Adicione pelo menos um placar antes de pagar.',
     });
   }
@@ -434,6 +446,7 @@ router.post('/games/:id/placar', requireAuth, async (req, res) => {
       return res.redirect(`/games/${req.params.id}/placar`);
     }
 
+    removeGameFromCart(req, req.params.id);
     res.redirect(`/payment/${result.paymentId}`);
   } catch (err) {
     console.error('Erro ao criar pagamento:', err.message, err.stack);

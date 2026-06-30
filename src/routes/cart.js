@@ -4,7 +4,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar } = require('../services/prizeService');
 const { isBettingOpen } = require('../services/gameStatusService');
-const { getPendingPaymentsForUser } = require('../services/paymentsService');
+const { getPendingPaymentsForUser, getPendingPaymentsCount } = require('../services/paymentsService');
 const {
   getCart,
   getCartCount,
@@ -12,9 +12,22 @@ const {
   addToCart,
   removeGameFromCart,
   removePlacarFromCart,
+  removePlacarFromCartByScore,
 } = require('../services/cartService');
 
 const router = express.Router();
+
+function wantsJson(req) {
+  const accept = req.get('Accept') || '';
+  const ctype = req.get('Content-Type') || '';
+  return accept.includes('application/json') || ctype.includes('application/json');
+}
+
+async function cartSummary(req) {
+  const cartCount = getCartCount(req);
+  const pendingPaymentsCount = await getPendingPaymentsCount(req.session.user.id);
+  return { cartCount, pendingPaymentsCount, badgeTotal: cartCount + pendingPaymentsCount };
+}
 
 function parsePlacares(body) {
   let placares = [];
@@ -22,6 +35,8 @@ function parsePlacares(body) {
     if (body.placares_json) {
       const parsed = JSON.parse(body.placares_json);
       if (Array.isArray(parsed)) placares = parsed;
+    } else if (Array.isArray(body.placares)) {
+      placares = body.placares;
     }
   } catch (_) {
     placares = [];
@@ -55,21 +70,41 @@ router.get('/carrinho', requireAuth, async (req, res) => {
   });
 });
 
+router.get('/api/cart/summary', requireAuth, async (req, res) => {
+  res.json(await cartSummary(req));
+});
+
+router.post('/api/cart/remove-placar', requireAuth, async (req, res) => {
+  const { game_id, home, away } = req.body;
+  const ok = removePlacarFromCartByScore(req, game_id, home, away);
+  res.json({ ok, ...(await cartSummary(req)) });
+});
+
 router.post('/games/:id/cart/add', requireAuth, async (req, res) => {
   const placares = parsePlacares(req.body);
 
   try {
     const [games] = await pool.query('SELECT * FROM games WHERE id = ? AND status = ?', [req.params.id, 'open']);
-    if (games.length === 0 || !isBettingOpen(games[0])) return res.redirect('/');
+    if (games.length === 0 || !isBettingOpen(games[0])) {
+      if (wantsJson(req)) return res.status(400).json({ ok: false, error: 'closed' });
+      return res.redirect('/');
+    }
 
     if (placares.length === 0) {
+      if (wantsJson(req)) return res.status(400).json({ ok: false, error: 'empty' });
       return res.redirect(`/games/${req.params.id}/placar?error=empty`);
     }
 
     addToCart(req, games[0], placares);
+
+    if (wantsJson(req)) {
+      return res.json({ ok: true, ...(await cartSummary(req)) });
+    }
+
     res.redirect('/carrinho?added=1');
   } catch (err) {
     console.error('Erro ao adicionar ao carrinho:', err.message);
+    if (wantsJson(req)) return res.status(500).json({ ok: false, error: 'cart' });
     res.redirect(`/games/${req.params.id}/placar?error=cart`);
   }
 });
@@ -80,8 +115,14 @@ router.post('/carrinho/remove-game', requireAuth, (req, res) => {
 });
 
 router.post('/carrinho/remove-placar', requireAuth, (req, res) => {
-  removePlacarFromCart(req, req.body.game_id, req.body.placar_index);
-  res.redirect('/carrinho');
+  const { game_id, placar_index, home, away, return_to } = req.body;
+  if (home !== undefined && away !== undefined && home !== '' && away !== '') {
+    removePlacarFromCartByScore(req, game_id, home, away);
+  } else {
+    removePlacarFromCart(req, game_id, placar_index);
+  }
+  const safeReturn = typeof return_to === 'string' && return_to.startsWith('/') ? return_to : '/carrinho';
+  res.redirect(safeReturn);
 });
 
 router.post('/carrinho/finalizar', requireAuth, async (req, res) => {

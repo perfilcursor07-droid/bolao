@@ -6091,6 +6091,22 @@ body.modal-open {
   font-weight: 600;
 }
 
+.placar-cart-hint {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.placar-cart-hint strong {
+  color: var(--accent);
+}
+
 @media (min-width: 520px) {
   .auth-form-grid {
     grid-template-columns: 1fr 1fr;
@@ -7187,7 +7203,7 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  z-index: 100;
+  z-index: 150;
   box-shadow: 0 -8px 32px rgba(34, 197, 94, 0.12), 0 -4px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -7235,6 +7251,11 @@ body.modal-open {
 .placar-sticky-footer .btn-cart:hover {
   background: rgba(34, 197, 94, 0.12);
   border-color: rgba(74, 222, 128, 0.5);
+}
+
+.placar-sticky-actions--solo .btn-pay {
+  flex: 1;
+  width: 100%;
 }
 
 .placar-sticky-footer .btn-pay {
@@ -7291,7 +7312,22 @@ body.modal-open {
 
 .placar-bottom-spacer {
   display: none;
-  height: 92px;
+  height: 110px;
+}
+
+body.has-placar-pay {
+  padding-bottom: calc(108px + var(--safe-bottom));
+}
+
+.pc-rm-form {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.pc-rm-form .pc-rm {
+  position: relative;
+  z-index: 2;
 }
 
 .placar-page { padding-top: 0.5rem; padding-bottom: 0; }
