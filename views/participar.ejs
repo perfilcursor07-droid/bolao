@@ -84,6 +84,8 @@
               formPhoneCountry = form.phone_country || '55';
               formPhoneLocal = form.phone || '';
             }
+            const formPhoneDigits = String(formPhoneLocal).replace(/\D/g, '');
+            const showStepDetails = formPhoneDigits.length >= 10;
           %>
 
           <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
@@ -118,8 +120,15 @@
                   Número incompleto — celular BR precisa de 11 dígitos com o 9 após o DDD
                 </small>
                 <small class="form-hint participar-hint-found" id="phone-hint" hidden>
-                  🔒 Cadastro protegido — nome e PIX vinculados a este WhatsApp. Para alterar, fale com o suporte.
+                  Cadastro encontrado — confira sua chave PIX abaixo e confirme para continuar.
                 </small>
+              </div>
+
+              <div id="participar-step-details" class="participar-step-details<%= showStepDetails ? ' is-visible' : '' %>" aria-hidden="<%= showStepDetails ? 'false' : 'true' %>">
+              <div class="participar-pix-panel" id="participar-pix-panel" aria-live="polite">
+                <span class="participar-pix-label">PIX cadastrada</span>
+                <span class="participar-pix-key" id="participar-pix-key"></span>
+                <small class="participar-pix-note">Para alterar, fale com o suporte.</small>
               </div>
 
               <div class="form-group participar-field participar-field-full">
@@ -132,7 +141,7 @@
                 </div>
               </div>
 
-              <div class="form-group participar-field participar-field-full">
+              <div class="form-group participar-field participar-field-full" id="cpf-field-group">
                 <label for="cpf">Chave PIX <small>(prêmio)</small></label>
                 <div class="participar-input-wrap">
                   <span class="participar-input-icon" aria-hidden="true">💰</span>
@@ -157,8 +166,10 @@
                   Digite a <strong>chave PIX cadastrada</strong> neste WhatsApp para confirmar que é você.
                 </small>
               </div>
+              </div>
             </div>
 
+            <div id="participar-step-footer" class="participar-step-details<%= showStepDetails ? ' is-visible' : '' %>" aria-hidden="<%= showStepDetails ? 'false' : 'true' %>">
             <label class="participar-check">
               <input type="checkbox" id="accept-rules" required>
               <span>
@@ -171,6 +182,7 @@
               Continuar
               <span class="participar-submit-arrow" aria-hidden="true">→</span>
             </button>
+            </div>
           </form>
 
 
@@ -289,6 +301,11 @@
     const cpfConfirmInput = document.getElementById('cpf_confirm');
     const pixMismatchHint = document.getElementById('pix-mismatch-hint');
     const pixConfirmLockedHint = document.getElementById('pix-confirm-locked-hint');
+    const participarPixPanel = document.getElementById('participar-pix-panel');
+    const participarPixKey = document.getElementById('participar-pix-key');
+    const cpfFieldGroup = document.getElementById('cpf-field-group');
+    const participarStepDetails = document.getElementById('participar-step-details');
+    const participarStepFooter = document.getElementById('participar-step-footer');
     const acceptRules = document.getElementById('accept-rules');
     const btnSubmit = document.getElementById('btn-submit');
     const participarForm = document.getElementById('form-participar');
@@ -314,11 +331,14 @@
     }
 
     function updateSubmitState() {
+      if (!isPhoneReady()) {
+        btnSubmit.disabled = true;
+        return;
+      }
       const pixOk = updatePixMatchState();
       const confirmFilled = cpfConfirmInput.value.trim().length >= (existingUserLocked ? 5 : 1);
-      const phoneOk = isPhoneReady();
       const cpfFieldOk = existingUserLocked || cpfInput.value.trim().length > 0;
-      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled || !phoneOk || !cpfFieldOk;
+      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled || !cpfFieldOk;
     }
 
     cpfInput.addEventListener('input', updateSubmitState);
@@ -356,6 +376,17 @@
     let lookupTimeout;
     let existingUserLocked = false;
 
+    function setPixPanelVisible(show, pixKey) {
+      const key = (pixKey || '').trim();
+      if (show && key.length >= 5) {
+        participarPixKey.textContent = key;
+        participarPixPanel.classList.add('is-visible');
+      } else {
+        participarPixKey.textContent = '';
+        participarPixPanel.classList.remove('is-visible');
+      }
+    }
+
     function setExistingUserLocked(locked, data) {
       if (existingUserLocked && !locked) {
         nameInput.value = '';
@@ -365,6 +396,8 @@
         cpfInput.setAttribute('name', 'cpf');
         cpfInput.setAttribute('required', '');
         cpfConfirmInput.placeholder = 'Digite a chave PIX novamente';
+        setPixPanelVisible(false);
+        cpfFieldGroup.hidden = false;
       }
       existingUserLocked = locked;
       nameInput.readOnly = locked;
@@ -374,18 +407,23 @@
       cpfInput.classList.toggle('participar-input--readonly', locked);
       cpfConfirmInput.classList.toggle('participar-input--readonly', false);
       pixConfirmLockedHint.hidden = !locked;
+      cpfFieldGroup.hidden = locked;
 
       if (locked && data) {
         nameInput.value = (data.name || '').toUpperCase();
-        cpfInput.value = data.pix_masked || 'Cadastrada';
+        const pixKey = data.pix_key || data.pix_masked || '';
+        setPixPanelVisible(true, pixKey);
+        cpfInput.value = '';
         cpfInput.disabled = true;
         cpfInput.removeAttribute('name');
         cpfInput.removeAttribute('required');
-        cpfInput.setAttribute('aria-label', 'Chave PIX cadastrada (oculta por segurança)');
         cpfConfirmInput.value = '';
         cpfConfirmInput.placeholder = 'Digite sua chave PIX cadastrada';
-        setTimeout(() => cpfConfirmInput.focus(), 100);
+        if (pixKey.trim().length >= 5) {
+          setTimeout(() => cpfConfirmInput.focus(), 100);
+        }
       } else if (!locked) {
+        setPixPanelVisible(false);
         cpfInput.removeAttribute('aria-label');
       }
     }
@@ -404,12 +442,34 @@
       return digits.length >= 8;
     }
 
+    function setStepDetailsVisible(show) {
+      participarStepDetails.classList.toggle('is-visible', show);
+      participarStepFooter.classList.toggle('is-visible', show);
+      participarStepDetails.setAttribute('aria-hidden', show ? 'false' : 'true');
+      participarStepFooter.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+
+    function updatePhoneStep() {
+      const ready = isPhoneReady();
+      const wasHidden = !participarStepDetails.classList.contains('is-visible');
+      setStepDetailsVisible(ready);
+      if (!ready) {
+        phoneHint.hidden = true;
+        setExistingUserLocked(false);
+        setPixPanelVisible(false);
+      } else if (wasHidden && !existingUserLocked) {
+        setTimeout(() => nameInput.focus(), 120);
+      }
+      updateSubmitState();
+    }
+
     function scheduleLookup(digits, countryDial) {
       clearTimeout(lookupTimeout);
       const minDigits = countryDial === '55' ? 10 : 8;
       if (digits.length < minDigits) {
         phoneHint.hidden = true;
         setExistingUserLocked(false);
+        setPixPanelVisible(false);
         return;
       }
 
@@ -449,9 +509,12 @@
         phoneWaHint.hidden = digits.length < 8;
         phoneWaError.hidden = digits.length >= 8;
       }
-      updateSubmitState();
+      updatePhoneStep();
       scheduleLookup(digits, countryDial);
     }
+
+    setPixPanelVisible(false);
+    setStepDetailsVisible(false);
 
     phoneWidget = PhoneInput.init({
       countryPicker: '#phone-country-picker',
@@ -461,6 +524,8 @@
       initialLocal: '<%= formPhoneLocal.replace(/'/g, "\\'") %>',
       onDigitsChange: onPhoneDigitsChange,
     });
+
+    updatePhoneStep();
 
     nameInput.addEventListener('input', normalizeNameInput);
     nameInput.addEventListener('blur', normalizeNameInput);

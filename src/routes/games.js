@@ -28,6 +28,7 @@ router.post('/api/lookup-phone', async (req, res) => {
         found: true,
         locked: true,
         name: (user.name || '').toUpperCase(),
+        pix_key: user.cpf || '',
         pix_masked: maskPixKey(user.cpf),
         has_pix: Boolean(user.cpf),
         phone_country: parsed.countryDial,

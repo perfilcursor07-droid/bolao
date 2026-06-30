@@ -21,7 +21,7 @@
     <!-- Bolões encerrados (compacto) -->
     <% if (typeof finishedSummaries !== 'undefined' && finishedSummaries.length > 0) { %>
       <div class="home-section-header" style="margin-top:1.25rem;">
-        <h2>Encerrados</h2>
+        <h2>Bolões Encerrados</h2>
         <a href="/boloes-encerrados" class="home-link">Ver todos →</a>
       </div>
       <div class="finished-compact-list">
@@ -54,7 +54,7 @@
 
     <% if (totalOpen > 0 || (typeof featuredGames === 'undefined' || featuredGames.length === 0)) { %>
       <div class="home-section-header">
-        <h2>Jogos abertos</h2>
+        <h2>Bolões abertos</h2>
         <% if (totalOpen > 0) { %>
           <span class="home-count"><%= totalOpen %></span>
         <% } %>
