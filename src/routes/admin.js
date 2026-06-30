@@ -764,7 +764,7 @@ router.post('/pagamentos/:betId/notify-individual', requireAdmin, async (req, re
     await enqueueMessage({
       userId: bet.user_id,
       phone,
-      messageType: 'prize_paid_individual',
+      messageType: 'bet_result',
       referenceKey: `prize_paid_bet_${bet.id}_${Date.now()}`,
       body,
     });

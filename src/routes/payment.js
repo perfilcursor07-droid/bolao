@@ -32,7 +32,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     const payment = payments[0];
 
-    if (payment.status === 'pending' && !canAcceptPaymentForGame(payment)) {
+    if (payment.status === 'pending' && !canAcceptPaymentForGame({ status: payment.game_status, game_date: payment.game_date })) {
       await pool.query(`UPDATE payments SET status = 'expired' WHERE id = ? AND status = 'pending'`, [
         payment.id,
       ]);

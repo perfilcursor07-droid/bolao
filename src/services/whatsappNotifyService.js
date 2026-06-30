@@ -295,9 +295,6 @@ async function notifyResultCorrection(gameId) {
   return { queued };
 }
 
-  return { queued };
-}
-
 /**
  * Confirma por WhatsApp que o PIX do prêmio já foi transferido (apostas com prize_paid_at).
  */
