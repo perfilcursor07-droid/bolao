@@ -2,7 +2,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const pool = require('../config/database');
 const { requireAdmin } = require('../middleware/auth');
-const { getWorldCupMatches, getMatchResult } = require('../services/footballApi');
+const { getWorldCupMatches, getFootballApiStatus, getMatchResultForGame } = require('../services/footballApi');
 const { syncGamesFromWorldCupMatches } = require('../services/gameStatusService');
 const { translateTeamName } = require('../utils/teamNamesPt');
 const { toMySQLDateTime } = require('../utils/dateTime');
@@ -817,7 +817,13 @@ async function createCopaBolaoFromMatch(m, entryFeeCents, createdBy) {
 
     if (m.api_match_id && (homeScore === null || awayScore === null)) {
       try {
-        const api = await getMatchResult(m.api_match_id, { forceRefresh: true });
+        const gameStub = {
+          id: 0,
+          home_team: home,
+          away_team: away,
+          api_match_id: m.api_match_id,
+        };
+        const api = await getMatchResultForGame(gameStub, { forceRefresh: true });
         if (api && (api.live || api.finished)) {
           homeScore = api.homeScore;
           awayScore = api.awayScore;
@@ -865,6 +871,8 @@ router.get('/copa', requireAdmin, async (req, res) => {
     const flash = req.session.flash || null;
     delete req.session.flash;
 
+    const apiStatus = getFootballApiStatus();
+
     res.render('admin/copa', {
       title: 'Copa do Mundo 2026',
       matches,
@@ -873,6 +881,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       fromCache,
       hasLive,
       flash,
+      apiStatus,
       existingApiMatchIds,
       existingFingerprints,
       user: req.session.user,
@@ -889,6 +898,7 @@ router.get('/copa', requireAdmin, async (req, res) => {
       cachedAt: null,
       fromCache: false,
       hasLive: false,
+      apiStatus: getFootballApiStatus(),
       existingApiMatchIds: [],
       existingFingerprints: [],
       user: req.session.user,

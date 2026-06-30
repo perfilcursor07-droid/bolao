@@ -20,16 +20,180 @@ const FD_KEY = process.env.FOOTBALL_API_KEY || '';
 
 const FD_MIN_INTERVAL_MS = 6500; // ~9 req/min (limite gratuito: 10/min)
 const WC_CACHE_TTL_DEFAULT_MS = 15 * 60 * 1000;
-const WC_CACHE_TTL_LIVE_MS = 45 * 1000;
+const WC_CACHE_TTL_LIVE_MS = 20 * 1000;
 const WC_CACHE_TTL_TODAY_MS = 5 * 60 * 1000;
 const MATCH_CACHE_FINISHED_MS = 24 * 60 * 60 * 1000;
-const MATCH_CACHE_LIVE_MS = 45 * 1000;
+const MATCH_CACHE_LIVE_MS = 20 * 1000;
 const MATCH_CACHE_PENDING_MS = 10 * 60 * 1000;
+
+const WC_SEASON = 2026;
+const WC_LEAGUE_AS = 1;
 
 let fdLastRequestAt = 0;
 let rateLimitedUntil = 0;
 let worldCupCache = { result: null, expiresAt: 0, fetchedAt: 0 };
 const matchResultCache = new Map();
+let liveFixturesCache = { matches: null, expiresAt: 0 };
+let fdLiveFixturesCache = { matches: null, expiresAt: 0 };
+/** null = ainda não testado; true/false após primeira busca da Copa 2026 na API-Football */
+let asWc2026Available = null;
+
+function isApiSportsWorldCupFixture(f) {
+  return f?.league?.id === WC_LEAGUE_AS && Number(f.league?.season) === WC_SEASON;
+}
+
+function useApiSportsForWc2026() {
+  return Boolean(AS_KEY && asWc2026Available === true);
+}
+
+function getFootballApiStatus() {
+  if (useApiSportsForWc2026()) {
+    return {
+      primary: 'api-sports',
+      label: 'API-Football (api-sports.io)',
+      hasApiSports: true,
+      hasFootballData: Boolean(FD_KEY),
+      wc2026Source: 'api-sports',
+    };
+  }
+  if (FD_KEY) {
+    const note = AS_KEY && asWc2026Available === false
+      ? 'API-Football ainda sem Copa 2026 — usando football-data.org'
+      : null;
+    return {
+      primary: 'football-data',
+      label: 'football-data.org (Copa 2026 ao vivo)',
+      hasApiSports: Boolean(AS_KEY),
+      hasFootballData: true,
+      wc2026Source: 'football-data',
+      note,
+    };
+  }
+  if (AS_KEY) {
+    return {
+      primary: 'api-sports',
+      label: 'API-Football (aguardando dados Copa 2026)',
+      hasApiSports: true,
+      hasFootballData: false,
+      wc2026Source: 'pending',
+    };
+  }
+  return { primary: 'none', label: 'Nenhuma API configurada', hasApiSports: false, hasFootballData: false, wc2026Source: 'none' };
+}
+
+function normalizeTeamKey(name) {
+  return translateTeamName(name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function fixturePairKey(home, away) {
+  return `${normalizeTeamKey(home)}|${normalizeTeamKey(away)}`;
+}
+
+function parsedMatchToResult(parsed) {
+  if (!parsed) return null;
+  const live = ['IN_PLAY', 'PAUSED', 'LIVE'].includes(parsed.status);
+  const finished = ['FINISHED', 'AWARDED'].includes(parsed.status);
+  const paused = parsed.status === 'PAUSED' || parsed.statusDetail === 'HT';
+
+  return {
+    finished,
+    live,
+    homeScore: parsed.homeScore,
+    awayScore: parsed.awayScore,
+    status: paused ? 'PAUSED' : parsed.statusDetail || parsed.status,
+    matchMinute: parsed.minute ?? null,
+    matchInjuryTime: parsed.injuryTime ?? null,
+    fixtureId: parsed.id,
+  };
+}
+
+function findParsedMatchForGame(game, matches) {
+  if (!game || !matches?.length) return null;
+  const key = fixturePairKey(game.home_team, game.away_team);
+  return matches.find((m) => fixturePairKey(m.homeTeam, m.awayTeam) === key) || null;
+}
+
+/**
+ * Jogos ao vivo da Copa — API-Football (só quando há dados da Copa 2026).
+ */
+async function fetchApiSportsLiveFixtures(options = {}) {
+  if (!useApiSportsForWc2026()) return [];
+
+  if (!options.forceRefresh && liveFixturesCache.matches && Date.now() < liveFixturesCache.expiresAt) {
+    return liveFixturesCache.matches;
+  }
+
+  try {
+    const res = await axios.get(`${AS_BASE}/fixtures`, {
+      headers: { 'x-apisports-key': AS_KEY },
+      params: { league: WC_LEAGUE_AS, season: WC_SEASON, live: 'all' },
+      timeout: 12000,
+    });
+    const matches = (res.data.response || []).map(parseApiSportsMatch);
+    liveFixturesCache = { matches, expiresAt: Date.now() + MATCH_CACHE_LIVE_MS };
+    return matches;
+  } catch (err) {
+    console.error('[api-sports] live=all erro:', err.response?.status, err.response?.data?.message || err.message);
+    return liveFixturesCache.matches || [];
+  }
+}
+
+/**
+ * Jogos ao vivo da Copa 2026 — football-data.org (1 request, ~20s cache).
+ */
+async function fetchFootballDataLiveFixtures(options = {}) {
+  if (!FD_KEY) return [];
+
+  if (!options.forceRefresh && fdLiveFixturesCache.matches && Date.now() < fdLiveFixturesCache.expiresAt) {
+    return fdLiveFixturesCache.matches;
+  }
+
+  try {
+    const res = await footballDataGet(`${FD_BASE}/competitions/WC/matches`, {
+      headers: { 'X-Auth-Token': FD_KEY },
+      params: { season: WC_SEASON, status: 'IN_PLAY,PAUSED,LIVE' },
+      timeout: 12000,
+    });
+    const matches = (res.data.matches || []).map(parseFootballDataMatch);
+    fdLiveFixturesCache = { matches, expiresAt: Date.now() + MATCH_CACHE_LIVE_MS };
+    return matches;
+  } catch (err) {
+    if (err.code !== 'RATE_LIMIT_COOLDOWN') {
+      console.error('[football-data.org] live erro:', err.response?.status, err.response?.data?.message || err.message);
+    }
+    return fdLiveFixturesCache.matches || [];
+  }
+}
+
+/**
+ * Lista unificada de jogos ao vivo (prioriza API com dados da Copa 2026).
+ */
+async function fetchLiveWorldCupFixtures(options = {}) {
+  const asLive = await fetchApiSportsLiveFixtures(options);
+  if (asLive.length > 0) return asLive;
+  return fetchFootballDataLiveFixtures(options);
+}
+
+/**
+ * Busca resultado para um bolão local (por ID ou por nomes dos times ao vivo).
+ */
+async function getMatchResultForGame(game, options = {}) {
+  if (!game) return null;
+
+  const liveMatches = await fetchLiveWorldCupFixtures({ forceRefresh: options.forceRefresh });
+  const fromLive = findParsedMatchForGame(game, liveMatches);
+  if (fromLive) return parsedMatchToResult(fromLive);
+
+  if (game.api_match_id) {
+    return getMatchResult(game.api_match_id, options);
+  }
+
+  return null;
+}
 
 function extractFootballDataScores(m) {
   const rt = m.score?.regularTime;
@@ -64,6 +228,8 @@ function computeWorldCupCacheTtl(matches) {
 
 function invalidateWorldCupCache() {
   worldCupCache.expiresAt = 0;
+  liveFixturesCache.expiresAt = 0;
+  fdLiveFixturesCache.expiresAt = 0;
 }
 
 function getWorldCupCacheInfo() {
@@ -158,13 +324,15 @@ async function getWorldCupMatches(options = {}) {
 
       const fixtures = res.data.response || [];
       if (fixtures.length > 0) {
+        asWc2026Available = true;
         const matches = enrichKnockoutMatches(fixtures.map(parseApiSportsMatch));
         const result = { matches, error: null };
         const ttl = computeWorldCupCacheTtl(matches);
         worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
         return { ...result, cachedAt: worldCupCache.fetchedAt, fromCache: false };
       }
-      errors.push('api-sports: 0 fixtures retornados');
+      asWc2026Available = false;
+      errors.push('api-sports: 0 fixtures Copa 2026 — usando football-data.org');
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       console.error('[api-sports] Erro:', err.response?.status, msg);
@@ -182,6 +350,7 @@ async function getWorldCupMatches(options = {}) {
       });
 
       const matches = enrichKnockoutMatches((res.data.matches || []).map(parseFootballDataMatch));
+      if (AS_KEY && asWc2026Available === null) asWc2026Available = false;
       const result = { matches, error: null };
       const ttl = computeWorldCupCacheTtl(matches);
       worldCupCache = { result, expiresAt: Date.now() + ttl, fetchedAt: Date.now() };
@@ -239,11 +408,14 @@ function parseFootballDataMatch(m) {
     awayTeam: translateTeamName(m.awayTeam?.name || m.awayTeam?.tla || 'A definir'),
     date: m.utcDate,
     status: m.status,
+    statusDetail: m.status === 'PAUSED' ? 'HT' : m.status,
     matchday: m.matchday,
     stage: m.stage,
     group: m.group,
     homeScore: scores.home,
     awayScore: scores.away,
+    minute: m.minute ?? null,
+    injuryTime: m.injuryTime ?? null,
   };
 }
 
@@ -300,6 +472,7 @@ function parseApiSportsMatch(f) {
     homeScore,
     awayScore,
     minute: f.fixture.status?.elapsed ?? null,
+    injuryTime: f.fixture.status?.extra ?? null,
     extraTime: st === 'AET' || st === 'PEN' || st === 'ET',
   };
 }
@@ -323,8 +496,8 @@ async function getMatchResult(matchId, options = {}) {
 
   if (Date.now() < rateLimitedUntil) return null;
 
-  // PRINCIPAL: api-sports.io
-  if (AS_KEY) {
+  // API-Football — só se o fixture for da Copa 2026 (IDs não são compatíveis com football-data)
+  if (AS_KEY && useApiSportsForWc2026()) {
     try {
       const res = await axios.get(`${AS_BASE}/fixtures`, {
         headers: { 'x-apisports-key': AS_KEY },
@@ -332,7 +505,7 @@ async function getMatchResult(matchId, options = {}) {
         timeout: 10000,
       });
       const f = res.data.response?.[0];
-      if (f) {
+      if (f && isApiSportsWorldCupFixture(f)) {
         const st = f.fixture.status?.short;
         const live = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(st);
         const finished = ['FT', 'AET', 'PEN'].includes(st);
@@ -374,12 +547,15 @@ async function getMatchResult(matchId, options = {}) {
         cacheMatchResult(matchId, result);
         return result;
       }
+      if (f) {
+        console.warn(`[api-sports] fixture ${matchId} ignorado (não é Copa 2026) — tentando football-data`);
+      }
     } catch (err) {
       console.error('[api-sports] Match result erro:', err.message);
     }
   }
 
-  // FALLBACK: football-data.org
+  // football-data.org (fonte da Copa 2026 enquanto API-Football não publica a temporada)
   if (FD_KEY) {
     try {
       const res = await footballDataGet(`${FD_BASE}/matches/${matchId}`, {
@@ -429,8 +605,8 @@ async function getMatchResult(matchId, options = {}) {
         live,
         homeScore: homeScore ?? 0,
         awayScore: awayScore ?? 0,
-        status: m.status,
-        matchMinute: null,
+        status: m.status === 'PAUSED' ? 'PAUSED' : m.status,
+        matchMinute: m.minute ?? null,
         matchInjuryTime: m.injuryTime ?? null,
       };
       cacheMatchResult(matchId, result);
@@ -448,6 +624,14 @@ async function getMatchResult(matchId, options = {}) {
 module.exports = {
   getWorldCupMatches,
   getMatchResult,
+  getMatchResultForGame,
+  fetchApiSportsLiveFixtures,
+  fetchFootballDataLiveFixtures,
+  fetchLiveWorldCupFixtures,
+  findParsedMatchForGame,
+  parsedMatchToResult,
+  getFootballApiStatus,
+  useApiSportsForWc2026,
   invalidateWorldCupCache,
   getWorldCupCacheInfo,
 };

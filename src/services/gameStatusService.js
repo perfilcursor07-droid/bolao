@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { getMatchResult, getWorldCupMatches } = require('./footballApi');
+const { getMatchResult, getWorldCupMatches, getMatchResultForGame, fetchLiveWorldCupFixtures, findParsedMatchForGame, parsedMatchToResult } = require('./footballApi');
 const { processGameResults } = require('./prizeService');
 const {
   BETTING_CLOSE_MINUTES,
@@ -272,12 +272,33 @@ async function syncLiveGameScores(options = {}) {
   const [games] = await pool.query(`SELECT * FROM games WHERE ${liveGamesSqlWhere()}`);
   if (games.length === 0) return 0;
 
+  const forceRefresh = options.forceRefresh === true;
   let synced = 0;
+
+  const liveMatches = await fetchLiveWorldCupFixtures({ forceRefresh });
+
   for (const game of games) {
     try {
-      const result = await getMatchResult(game.api_match_id, {
-        forceRefresh: options.forceRefresh === true,
-      });
+      let result = null;
+
+      if (liveMatches.length > 0) {
+        const parsed = findParsedMatchForGame(game, liveMatches);
+        if (parsed) {
+          result = parsedMatchToResult(parsed);
+          if (result?.fixtureId && String(game.api_match_id) !== String(result.fixtureId)) {
+            await pool.query('UPDATE games SET api_match_id = ? WHERE id = ?', [
+              String(result.fixtureId),
+              game.id,
+            ]);
+            game.api_match_id = String(result.fixtureId);
+          }
+        }
+      }
+
+      if (!result) {
+        result = await getMatchResultForGame(game, { forceRefresh });
+      }
+
       const { updated } = await updateGameFromApiResult(game, result);
       if (updated) synced++;
     } catch (err) {

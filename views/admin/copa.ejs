@@ -13,6 +13,9 @@
 
     <div class="copa-sync-bar">
       <div class="copa-sync-info">
+        <% if (typeof apiStatus !== 'undefined' && apiStatus) { %>
+          <span class="copa-api-badge copa-api-badge--<%= apiStatus.primary %>">API: <%= apiStatus.label %></span>
+        <% } %>
         <% if (typeof cachedAt !== 'undefined' && cachedAt) { %>
           <span>Atualizado <%= gameDateBR(new Date(cachedAt), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) %></span>
           <% if (typeof fromCache !== 'undefined' && fromCache) { %>
@@ -22,7 +25,10 @@
           <span>Dados da football-data.org</span>
         <% } %>
         <% if (typeof hasLive !== 'undefined' && hasLive) { %>
-          <span class="copa-sync-live">· atualiza a cada 3 min</span>
+          <span class="copa-sync-live">· placar ao vivo ~20s (<%= typeof apiStatus !== 'undefined' && apiStatus?.wc2026Source === 'football-data' ? 'football-data.org' : 'API-Football' %>)</span>
+        <% } %>
+        <% if (typeof apiStatus !== 'undefined' && apiStatus?.note) { %>
+          <span class="copa-sync-hint-inline" style="display:block;font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;"><%= apiStatus.note %></span>
         <% } %>
       </div>
       <a href="/admin/copa?refresh=1" class="btn btn-sm btn-outline">↻ Atualizar agora</a>
@@ -40,14 +46,16 @@
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
       <div class="card" style="padding:1.5rem; text-align:center;">
-        <p style="margin-bottom:1rem;">Para usar esta funcionalidade, cadastre uma chave gratuita da API:</p>
+        <p style="margin-bottom:1rem;">Para placar ao vivo da <strong>Copa 2026</strong>, configure a chave gratuita da <strong>football-data.org</strong> (10 req/min):</p>
         <ol style="text-align:left; color:var(--text-secondary); font-size:0.9rem; margin-bottom:1rem;">
-          <li>Acesse <a href="https://www.football-data.org/" target="_blank">football-data.org</a></li>
-          <li>Registre-se gratuitamente</li>
-          <li>Copie seu token</li>
-          <li>Adicione no <code>.env</code>: <code>FOOTBALL_API_KEY=seu-token</code></li>
+          <li>Acesse <a href="https://www.football-data.org/client/register" target="_blank">football-data.org</a> e crie conta grátis</li>
+          <li>Copie o token no painel</li>
+          <li>No <code>.env</code> do servidor: <code>FOOTBALL_API_KEY=seu-token</code></li>
+          <li>Reinicie o app (<code>pm2 restart bolaopix</code>)</li>
         </ol>
-        <p style="font-size:0.8rem; color:var(--text-muted);">Plano gratuito: 10 req/min · Copa do Mundo incluída</p>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">
+          Opcional: <code>APISPORTS_KEY</code> em <a href="https://www.api-football.com/" target="_blank">api-football.com</a> — será usada automaticamente quando publicarem a Copa 2026.
+        </p>
       </div>
     <% } else if (matches && matches.length > 0) { %>
 
