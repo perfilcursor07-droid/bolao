@@ -34,7 +34,7 @@ const {
   setAffiliateStatus,
   markAffiliatePayoutPaid,
 } = require('../services/affiliateService');
-const { normalizeBrazilPhone, formatPhoneDisplay, isWhatsAppReadyPhone } = require('../services/whatsapp/phone');
+const { normalizeBrazilPhone, normalizePhoneInput, formatPhoneDisplay, isWhatsAppReadyPhone } = require('../services/whatsapp/phone');
 const {
   gameBetCountSubquery,
   createMarketingBet,
@@ -499,15 +499,20 @@ router.post('/usuarios/:id/editar', requireAdmin, async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     const name = String(req.body.name || '').trim();
     const phoneRaw = String(req.body.phone || '').trim();
+    const countryDial = '55';
     const cpf = String(req.body.cpf || '').trim();
 
     if (!Number.isFinite(userId) || !name || name.length < 2) {
       return res.redirect(appendQuery({ error: 'Nome inválido' }));
     }
 
-    const phone = normalizeBrazilPhone(phoneRaw);
+    const phone = normalizePhoneInput(countryDial, phoneRaw);
     if (!phone) {
-      return res.redirect(appendQuery({ error: 'Telefone inválido — use DDD + número (ex: 63981013083)' }));
+      return res.redirect(appendQuery({
+        error: countryDial === '55'
+          ? 'Telefone inválido — use (DDD) 9XXXX-XXXX, ex: (11) 98114-1234'
+          : 'Telefone inválido para o país selecionado',
+      }));
     }
 
     if (!cpf || cpf.length < 5) {

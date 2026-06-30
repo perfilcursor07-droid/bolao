@@ -1,7 +1,16 @@
 const pool = require('../config/database');
-const { normalizeBrazilPhone, cleanPhone: cleanPhoneDigits } = require('./whatsapp/phone');
+const {
+  normalizeBrazilPhone,
+  normalizePhoneInput,
+  isWhatsAppReadyPhone,
+  cleanPhone: cleanPhoneDigits,
+} = require('./whatsapp/phone');
 
-function cleanPhone(phone) {
+function cleanPhone(phone, countryDial) {
+  if (countryDial) {
+    const combined = normalizePhoneInput(countryDial, phone);
+    if (combined) return combined;
+  }
   const normalized = normalizeBrazilPhone(phone);
   if (normalized) return normalized;
   return cleanPhoneDigits(phone);
@@ -97,63 +106,49 @@ function normalizeParticipantName(name) {
   return (name || '').trim().replace(/\s+/g, ' ').toUpperCase();
 }
 
+/** Oculta chave PIX na tela (cadastro já existente). */
+function maskPixKey(key) {
+  const k = String(key || '').trim();
+  if (!k) return '';
+  if (k.includes('@')) {
+    const at = k.indexOf('@');
+    const local = k.slice(0, at);
+    const domain = k.slice(at + 1);
+    if (local.length <= 2) return `**@${domain}`;
+    return `${local.slice(0, 2)}${'*'.repeat(Math.min(5, Math.max(1, local.length - 2)))}@${domain}`;
+  }
+  const digits = k.replace(/\D/g, '');
+  if (digits.length >= 4) return `*****${digits.slice(-4)}`;
+  return '*****';
+}
+
 /**
- * Identifica ou atualiza participante para apostar.
- * Permite corrigir nome e chave PIX quando o WhatsApp já está cadastrado.
+ * Identifica participante para apostar.
+ * Cadastro existente: NUNCA altera nome/PIX por esta tela (proteção contra fraude).
  */
-async function findOrCreateParticipant({ name, phone, cpf }) {
+async function findOrCreateParticipant({ name, phone, cpf, phoneCountry }) {
   const pixKey = (cpf || '').trim();
-  const phoneClean = cleanPhone(phone);
+  const phoneClean = cleanPhone(phone, phoneCountry);
   const displayName = normalizeParticipantName(name);
 
-  if (!phoneClean || phoneClean.length < 10) {
+  if (!phoneClean || !isWhatsAppReadyPhone(phoneClean)) {
     return { error: 'invalid_phone' };
+  }
+
+  const userByPhone = await findUserByPhone(phoneClean);
+
+  if (userByPhone) {
+    if (userByPhone.role === 'admin') {
+      return { error: 'admin_cpf' };
+    }
+    return toParticipantUser(userByPhone);
   }
 
   if (!pixKey || pixKey.length < 5) {
     return { error: 'invalid_data' };
   }
 
-  const userByPhone = await findUserByPhone(phone);
   const userByPix = await findUserByPixKey(pixKey);
-
-  if (userByPhone) {
-    if (userByPhone.role === 'admin') {
-      return { error: 'admin_cpf' };
-    }
-
-    if (userByPix && userByPix.id !== userByPhone.id) {
-      return { error: 'pix_taken' };
-    }
-
-    if (!displayName) {
-      return { error: 'invalid_data' };
-    }
-
-    const updates = [];
-    const params = [];
-
-    if (displayName !== userByPhone.name) {
-      updates.push('name = ?');
-      params.push(displayName);
-    }
-
-    if (!pixKeysEqual(userByPhone.cpf || '', pixKey)) {
-      updates.push('cpf = ?');
-      params.push(pixKey);
-      updates.push('email = ?');
-      params.push(guestEmail(pixKey));
-    }
-
-    if (updates.length > 0) {
-      params.push(userByPhone.id);
-      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
-      const [refreshed] = await pool.query('SELECT * FROM users WHERE id = ?', [userByPhone.id]);
-      return toParticipantUser(refreshed[0]);
-    }
-
-    return toParticipantUser(userByPhone);
-  }
 
   if (userByPix) {
     if (userByPix.role === 'admin') {
@@ -203,4 +198,5 @@ module.exports = {
   pixKeysEqual,
   normalizePixKey,
   normalizeParticipantName,
+  maskPixKey,
 };

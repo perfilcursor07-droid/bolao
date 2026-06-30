@@ -13,7 +13,7 @@
 
     <p class="admin-page-intro">
       Todos os usuários cadastrados no sistema — participantes, convidados e administradores.
-      Telefones no formato <strong>DDD + número</strong> (ex: 63981013083) recebem WhatsApp corretamente.
+      Telefones no formato <strong>+55 (DDD) 9XXXX-XXXX</strong> aparecem como <strong>WhatsApp OK</strong> e recebem mensagens automáticas.
     </p>
 
     <% if (typeof saved !== 'undefined' && saved) { %>
@@ -106,9 +106,20 @@
             <input type="text" id="admin-user-name" name="name" class="form-control" required minlength="2">
           </div>
           <div class="form-group">
-            <label for="admin-user-phone">Telefone (WhatsApp)</label>
-            <input type="tel" id="admin-user-phone" name="phone" class="form-control" placeholder="63981013083" required>
-            <small class="admin-cell-muted">Somente números — DDD + celular, ex: 63981013083</small>
+            <label for="admin-user-phone-country">Telefone (WhatsApp)</label>
+            <div class="participar-phone-row">
+              <div class="participar-country-picker" id="admin-user-phone-picker">
+                <input type="hidden" id="admin-user-phone-country" name="phone_country" value="55">
+                <button type="button" class="participar-country-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="País">
+                  <span class="participar-country-flag"></span>
+                  <span class="participar-country-label">+55 Brasil</span>
+                  <span class="participar-country-chevron" aria-hidden="true"></span>
+                </button>
+                <ul class="participar-country-menu" role="listbox" hidden></ul>
+              </div>
+              <input type="tel" id="admin-user-phone" name="phone" class="form-control participar-input" placeholder="(11) 98114-1234" required>
+            </div>
+            <small class="admin-cell-muted">Brasil: (DDD) + 9 + celular — ex. (11) 98114-1234</small>
           </div>
           <div class="form-group">
             <label for="admin-user-cpf">Chave PIX / CPF</label>
@@ -122,6 +133,7 @@
       </div>
     </div>
 
+    <script src="/js/phone-input.js"></script>
     <script>
       (function () {
         const modal = document.getElementById('admin-user-modal');
@@ -131,8 +143,9 @@
         const cancelBtn = document.getElementById('admin-user-cancel');
         const roleEl = document.getElementById('admin-user-modal-role');
         const nameInput = document.getElementById('admin-user-name');
-        const phoneInput = document.getElementById('admin-user-phone');
         const cpfInput = document.getElementById('admin-user-cpf');
+
+        let phoneWidget = null;
 
         const roleLabels = { admin: 'Administrador', guest: 'Convidado', user: 'Usuário' };
 
@@ -144,9 +157,18 @@
         function openModal(btn) {
           form.action = '/admin/usuarios/' + btn.dataset.userId + '/editar';
           nameInput.value = btn.dataset.userName || '';
-          phoneInput.value = btn.dataset.userPhone || '';
           cpfInput.value = btn.dataset.userCpf || '';
           roleEl.textContent = roleLabels[btn.dataset.userRole] || btn.dataset.userRole;
+
+          if (!phoneWidget) {
+            phoneWidget = PhoneInput.init({
+              countryPicker: '#admin-user-phone-picker',
+              phoneInput: '#admin-user-phone',
+              defaultCountry: '55',
+            });
+          }
+          phoneWidget.setFromStored(btn.dataset.userPhone || '');
+
           modal.hidden = false;
           document.body.classList.add('admin-modal-open');
           nameInput.focus();

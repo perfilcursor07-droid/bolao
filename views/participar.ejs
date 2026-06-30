@@ -69,30 +69,56 @@
 
         <div class="card participar-card">
           <div class="participar-card-head">
-            <h2>Identifique-se</h2>
-            <p>Rápido — em seguida você escolhe o placar. Depois do jogo, <a href="/consultar">consulte pelo WhatsApp</a> se ganhou.</p>
+            <h2>Seus dados</h2>
+            <p>Cadastro rápido para apostar. Informe o <strong>WhatsApp</strong> onde quer receber aviso de prêmio — o mesmo número usado para mensagens automáticas.</p>
           </div>
 
           <% if (error) { %>
             <div class="alert alert-error" role="alert"><%= error %></div>
           <% } %>
 
+          <%
+            let formPhoneCountry = '55';
+            let formPhoneLocal = '';
+            if (typeof form !== 'undefined' && form) {
+              formPhoneCountry = form.phone_country || '55';
+              formPhoneLocal = form.phone || '';
+            }
+          %>
+
           <form method="POST" action="/games/<%= game.id %>/participar" class="participar-form" id="form-participar">
             <div class="participar-fields">
               <div class="form-group participar-field participar-field-full">
-                <label for="phone">WhatsApp <small>(só números)</small></label>
-                <div class="participar-input-wrap">
-                  <span class="participar-input-icon" aria-hidden="true">📱</span>
-                  <input type="tel" id="phone" name="phone" class="form-control participar-input" required
-                    placeholder="63981013083" value="<%= typeof form !== 'undefined' && form ? form.phone : '' %>"
-                    inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" autocomplete="tel">
+                <label for="phone-country">WhatsApp</label>
+                <div class="participar-phone-row">
+                  <div class="participar-country-picker" id="phone-country-picker">
+                    <input type="hidden" id="phone-country" name="phone_country" value="<%= formPhoneCountry %>">
+                    <button type="button" class="participar-country-trigger" id="phone-country-trigger"
+                      aria-haspopup="listbox" aria-expanded="false" aria-label="País do WhatsApp">
+                      <span class="participar-country-flag"></span>
+                      <span class="participar-country-label">+55 Brasil</span>
+                      <span class="participar-country-chevron" aria-hidden="true"></span>
+                    </button>
+                    <ul class="participar-country-menu" id="phone-country-menu" role="listbox" hidden></ul>
+                  </div>
+                  <div class="participar-input-wrap participar-input-wrap--phone">
+                    <span class="participar-input-icon" aria-hidden="true">📱</span>
+                    <input type="tel" id="phone" name="phone" class="form-control participar-input" required
+                      placeholder="(11) 98114-1234" value="<%= formPhoneLocal %>"
+                      inputmode="tel" autocomplete="tel">
+                  </div>
                 </div>
-                <small class="form-hint participar-hint-phone">
-                  Digite <strong>DDD</strong> + <strong>9</strong> + número do celular (11 dígitos).
-                  Ex.: DDD <strong>63</strong> + <strong>9</strong> + <strong>81013083</strong> = <strong>63981013083</strong>
+                <small class="form-hint participar-hint-phone" id="phone-format-hint">
+                  Brasil: <strong>(DDD)</strong> + <strong>9</strong> + celular — ex. <strong>(11) 98114-1234</strong>
+                </small>
+                <small class="form-hint participar-hint-wa" id="phone-wa-hint" hidden>
+                  ✓ Formato válido para receber mensagem no WhatsApp
+                </small>
+                <small class="form-hint participar-hint-error" id="phone-wa-error" hidden>
+                  Número incompleto — celular BR precisa de 11 dígitos com o 9 após o DDD
                 </small>
                 <small class="form-hint participar-hint-found" id="phone-hint" hidden>
-                  ✓ Cadastro encontrado — confira ou edite nome e chave PIX abaixo
+                  🔒 Cadastro protegido — nome e PIX vinculados a este WhatsApp. Para alterar, fale com o suporte.
                 </small>
               </div>
 
@@ -127,6 +153,9 @@
                     autocomplete="off">
                 </div>
                 <small class="form-hint participar-hint-error" id="pix-mismatch-hint" hidden>As chaves PIX não conferem</small>
+                <small class="form-hint participar-hint-phone" id="pix-confirm-locked-hint" hidden>
+                  Digite a <strong>chave PIX cadastrada</strong> neste WhatsApp para confirmar que é você.
+                </small>
               </div>
             </div>
 
@@ -189,6 +218,7 @@
 
   <%- include('partials/footer') %>
 
+  <script src="/js/phone-input.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script>
     const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
@@ -258,14 +288,22 @@
     const cpfInput = document.getElementById('cpf');
     const cpfConfirmInput = document.getElementById('cpf_confirm');
     const pixMismatchHint = document.getElementById('pix-mismatch-hint');
+    const pixConfirmLockedHint = document.getElementById('pix-confirm-locked-hint');
     const acceptRules = document.getElementById('accept-rules');
     const btnSubmit = document.getElementById('btn-submit');
     const participarForm = document.getElementById('form-participar');
 
     function updatePixMatchState() {
+      const confirm = cpfConfirmInput.value.trim();
+      if (existingUserLocked) {
+        cpfInput.classList.remove('participar-input--error');
+        cpfConfirmInput.classList.remove('participar-input--error');
+        pixMismatchHint.hidden = true;
+        return confirm.length >= 5;
+      }
+
       const pix = cpfInput.value;
-      const confirm = cpfConfirmInput.value;
-      const bothFilled = pix.trim() && confirm.trim();
+      const bothFilled = pix.trim() && confirm;
       const mismatch = bothFilled && !pixKeysMatch(pix, confirm);
 
       cpfInput.classList.toggle('participar-input--error', mismatch);
@@ -277,8 +315,10 @@
 
     function updateSubmitState() {
       const pixOk = updatePixMatchState();
-      const confirmFilled = cpfConfirmInput.value.trim().length > 0;
-      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled;
+      const confirmFilled = cpfConfirmInput.value.trim().length >= (existingUserLocked ? 5 : 1);
+      const phoneOk = isPhoneReady();
+      const cpfFieldOk = existingUserLocked || cpfInput.value.trim().length > 0;
+      btnSubmit.disabled = !acceptRules.checked || !pixOk || !confirmFilled || !phoneOk || !cpfFieldOk;
     }
 
     cpfInput.addEventListener('input', updateSubmitState);
@@ -286,6 +326,19 @@
 
     participarForm.addEventListener('submit', function (e) {
       normalizeNameInput();
+      if (!isPhoneReady()) {
+        e.preventDefault();
+        phoneWaError.hidden = false;
+        document.getElementById('phone').focus();
+        return;
+      }
+      if (existingUserLocked) {
+        if (cpfConfirmInput.value.trim().length < 5) {
+          e.preventDefault();
+          cpfConfirmInput.focus();
+        }
+        return;
+      }
       if (!pixKeysMatch(cpfInput.value, cpfConfirmInput.value)) {
         e.preventDefault();
         updatePixMatchState();
@@ -293,29 +346,70 @@
       }
     });
 
-    const phoneInput = document.getElementById('phone');
     const phoneHint = document.getElementById('phone-hint');
+    const phoneWaHint = document.getElementById('phone-wa-hint');
+    const phoneWaError = document.getElementById('phone-wa-error');
+    const phoneFormatHint = document.getElementById('phone-format-hint');
     const nameInput = document.getElementById('name');
 
-    function normalizeNameInput() {
-      nameInput.value = nameInput.value.toUpperCase();
+    let phoneWidget = null;
+    let lookupTimeout;
+    let existingUserLocked = false;
+
+    function setExistingUserLocked(locked, data) {
+      if (existingUserLocked && !locked) {
+        nameInput.value = '';
+        cpfInput.value = '';
+        cpfConfirmInput.value = '';
+        cpfInput.disabled = false;
+        cpfInput.setAttribute('name', 'cpf');
+        cpfInput.setAttribute('required', '');
+        cpfConfirmInput.placeholder = 'Digite a chave PIX novamente';
+      }
+      existingUserLocked = locked;
+      nameInput.readOnly = locked;
+      cpfInput.readOnly = locked;
+      cpfConfirmInput.readOnly = false;
+      nameInput.classList.toggle('participar-input--readonly', locked);
+      cpfInput.classList.toggle('participar-input--readonly', locked);
+      cpfConfirmInput.classList.toggle('participar-input--readonly', false);
+      pixConfirmLockedHint.hidden = !locked;
+
+      if (locked && data) {
+        nameInput.value = (data.name || '').toUpperCase();
+        cpfInput.value = data.pix_masked || 'Cadastrada';
+        cpfInput.disabled = true;
+        cpfInput.removeAttribute('name');
+        cpfInput.removeAttribute('required');
+        cpfInput.setAttribute('aria-label', 'Chave PIX cadastrada (oculta por segurança)');
+        cpfConfirmInput.value = '';
+        cpfConfirmInput.placeholder = 'Digite sua chave PIX cadastrada';
+        setTimeout(() => cpfConfirmInput.focus(), 100);
+      } else if (!locked) {
+        cpfInput.removeAttribute('aria-label');
+      }
     }
 
-    nameInput.addEventListener('input', normalizeNameInput);
-    nameInput.addEventListener('blur', normalizeNameInput);
-    normalizeNameInput();
+    function normalizeNameInput() {
+      if (!existingUserLocked) {
+        nameInput.value = nameInput.value.toUpperCase();
+      }
+    }
 
-    phoneInput.addEventListener('input', function (e) {
-      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
-    });
+    function isPhoneReady() {
+      if (!phoneWidget) return false;
+      const dial = phoneWidget.getCountryDial();
+      const digits = phoneWidget.getLocalDigits();
+      if (dial === '55') return digits.length === 11 && digits[2] === '9';
+      return digits.length >= 8;
+    }
 
-    let lookupTimeout;
-    phoneInput.addEventListener('input', function () {
+    function scheduleLookup(digits, countryDial) {
       clearTimeout(lookupTimeout);
-      const digits = this.value.replace(/\D/g, '');
-
-      if (digits.length < 10) {
+      const minDigits = countryDial === '55' ? 10 : 8;
+      if (digits.length < minDigits) {
         phoneHint.hidden = true;
+        setExistingUserLocked(false);
         return;
       }
 
@@ -323,27 +417,54 @@
         fetch('/api/lookup-phone', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: digits })
+          body: JSON.stringify({ phone: digits, phone_country: countryDial })
         })
           .then(r => r.json())
           .then(data => {
-            if (data.found) {
-              nameInput.value = (data.name || '').toUpperCase();
-              if (data.cpf) {
-                cpfInput.value = data.cpf;
-                cpfConfirmInput.value = data.cpf;
-              }
+            if (data.found && data.locked) {
+              setExistingUserLocked(true, data);
               phoneHint.hidden = false;
               updateSubmitState();
             } else {
+              setExistingUserLocked(false);
               phoneHint.hidden = true;
+              updateSubmitState();
             }
           })
           .catch(() => {
+            setExistingUserLocked(false);
             phoneHint.hidden = true;
           });
-      }, 500);
+      }, 450);
+    }
+
+    function onPhoneDigitsChange(digits, countryDial) {
+      if (countryDial === '55') {
+        phoneFormatHint.innerHTML = 'Brasil: <strong>(DDD)</strong> + <strong>9</strong> + celular — ex. <strong>(11) 98114-1234</strong>';
+        const ok = digits.length === 11 && digits[2] === '9';
+        phoneWaHint.hidden = !ok;
+        phoneWaError.hidden = ok || digits.length < 8;
+      } else {
+        phoneFormatHint.textContent = 'Digite o número com DDD/área local, sem o código do país.';
+        phoneWaHint.hidden = digits.length < 8;
+        phoneWaError.hidden = digits.length >= 8;
+      }
+      updateSubmitState();
+      scheduleLookup(digits, countryDial);
+    }
+
+    phoneWidget = PhoneInput.init({
+      countryPicker: '#phone-country-picker',
+      phoneInput: '#phone',
+      defaultCountry: '55',
+      initialCountry: '55',
+      initialLocal: '<%= formPhoneLocal.replace(/'/g, "\\'") %>',
+      onDigitsChange: onPhoneDigitsChange,
     });
+
+    nameInput.addEventListener('input', normalizeNameInput);
+    nameInput.addEventListener('blur', normalizeNameInput);
+    normalizeNameInput();
 
     acceptRules.addEventListener('change', updateSubmitState);
     updateSubmitState();

@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentWithPlacar, getUserGameStatus, calcPrizeBreakdown } = require('../services/prizeService');
-const { findOrCreateParticipant, setSessionUser, cleanPhone, pixKeysMatch, findUserByPhone } = require('../services/guestService');
+const { findOrCreateParticipant, setSessionUser, pixKeysMatch, findUserByPhone, maskPixKey, pixKeysEqual } = require('../services/guestService');
 const { tryBindSessionReferral } = require('../services/affiliateService');
 const { loadHomeData } = require('../services/homeService');
 const { loadFinishedBoloes, loadBetsForGames } = require('../services/finishedBoloesService');
@@ -10,21 +10,28 @@ const { attachMarketingPoolToGame } = require('../services/marketingBetService')
 const { isBettingOpen } = require('../services/bettingRules');
 const { closeExpiredOpenGames } = require('../services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
+const { normalizePhoneInput, parsePhoneForForm } = require('../services/whatsapp/phone');
 
 const router = express.Router();
 
 // API: buscar dados do participante pelo telefone
 router.post('/api/lookup-phone', async (req, res) => {
-  const phone = (req.body.phone || '').replace(/\D/g, '');
-  if (phone.length < 10) return res.json({ found: false });
+  const local = String(req.body.phone || '').replace(/\D/g, '');
+  if (local.length < 10) return res.json({ found: false });
 
   try {
-    const user = await findUserByPhone(phone);
+    const full = normalizePhoneInput('55', local);
+    const user = await findUserByPhone(full || local);
     if (user) {
+      const parsed = parsePhoneForForm(user.phone);
       return res.json({
         found: true,
+        locked: true,
         name: (user.name || '').toUpperCase(),
-        cpf: user.cpf || '',
+        pix_masked: maskPixKey(user.cpf),
+        has_pix: Boolean(user.cpf),
+        phone_country: parsed.countryDial,
+        phone: parsed.local,
       });
     }
     res.json({ found: false });
@@ -169,6 +176,8 @@ router.get('/games/:id/participar', async (req, res) => {
 
 router.post('/games/:id/participar', async (req, res) => {
   const { name, phone, cpf, cpf_confirm } = req.body;
+  const countryDial = '55';
+  const phoneNormalized = normalizePhoneInput(countryDial, phone);
 
   try {
     await closeExpiredOpenGames();
@@ -177,17 +186,45 @@ router.post('/games/:id/participar', async (req, res) => {
 
     const game = await attachMarketingPoolToGame(games[0]);
 
-    if (!pixKeysMatch(cpf, cpf_confirm)) {
+    const existingByPhone = phoneNormalized ? await findUserByPhone(phoneNormalized) : null;
+
+    if (existingByPhone) {
+      if (!cpf_confirm?.trim() || !pixKeysEqual(existingByPhone.cpf, cpf_confirm)) {
+        return res.render('participar', {
+          title: 'Participar',
+          game,
+          error: 'Chave PIX incorreta. Digite a chave cadastrada neste WhatsApp para confirmar.',
+          form: { ...req.body, phone_country: countryDial },
+          user: null,
+        });
+      }
+    } else if (!pixKeysMatch(cpf, cpf_confirm)) {
       return res.render('participar', {
         title: 'Participar',
         game,
         error: 'As chaves PIX não conferem. Digite a mesma chave nos dois campos.',
-        form: req.body,
+        form: { ...req.body, phone_country: countryDial },
         user: null,
       });
     }
 
-    const result = await findOrCreateParticipant({ name, phone, cpf });
+    if (!phoneNormalized) {
+      return res.render('participar', {
+        title: 'Participar',
+        game,
+        error: countryDial === '55'
+          ? 'WhatsApp inválido. Use DDD + 9 + celular. Ex.: (11) 98114-1234'
+          : 'Número inválido para o país selecionado. Confira o código e o número.',
+        form: { ...req.body, phone_country: countryDial },
+        user: null,
+      });
+    }
+
+    const result = await findOrCreateParticipant({
+      name,
+      phone: phoneNormalized,
+      cpf,
+    });
 
     if (result.error === 'invalid_data') {
       return res.render('participar', {
@@ -203,8 +240,10 @@ router.post('/games/:id/participar', async (req, res) => {
       return res.render('participar', {
         title: 'Participar',
         game,
-        error: 'WhatsApp inválido. Use só números: DDD + 9 + celular (11 dígitos). Ex.: 63981013083',
-        form: req.body,
+        error: countryDial === '55'
+          ? 'WhatsApp inválido. Use DDD + 9 + celular. Ex.: (11) 98114-1234'
+          : 'Número inválido para o país selecionado. Confira o código e o número.',
+        form: { ...req.body, phone_country: countryDial },
         user: null,
       });
     }

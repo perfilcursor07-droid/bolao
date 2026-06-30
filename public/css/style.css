@@ -4013,8 +4013,8 @@ body.modal-open {
   display: block;
   margin-top: 0.3rem;
   font-size: 0.72rem;
-  color: var(--accent);
-  line-height: 1.4;
+  color: #fde68a;
+  line-height: 1.45;
 }
 
 .participar-hint-phone {
@@ -4033,6 +4033,163 @@ body.modal-open {
 .participar-input.form-control.participar-input--uppercase {
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.participar-phone-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: stretch;
+}
+
+.participar-country-picker {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 48%;
+}
+
+.participar-country-picker--single .participar-country-trigger {
+  cursor: default;
+  pointer-events: none;
+}
+
+.participar-country-picker--single .participar-country-chevron {
+  display: none;
+}
+
+.participar-country-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 8.5rem;
+  padding: 0.55rem 0.55rem 0.55rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.participar-country-trigger:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.participar-country-picker.is-open .participar-country-trigger,
+.participar-country-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.participar-country-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.participar-country-chevron {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid #94a3b8;
+  border-bottom: 2px solid #94a3b8;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s;
+}
+
+.participar-country-picker.is-open .participar-country-chevron {
+  transform: rotate(-135deg) translateY(1px);
+}
+
+.participar-country-menu {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  min-width: 13.5rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.participar-country-menu[hidden] {
+  display: none !important;
+}
+
+.participar-country-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.55rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.participar-country-option:hover,
+.participar-country-option.is-selected {
+  background: rgba(16, 185, 129, 0.14);
+  color: #f8fafc;
+}
+
+.participar-country-option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.participar-country-flag {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.125rem;
+  line-height: 1;
+}
+
+.participar-country-flag-img {
+  display: block;
+  width: 24px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.participar-input-wrap--phone {
+  flex: 1;
+  min-width: 0;
+}
+
+.participar-hint-wa {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: #86efac;
+}
+
+.participar-hint-wa[hidden],
+.participar-hint-error#phone-wa-error[hidden] {
+  display: none !important;
 }
 
 .participar-hint-found[hidden] {
