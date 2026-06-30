@@ -1,8 +1,28 @@
 const axios = require('axios');
 const { translateTeamName } = require('../utils/teamNamesPt');
+const { parseUsDateAsUtcToBrazil, parseUsDateInZoneToBrazil } = require('../utils/dateTime');
 
 const WC26_BASE = (process.env.WORLDCUP26_API_URL || 'https://worldcup26.ir').replace(/\/$/, '');
 const WC26_ENABLED = !['0', 'false', 'no'].includes(String(process.env.WORLDCUP26_API || '1').toLowerCase());
+
+const STADIUM_META = {
+  1: { region: 'Central', country_en: 'Mexico', timeZone: 'America/Mexico_City' },
+  2: { region: 'Central', country_en: 'Mexico', timeZone: 'America/Mexico_City' },
+  3: { region: 'Central', country_en: 'Mexico', timeZone: 'America/Monterrey' },
+  4: { region: 'Central', country_en: 'United States', timeZone: 'America/Chicago' },
+  5: { region: 'Central', country_en: 'United States', timeZone: 'America/Chicago' },
+  6: { region: 'Central', country_en: 'United States', timeZone: 'America/Chicago' },
+  7: { region: 'Eastern', country_en: 'United States', timeZone: 'America/New_York' },
+  8: { region: 'Eastern', country_en: 'United States', timeZone: 'America/New_York' },
+  9: { region: 'Eastern', country_en: 'United States', timeZone: 'America/New_York' },
+  10: { region: 'Eastern', country_en: 'United States', timeZone: 'America/New_York' },
+  11: { region: 'Eastern', country_en: 'United States', timeZone: 'America/New_York' },
+  12: { region: 'Eastern', country_en: 'Canada', timeZone: 'America/Toronto' },
+  13: { region: 'Western', country_en: 'Canada', timeZone: 'America/Vancouver' },
+  14: { region: 'Western', country_en: 'United States', timeZone: 'America/Los_Angeles' },
+  15: { region: 'Western', country_en: 'United States', timeZone: 'America/Los_Angeles' },
+  16: { region: 'Western', country_en: 'United States', timeZone: 'America/Los_Angeles' },
+};
 
 const CACHE_TTL_LIVE_MS = 20 * 1000;
 const CACHE_TTL_TODAY_MS = 5 * 60 * 1000;
@@ -21,16 +41,31 @@ function parseScore(val) {
 }
 
 /**
- * local_date vem como MM/DD/YYYY HH:mm (horário local do estádio).
+ * A API worldcup26.ir mistura formatos em local_date:
+ * - Maioria dos jogos: horário em UTC
+ * - Alguns estádios US Central (ex.: meio-dia em Dallas): horário local do estádio
  */
-function parseLocalDate(localDate) {
+function parseWorldCup26LocalDate(localDate, stadiumId) {
   const m = String(localDate || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
   if (!m) return null;
-  const [, mm, dd, yyyy, hh, min] = m;
-  const month = mm.padStart(2, '0');
-  const day = dd.padStart(2, '0');
-  const hour = hh.padStart(2, '0');
-  return `${yyyy}-${month}-${day}T${hour}:${min}:00.000Z`;
+
+  const month = +m[1];
+  const day = +m[2];
+  const hour = +m[4];
+  const stadium = STADIUM_META[String(stadiumId)];
+
+  const asUtc = parseUsDateAsUtcToBrazil(localDate);
+  if (!stadium) return asUtc;
+
+  const isUsCentral = stadium.region === 'Central' && stadium.country_en === 'United States';
+  if (!isUsCentral) return asUtc;
+
+  // Central US: meio-dia local em junho (ex. Costa do Marfim × Noruega, 14h BRT)
+  if (hour < 13 && !(month === 7 && hour === 12)) {
+    return parseUsDateInZoneToBrazil(localDate, stadium.timeZone) || asUtc;
+  }
+
+  return asUtc;
 }
 
 function parseTimeElapsed(finished, timeElapsed) {
@@ -94,7 +129,7 @@ function parseWorldCup26Game(g) {
     id: String(g.id),
     homeTeam: translateTeamName(homeName),
     awayTeam: translateTeamName(awayName),
-    date: parseLocalDate(g.local_date),
+    date: parseWorldCup26LocalDate(g.local_date, g.stadium_id),
     status,
     statusDetail,
     matchday: g.matchday,

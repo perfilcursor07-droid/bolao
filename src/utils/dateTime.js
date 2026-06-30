@@ -53,6 +53,64 @@ function toMySQLDateTime(value) {
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
 }
 
+/**
+ * Converte relógio de parede em um fuso IANA para Date UTC.
+ */
+function wallClockInTimeZoneToDate(year, month, day, hour, minute, timeZone) {
+  let utc = Date.UTC(year, month - 1, day, hour, minute);
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(utc);
+    const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]));
+    const ty = +p.year;
+    const tm = +p.month;
+    const td = +p.day;
+    const th = +p.hour;
+    const tmi = +p.minute;
+    if (ty === year && tm === month && td === day && th === hour && tmi === minute) {
+      return d;
+    }
+    utc += ((hour - th) * 60 + (minute - tmi) + (day - td) * 1440) * 60000;
+  }
+
+  return new Date(utc);
+}
+
+/** MM/DD/YYYY HH:mm interpretado em UTC → DATETIME Brasil. */
+function parseUsDateAsUtcToBrazil(localDate) {
+  const m = String(localDate || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const month = +m[1];
+  const day = +m[2];
+  const year = +m[3];
+  const hour = +m[4];
+  const minute = +m[5];
+  const utc = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  return toMySQLDateTime(utc.toISOString());
+}
+
+/** MM/DD/YYYY HH:mm no fuso do estádio → DATETIME Brasil. */
+function parseUsDateInZoneToBrazil(localDate, timeZone) {
+  const m = String(localDate || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const month = +m[1];
+  const day = +m[2];
+  const year = +m[3];
+  const hour = +m[4];
+  const minute = +m[5];
+  const utc = wallClockInTimeZoneToDate(year, month, day, hour, minute, timeZone);
+  return toMySQLDateTime(utc.toISOString());
+}
+
 function hasExplicitTimezone(str) {
   return /Z$/i.test(str) || /[+-]\d{2}:\d{2}$/.test(str) || /[+-]\d{4}$/.test(str);
 }
@@ -123,4 +181,13 @@ function formatBetPaidAtBR(value) {
   });
 }
 
-module.exports = { toMySQLDateTime, formatGameDateBR, toDatetimeLocalBR, formatBetPaidAtBR, TZ_BR };
+module.exports = {
+  toMySQLDateTime,
+  formatGameDateBR,
+  toDatetimeLocalBR,
+  formatBetPaidAtBR,
+  parseUsDateAsUtcToBrazil,
+  parseUsDateInZoneToBrazil,
+  wallClockInTimeZoneToDate,
+  TZ_BR,
+};
