@@ -131,7 +131,7 @@ async function createPixOrder({ referenceId, customer, amountCents, description 
 
   try {
     console.log('[PagBank createPixOrder] Request:', JSON.stringify(body, null, 2));
-    const response = await axios.post(`${BASE_URL}/orders`, body, { headers: getHeaders() });
+    const response = await axios.post(`${BASE_URL}/orders`, body, { headers: getHeaders(), timeout: 30000 });
     console.log('[PagBank createPixOrder] Response:', JSON.stringify(response.data, null, 2));
 
     const order = response.data;
@@ -142,7 +142,7 @@ async function createPixOrder({ referenceId, customer, amountCents, description 
       try {
         // Aguardar um momento para o QR code ser gerado
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const orderDetail = await axios.get(`${BASE_URL}/orders/${order.id}`, { headers: getHeaders() });
+        const orderDetail = await axios.get(`${BASE_URL}/orders/${order.id}`, { headers: getHeaders(), timeout: 15000 });
         console.log('[PagBank] GET order response:', JSON.stringify(orderDetail.data, null, 2));
         if (orderDetail.data.qr_codes && orderDetail.data.qr_codes[0] && orderDetail.data.qr_codes[0].text) {
           order.qr_codes = orderDetail.data.qr_codes;

@@ -11,9 +11,72 @@ const { isBettingOpen, hasGameStarted } = require('../services/bettingRules');
 const { closeExpiredOpenGames, syncLiveGameScores } = require('../services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting, canAcceptPaymentForGame } = require('../services/paymentGateService');
 const { normalizePhoneInput, parsePhoneForForm } = require('../services/whatsapp/phone');
-const { getCartPlacaresForGame, removePlacarFromCartByScore, removeGameFromCart } = require('../services/cartService');
+const { getCartPlacaresForGame, removePlacarFromCartByScore, removeGameFromCart, parsePlacaresFromBody } = require('../services/cartService');
 
 const router = express.Router();
+
+const PAY_ERROR_MESSAGES = {
+  game_closed: 'Apostas encerradas para este jogo.',
+  no_placares: 'Adicione pelo menos um palpite antes de pagar.',
+  payment: 'Não foi possível gerar o PIX. Tente novamente em alguns instantes.',
+};
+
+function resolvePlacaresForPayment(req, gameId) {
+  let placares = parsePlacaresFromBody(req.body);
+  if (placares.length === 0) {
+    placares = getCartPlacaresForGame(req, gameId);
+  }
+  return placares;
+}
+
+async function renderPlacarWithError(req, res, gameId, errorMessage) {
+  const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [gameId]);
+  if (games.length === 0) return res.redirect('/');
+  const userStatus = await getUserGameStatus(req.session.user.id, gameId);
+  return res.render('placar', {
+    title: 'Escolher Placar',
+    game: games[0],
+    user: req.session.user,
+    userStatus,
+    cartPlacares: getCartPlacaresForGame(req, gameId),
+    error: errorMessage,
+  });
+}
+
+async function processPlacarPayment(req, res, { json = false } = {}) {
+  const gameId = req.params.id;
+  const placares = resolvePlacaresForPayment(req, gameId);
+
+  if (placares.length === 0) {
+    const message = PAY_ERROR_MESSAGES.no_placares;
+    if (json) return res.status(400).json({ ok: false, error: 'no_placares', message });
+    return renderPlacarWithError(req, res, gameId, message);
+  }
+
+  try {
+    const result = await createPaymentWithPlacar(req.session.user.id, gameId, placares);
+
+    if (result.error === 'game_closed') {
+      const message = PAY_ERROR_MESSAGES.game_closed;
+      if (json) return res.status(400).json({ ok: false, error: 'game_closed', message });
+      return res.redirect(`/?error=closed`);
+    }
+    if (result.error === 'no_placares') {
+      const message = PAY_ERROR_MESSAGES.no_placares;
+      if (json) return res.status(400).json({ ok: false, error: 'no_placares', message });
+      return res.redirect(`/games/${gameId}/placar?error=empty`);
+    }
+
+    removeGameFromCart(req, gameId);
+    if (json) return res.json({ ok: true, paymentId: result.paymentId });
+    return res.redirect(`/payment/${result.paymentId}`);
+  } catch (err) {
+    console.error('Erro ao criar pagamento:', err.message, err.stack);
+    const message = PAY_ERROR_MESSAGES.payment;
+    if (json) return res.status(500).json({ ok: false, error: 'payment', message });
+    return res.redirect(`/games/${gameId}/placar?error=payment`);
+  }
+}
 
 async function loadParticiparGame(gameRow) {
   const game = await attachMarketingPoolToGame(gameRow);
@@ -402,67 +465,12 @@ router.post('/games/:id/placar/remove', requireAuth, (req, res) => {
   res.redirect(`/games/${req.params.id}/placar`);
 });
 
+router.post('/games/:id/placar/pay', requireAuth, async (req, res) => {
+  await processPlacarPayment(req, res, { json: true });
+});
+
 router.post('/games/:id/placar', requireAuth, async (req, res) => {
-  let placares = [];
-
-  try {
-    if (req.body.placares_json) {
-      const parsed = JSON.parse(req.body.placares_json);
-      if (Array.isArray(parsed)) {
-        placares = parsed;
-      }
-    }
-  } catch (e) {
-    console.error('Erro ao parsear placares_json:', e.message);
-    placares = [];
-  }
-
-  if (placares.length === 0) {
-    placares = getCartPlacaresForGame(req, req.params.id);
-  }
-
-  // Fallback: se veio via campos individuais (compatibilidade)
-  if (placares.length === 0) {
-    const homeScore = parseInt(req.body.home_score);
-    const awayScore = parseInt(req.body.away_score);
-    if (!isNaN(homeScore) && !isNaN(awayScore) && homeScore >= 0 && awayScore >= 0) {
-      placares = [{ home: homeScore, away: awayScore }];
-    }
-  }
-
-  // Sanitiza e valida cada placar
-  placares = placares
-    .map((p) => ({ home: parseInt(p.home, 10), away: parseInt(p.away, 10) }))
-    .filter((p) => !isNaN(p.home) && !isNaN(p.away) && p.home >= 0 && p.away >= 0 && p.home <= 99 && p.away <= 99);
-
-  if (placares.length === 0) {
-    const [games] = await pool.query('SELECT * FROM games WHERE id = ?', [req.params.id]);
-    if (games.length === 0) return res.redirect('/');
-    const userStatus = await getUserGameStatus(req.session.user.id, req.params.id);
-    return res.render('placar', {
-      title: 'Escolher Placar',
-      game: games[0],
-      user: req.session.user,
-      userStatus,
-      cartPlacares: getCartPlacaresForGame(req, req.params.id),
-      error: 'Adicione pelo menos um placar antes de pagar.',
-    });
-  }
-
-  try {
-    const result = await createPaymentWithPlacar(req.session.user.id, req.params.id, placares);
-
-    if (result.error === 'game_closed') return res.redirect('/');
-    if (result.error === 'no_placares') {
-      return res.redirect(`/games/${req.params.id}/placar`);
-    }
-
-    removeGameFromCart(req, req.params.id);
-    res.redirect(`/payment/${result.paymentId}`);
-  } catch (err) {
-    console.error('Erro ao criar pagamento:', err.message, err.stack);
-    res.redirect(`/games/${req.params.id}/placar?error=payment`);
-  }
+  await processPlacarPayment(req, res, { json: false });
 });
 
 router.get('/regras', (req, res) => {

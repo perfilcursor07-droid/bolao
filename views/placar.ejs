@@ -114,7 +114,7 @@
       <strong id="sticky-total">R$ 0,00</strong>
     </div>
     <div class="placar-sticky-actions placar-sticky-actions--solo">
-      <button type="submit" class="btn btn-gold btn-pay" id="btn-pay">
+      <button type="button" class="btn btn-gold btn-pay" id="btn-pay">
         Pagar agora
       </button>
     </div>
@@ -231,6 +231,54 @@
       cartBusy = busy;
       if (elBtnAdd) elBtnAdd.disabled = busy;
       document.querySelectorAll('.pq-btn').forEach(b => { b.disabled = busy; });
+      if (!elPay.classList.contains('is-loading')) {
+        elPay.disabled = busy || placares.length === 0;
+      }
+    }
+
+    function setPayLoading(loading) {
+      if (!elPay) return;
+      elPay.classList.toggle('is-loading', loading);
+      elPay.setAttribute('aria-busy', loading ? 'true' : 'false');
+      elPay.disabled = loading || cartBusy || placares.length === 0;
+      if (loading) {
+        elPay.textContent = '⏳ Gerando PIX...';
+      } else if (placares.length > 0) {
+        elPay.textContent = 'Pagar ' + fmt(FEE * placares.length);
+      } else {
+        elPay.textContent = 'Pagar agora';
+      }
+    }
+
+    async function payNow() {
+      if (cartBusy || placares.length === 0 || elPay.classList.contains('is-loading')) return;
+      noErr();
+      setPayLoading(true);
+
+      try {
+        const res = await fetch('/games/' + GAME_ID + '/placar/pay', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ placares }),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ok && data.paymentId) {
+          window.location.href = '/payment/' + data.paymentId;
+          return;
+        }
+
+        const msg = data.message
+          || (data.error === 'game_closed' ? 'Apostas encerradas para este jogo.' : null)
+          || (data.error === 'no_placares' ? 'Adicione pelo menos um palpite antes de pagar.' : null)
+          || 'Não foi possível gerar o PIX. Tente novamente.';
+        err(msg);
+      } catch (_) {
+        err('Falha de conexão ao gerar o PIX. Verifique a internet e tente de novo.');
+      } finally {
+        setPayLoading(false);
+      }
     }
 
     async function add(h, a, opts) {
@@ -295,12 +343,16 @@
         elSpacer.style.display = 'block';
         elSCount.textContent = n + ' palpite' + (n > 1 ? 's' : '');
         elSTotal.textContent = fmt(FEE * n);
-        elPay.disabled = cartBusy;
-        elPay.textContent = 'Pagar ' + fmt(FEE * n);
+        if (!elPay.classList.contains('is-loading')) {
+          elPay.disabled = cartBusy;
+          elPay.textContent = 'Pagar ' + fmt(FEE * n);
+        }
       } else {
         elForm.style.display = 'none';
         elSpacer.style.display = 'none';
-        elPay.disabled = true;
+        if (!elPay.classList.contains('is-loading')) {
+          elPay.disabled = true;
+        }
       }
 
       document.querySelectorAll('.pq-btn').forEach(b => {
@@ -315,21 +367,10 @@
     $('btn-away-plus').onclick = ()=>{ if(cA<20){cA++;upd();} };
     $('btn-away-minus').onclick = ()=>{ if(cA>0){cA--;upd();} };
     elBtnAdd.onclick = () => add(cH, cA);
+    elPay.onclick = () => payNow();
 
     document.querySelectorAll('.pq-btn').forEach(b => {
       b.onclick = () => add(+b.dataset.h, +b.dataset.a, { quick: true });
-    });
-
-    $('placar-form').addEventListener('submit', function (e) {
-      if (elPay.classList.contains('is-loading')) {
-        e.preventDefault();
-        return;
-      }
-      noErr();
-      elJson.value = JSON.stringify(placares);
-      elPay.classList.add('is-loading');
-      elPay.setAttribute('aria-busy', 'true');
-      elPay.textContent = '⏳ Gerando PIX...';
     });
 
     upd();

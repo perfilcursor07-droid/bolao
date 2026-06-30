@@ -125,4 +125,5 @@ module.exports = {
   removePlacarFromCartByScore,
   getCartPlacaresForGame,
   clearCart,
+  parsePlacaresFromBody: parsePlacares,
 };
