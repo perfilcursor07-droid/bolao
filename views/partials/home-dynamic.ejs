@@ -29,9 +29,15 @@
           <% var game = item.game, winners = item.winners, breakdown = item.breakdown; %>
           <a href="/games/<%= game.id %>" class="finished-compact-row">
             <div class="finished-compact-match">
-              <span><%= teamPt(game.home_team) %></span>
+              <span class="finished-compact-team">
+                <%- include('team-flag', { name: game.home_team, size: 'sm' }) %>
+                <%= teamPt(game.home_team) %>
+              </span>
               <strong class="finished-compact-score"><%= game.home_score %> × <%= game.away_score %></strong>
-              <span><%= teamPt(game.away_team) %></span>
+              <span class="finished-compact-team">
+                <%- include('team-flag', { name: game.away_team, size: 'sm' }) %>
+                <%= teamPt(game.away_team) %>
+              </span>
             </div>
             <div class="finished-compact-meta">
               <% if (winners.length > 0) { %>

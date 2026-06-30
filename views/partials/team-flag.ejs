@@ -1,0 +1,16 @@
+<%
+  const _teamName = typeof name !== 'undefined' ? name : '';
+  const _size = typeof size !== 'undefined' ? size : 'md';
+  const _flag = typeof teamFlag !== 'undefined' && _teamName ? teamFlag(_teamName) : null;
+%>
+<% if (_flag) { %>
+  <img
+    src="<%= _flag %>"
+    alt=""
+    class="team-flag-img team-flag-img--<%= _size %>"
+    width="<%= _size === 'lg' ? 32 : _size === 'sm' ? 18 : 24 %>"
+    height="<%= _size === 'lg' ? 24 : _size === 'sm' ? 13 : 18 %>"
+    loading="lazy"
+    decoding="async"
+  >
+<% } %>

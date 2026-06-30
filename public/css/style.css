@@ -3168,10 +3168,20 @@ td { border-top: 1px solid var(--border); }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
   text-align: center;
   padding: 0.1rem 0;
+}
+
+.featured-team-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+  max-width: 42%;
 }
 
 .featured-team {
@@ -3747,6 +3757,78 @@ body.modal-open {
 }
 
 .game-row-teams strong { font-weight: 700; }
+
+.game-row-teams--flags {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.game-row-vs {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.team-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.team-line-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-flag-img {
+  display: block;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.team-flag-img--sm {
+  width: 18px;
+  height: 13px;
+}
+
+.team-flag-img--md {
+  width: 24px;
+  height: 18px;
+}
+
+.team-flag-img--lg {
+  width: 32px;
+  height: 24px;
+}
+
+.live-game-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.finished-compact-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .game-row-meta {
   display: flex;

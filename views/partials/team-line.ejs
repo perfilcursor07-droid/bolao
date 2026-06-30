@@ -1,0 +1,4 @@
+<span class="team-line<%= typeof className !== 'undefined' && className ? ' ' + className : '' %>">
+  <%- include('team-flag', { name: name, size: typeof size !== 'undefined' ? size : 'md' }) %>
+  <span class="team-line-name"><%= teamPt(name) %></span>
+</span>

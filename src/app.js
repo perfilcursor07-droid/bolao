@@ -17,6 +17,7 @@ const { formatLiveMatchMinute } = require('./utils/liveMatchDisplay');
 const { shortName } = require('./utils/displayName');
 const { getCartCount } = require('./services/cartService');
 const { getPendingPaymentsCount } = require('./services/paymentsService');
+const { ensureTeamFlagsLoaded, getTeamFlagUrl } = require('./services/teamFlagsService');
 const { closeExpiredOpenGames, finalizeClosedGamesWithScores, isBettingOpen, hasGameStarted, BETTING_CLOSE_MINUTES } = require('./services/gameStatusService');
 const { expirePendingPaymentsForClosedBetting } = require('./services/paymentGateService');
 const { captureReferralCode, tryBindSessionReferral } = require('./services/affiliateService');
@@ -85,9 +86,15 @@ app.use(async (req, res, next) => {
 });
 
 app.use(async (req, res, next) => {
+  try {
+    await ensureTeamFlagsLoaded();
+  } catch {
+    /* bandeiras opcionais */
+  }
   res.locals.user = req.session.user || null;
   res.locals.formatCents = formatCents;
   res.locals.teamPt = translateTeamName;
+  res.locals.teamFlag = getTeamFlagUrl;
   res.locals.gameDateBR = formatGameDateBR;
   res.locals.firstName = (name) => {
     if (!name || typeof name !== 'string') return '—';

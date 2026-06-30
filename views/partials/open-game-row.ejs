@@ -5,8 +5,10 @@
 
 <article class="game-row<%= showClosedPanel ? ' game-row--closed-info' : '' %>">
   <div class="game-row-main">
-    <div class="game-row-teams">
-      <strong><%= teamPt(game.home_team) %></strong> × <strong><%= teamPt(game.away_team) %></strong>
+    <div class="game-row-teams game-row-teams--flags">
+      <%- include('team-line', { name: game.home_team, size: 'sm' }) %>
+      <span class="game-row-vs">×</span>
+      <%- include('team-line', { name: game.away_team, size: 'sm' }) %>
     </div>
     <div class="game-row-meta">
       <time><%= gameDateBR(game.game_date) %></time>

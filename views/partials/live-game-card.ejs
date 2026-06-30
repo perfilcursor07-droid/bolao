@@ -16,13 +16,19 @@
       <% } %>
 
       <div class="live-game-match">
-        <span class="live-game-team"><%= teamPt(game.home_team) %></span>
+        <span class="live-game-team">
+          <%- include('team-flag', { name: game.home_team, size: 'md' }) %>
+          <%= teamPt(game.home_team) %>
+        </span>
         <% if (game.home_score !== null && game.away_score !== null) { %>
           <span class="live-game-score"><%= game.home_score %> × <%= game.away_score %></span>
         <% } else { %>
           <span class="live-game-score live-game-score--pending">×</span>
         <% } %>
-        <span class="live-game-team"><%= teamPt(game.away_team) %></span>
+        <span class="live-game-team">
+          <%- include('team-flag', { name: game.away_team, size: 'md' }) %>
+          <%= teamPt(game.away_team) %>
+        </span>
       </div>
 
       <div class="live-game-prize">

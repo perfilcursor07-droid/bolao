@@ -7,9 +7,15 @@
     </header>
 
     <div class="featured-match">
-      <span class="featured-team"><%= teamPt(game.home_team) %></span>
+      <div class="featured-team-col">
+        <%- include('team-flag', { name: game.home_team, size: 'lg' }) %>
+        <span class="featured-team"><%= teamPt(game.home_team) %></span>
+      </div>
       <span class="featured-x">×</span>
-      <span class="featured-team"><%= teamPt(game.away_team) %></span>
+      <div class="featured-team-col">
+        <%- include('team-flag', { name: game.away_team, size: 'lg' }) %>
+        <span class="featured-team"><%= teamPt(game.away_team) %></span>
+      </div>
     </div>
 
     <div class="featured-stats-grid">
