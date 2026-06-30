@@ -1,116 +1,153 @@
-<nav class="navbar">
-  <a href="/" class="navbar-brand">
-    <%- include('logo') %>
-    <span class="brand-text">Bolão <span class="brand-accent">Online</span></span>
-  </a>
+<header class="site-header">
+  <div class="container home-container site-header-inner">
+    <nav class="navbar" aria-label="Principal">
+      <a href="/" class="navbar-brand">
+        <%- include('logo') %>
+        <span class="brand-text">Bolão <span class="brand-accent">Online</span></span>
+      </a>
 
-  <div class="navbar-center" id="navbar-nav">
-    <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/" class="nav-pill">Jogos</a>
-      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
-      <a href="/ganhadores" class="nav-pill">Ganhadores</a>
-      <a href="/my-bets" class="nav-pill">Apostas</a>
-      <a href="/regras" class="nav-pill">Regras</a>
-      <a href="/afiliado" class="nav-pill">Afiliados</a>
-    <% } else { %>
-      <a href="/boloes-encerrados" class="nav-pill">Encerrados</a>
-      <a href="/ganhadores" class="nav-pill">Ganhadores</a>
-      <a href="/consultar" class="nav-pill">Consultar</a>
-      <a href="/regras" class="nav-pill">Regras</a>
-      <a href="/afiliado" class="nav-pill">Afiliados</a>
-    <% } %>
-  </div>
+      <div class="navbar-center" id="navbar-nav">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <a href="/" class="nav-pill" title="Jogos">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 2.8 4 6 4 9s-1.5 6.2-4 9M12 3c-2.5 2.8-4 6-4 9s1.5 6.2 4 9M3 12h18"/></svg>
+            <span>Jogos</span>
+          </a>
+          <a href="/boloes-encerrados" class="nav-pill" title="Encerrados">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            <span>Encerrados</span>
+          </a>
+          <a href="/ganhadores" class="nav-pill" title="Ganhadores">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10l1 5a4 4 0 01-4 4 4 4 0 01-4-4l1-5zM5 4h14"/></svg>
+            <span>Ganhadores</span>
+          </a>
+          <a href="/my-bets" class="nav-pill" title="Apostas">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+            <span>Apostas</span>
+          </a>
+          <a href="/regras" class="nav-pill" title="Regras">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+            <span>Regras</span>
+          </a>
+          <a href="/afiliado" class="nav-pill" title="Afiliados">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            <span>Afiliados</span>
+          </a>
+        <% } else { %>
+          <a href="/boloes-encerrados" class="nav-pill" title="Encerrados">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            <span>Encerrados</span>
+          </a>
+          <a href="/ganhadores" class="nav-pill" title="Ganhadores">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10l1 5a4 4 0 01-4 4 4 4 0 01-4-4l1-5zM5 4h14"/></svg>
+            <span>Ganhadores</span>
+          </a>
+          <a href="/consultar" class="nav-pill" title="Consultar">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Consultar</span>
+          </a>
+          <a href="/regras" class="nav-pill" title="Regras">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+            <span>Regras</span>
+          </a>
+          <a href="/afiliado" class="nav-pill" title="Afiliados">
+            <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            <span>Afiliados</span>
+          </a>
+        <% } %>
+      </div>
 
-  <div class="navbar-right">
-    <% if (typeof user !== 'undefined' && user) { %>
-      <%- include('nav-tools') %>
-      <div class="nav-user-menu" id="nav-user-menu">
-        <button type="button" class="nav-user-trigger" id="nav-user-trigger"
-          aria-haspopup="menu" aria-expanded="false" aria-controls="nav-user-dropdown">
-          <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-          <span class="nav-user-trigger-name"><%= user.name.split(' ')[0] %></span>
-          <span class="nav-user-chevron" aria-hidden="true"></span>
-        </button>
-        <div class="nav-user-dropdown" id="nav-user-dropdown" role="menu" hidden>
-          <div class="nav-user-dropdown-head">
-            <span class="nav-avatar nav-avatar--lg"><%= user.name.charAt(0).toUpperCase() %></span>
-            <div>
-              <strong><%= user.name.split(' ')[0] %></strong>
-              <small>Minha conta</small>
+      <div class="navbar-right">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <%- include('nav-tools') %>
+          <div class="nav-user-menu" id="nav-user-menu">
+            <button type="button" class="nav-user-trigger" id="nav-user-trigger"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="nav-user-dropdown">
+              <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+              <span class="nav-user-trigger-name"><%= user.name.split(' ')[0] %></span>
+              <span class="nav-user-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="nav-user-dropdown" id="nav-user-dropdown" role="menu" hidden>
+              <div class="nav-user-dropdown-head">
+                <span class="nav-avatar nav-avatar--lg"><%= user.name.charAt(0).toUpperCase() %></span>
+                <div>
+                  <strong><%= user.name.split(' ')[0] %></strong>
+                  <small>Minha conta</small>
+                </div>
+              </div>
+              <a href="/painel" class="nav-user-dropdown-item" role="menuitem">Painel</a>
+              <% if (user.role === 'admin') { %>
+                <a href="/admin" class="nav-user-dropdown-item nav-user-dropdown-item--admin" role="menuitem">Administração</a>
+              <% } %>
+              <a href="/logout" class="nav-user-dropdown-item nav-user-dropdown-item--exit" role="menuitem">Sair</a>
             </div>
           </div>
-          <a href="/painel" class="nav-user-dropdown-item" role="menuitem">Painel</a>
-          <% if (user.role === 'admin') { %>
-            <a href="/admin" class="nav-user-dropdown-item nav-user-dropdown-item--admin" role="menuitem">Administração</a>
-          <% } %>
-          <a href="/logout" class="nav-user-dropdown-item nav-user-dropdown-item--exit" role="menuitem">Sair</a>
-        </div>
+        <% } else { %>
+          <a href="/login" class="nav-account-exit nav-account-exit--guest">Entrar</a>
+          <a href="/register" class="nav-btn-cta nav-btn-cta--compact">Cadastrar</a>
+        <% } %>
       </div>
-    <% } else { %>
-      <a href="/login" class="nav-account-exit nav-account-exit--guest">Entrar</a>
-      <a href="/register" class="nav-btn-cta nav-btn-cta--compact">Cadastrar</a>
-    <% } %>
+
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu" type="button" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+    </nav>
   </div>
 
-  <button class="nav-toggle" id="nav-toggle" aria-label="Menu" type="button" aria-expanded="false">
-    <span></span><span></span>
-  </button>
-</nav>
-
-<div class="nav-mobile" id="nav-mobile" aria-hidden="true">
-  <% if (typeof user !== 'undefined' && user) { %>
-    <div class="nav-mobile-user">
-      <a href="/painel" class="nav-mobile-user-link">
-        <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
-        <div>
-          <strong><%= user.name.split(' ')[0] %></strong>
-          <small>Meu painel</small>
-        </div>
-      </a>
-    </div>
-    <nav class="nav-mobile-links">
-      <a href="/" class="nav-mobile-link"><span class="nav-mobile-link-label">Jogos</span></a>
-      <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
-      <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
-      <a href="/carrinho" class="nav-mobile-link">
-        <span class="nav-mobile-link-label">Carrinho / PIX pendente</span>
-        <%
-          const mCart = typeof cartCount !== 'undefined' ? Number(cartCount) : 0;
-          const mPending = typeof pendingPaymentsCount !== 'undefined' ? Number(pendingPaymentsCount) : 0;
-          const mTotal = mCart + mPending;
-        %>
-        <% if (mTotal > 0) { %>
-          <span class="nav-mobile-badge<%= mPending > 0 && mCart === 0 ? ' nav-mobile-badge--warn' : '' %>"><%= mTotal %></span>
+  <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
+    <% if (typeof user !== 'undefined' && user) { %>
+      <div class="nav-mobile-user">
+        <a href="/painel" class="nav-mobile-user-link">
+          <span class="nav-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+          <div>
+            <strong><%= user.name.split(' ')[0] %></strong>
+            <small>Meu painel</small>
+          </div>
+        </a>
+      </div>
+      <nav class="nav-mobile-links">
+        <a href="/" class="nav-mobile-link"><span class="nav-mobile-link-label">⚽ Jogos</span></a>
+        <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">🏁 Encerrados</span></a>
+        <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">🏆 Ganhadores</span></a>
+        <a href="/carrinho" class="nav-mobile-link">
+          <span class="nav-mobile-link-label">🛒 Carrinho / PIX pendente</span>
+          <%
+            const mCart = typeof cartCount !== 'undefined' ? Number(cartCount) : 0;
+            const mPending = typeof pendingPaymentsCount !== 'undefined' ? Number(pendingPaymentsCount) : 0;
+            const mTotal = mCart + mPending;
+          %>
+          <% if (mTotal > 0) { %>
+            <span class="nav-mobile-badge<%= mPending > 0 && mCart === 0 ? ' nav-mobile-badge--warn' : '' %>"><%= mTotal %></span>
+          <% } %>
+        </a>
+        <a href="/my-bets" class="nav-mobile-link"><span class="nav-mobile-link-label">📋 Minhas apostas</span></a>
+        <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">📄 Regras</span></a>
+        <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">👥 Afiliados</span></a>
+        <% if (user.role === 'admin') { %>
+          <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">⚙️ Administração</span></a>
         <% } %>
-      </a>
-      <a href="/my-bets" class="nav-mobile-link"><span class="nav-mobile-link-label">Minhas apostas</span></a>
-      <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
-      <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">Afiliados</span></a>
-      <% if (user.role === 'admin') { %>
-        <a href="/admin" class="nav-mobile-link"><span class="nav-mobile-link-label">Administração</span></a>
-      <% } %>
-    </nav>
-    <div class="nav-mobile-footer">
-      <a href="/logout" class="nav-mobile-link nav-mobile-link--exit">Sair da conta</a>
-    </div>
-  <% } else { %>
-    <nav class="nav-mobile-links">
-      <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">Encerrados</span></a>
-      <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">Ganhadores</span></a>
-      <a href="/consultar" class="nav-mobile-link"><span class="nav-mobile-link-label">Consultar apostas</span></a>
-      <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">Regras</span></a>
-      <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">Afiliados</span></a>
-    </nav>
-    <div class="nav-mobile-guest">
-      <p class="nav-mobile-guest-title">Bem-vindo</p>
-      <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>
-    </div>
-    <div class="nav-mobile-footer nav-mobile-footer-guest">
-      <a href="/login" class="nav-btn-cta nav-btn-cta--block">Entrar</a>
-      <a href="/register" class="nav-link-quiet nav-link-quiet--block">Criar conta</a>
-    </div>
-  <% } %>
-</div>
+      </nav>
+      <div class="nav-mobile-footer">
+        <a href="/logout" class="nav-mobile-link nav-mobile-link--exit">Sair da conta</a>
+      </div>
+    <% } else { %>
+      <nav class="nav-mobile-links">
+        <a href="/boloes-encerrados" class="nav-mobile-link"><span class="nav-mobile-link-label">🏁 Encerrados</span></a>
+        <a href="/ganhadores" class="nav-mobile-link"><span class="nav-mobile-link-label">🏆 Ganhadores</span></a>
+        <a href="/consultar" class="nav-mobile-link"><span class="nav-mobile-link-label">🔍 Consultar apostas</span></a>
+        <a href="/regras" class="nav-mobile-link"><span class="nav-mobile-link-label">📄 Regras</span></a>
+        <a href="/afiliado" class="nav-mobile-link"><span class="nav-mobile-link-label">👥 Afiliados</span></a>
+      </nav>
+      <div class="nav-mobile-guest">
+        <p class="nav-mobile-guest-title">Bem-vindo</p>
+        <p class="nav-mobile-guest-text">Entre ou cadastre-se para participar dos bolões.</p>
+      </div>
+      <div class="nav-mobile-footer nav-mobile-footer-guest">
+        <a href="/login" class="nav-btn-cta nav-btn-cta--block">Entrar</a>
+        <a href="/register" class="nav-link-quiet nav-link-quiet--block">Criar conta</a>
+      </div>
+    <% } %>
+  </div>
+</header>
 
 <script>
   (function () {
