@@ -42,21 +42,13 @@
           </div>
 
           <div class="participar-hero-fixture">
-            <%
-              function teamInitials(name) {
-                const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-                if (!parts.length) return '?';
-                if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-              }
-            %>
             <div class="participar-hero-team-wrap">
-              <span class="participar-hero-crest" aria-hidden="true"><%= teamInitials(teamPt(game.home_team)) %></span>
+              <%- include('partials/team-flag', { name: game.home_team, size: 'md' }) %>
               <span class="participar-hero-team"><%= teamPt(game.home_team) %></span>
             </div>
             <span class="participar-hero-vs" aria-hidden="true">×</span>
             <div class="participar-hero-team-wrap">
-              <span class="participar-hero-crest" aria-hidden="true"><%= teamInitials(teamPt(game.away_team)) %></span>
+              <%- include('partials/team-flag', { name: game.away_team, size: 'md' }) %>
               <span class="participar-hero-team"><%= teamPt(game.away_team) %></span>
             </div>
           </div>

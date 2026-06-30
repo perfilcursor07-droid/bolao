@@ -19,9 +19,15 @@
         <% } %>
       </div>
       <div class="game-result-scoreline">
-        <span class="game-result-team"><%= teamPt(game.home_team) %></span>
+        <span class="game-result-team">
+          <%- include('team-flag', { name: game.home_team, size: 'sm' }) %>
+          <%= teamPt(game.home_team) %>
+        </span>
         <span class="game-result-score"><%= game.home_score %> × <%= game.away_score %></span>
-        <span class="game-result-team"><%= teamPt(game.away_team) %></span>
+        <span class="game-result-team">
+          <%- include('team-flag', { name: game.away_team, size: 'sm' }) %>
+          <%= teamPt(game.away_team) %>
+        </span>
       </div>
       <% if (winCount > 0 && typeof prizeBreakdown !== 'undefined' && prizeBreakdown) { %>
         <p class="game-result-prize-hint">

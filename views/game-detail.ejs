@@ -25,11 +25,13 @@
 
       <div class="match-row match-row-lg">
         <div class="match-team">
+          <%- include('partials/team-flag', { name: game.home_team, size: 'lg' }) %>
           <span class="match-team-name"><%= teamPt(game.home_team) %></span>
           <% if (game.home_score !== null) { %><span class="match-score"><%= game.home_score %></span><% } %>
         </div>
         <span class="match-x">×</span>
         <div class="match-team">
+          <%- include('partials/team-flag', { name: game.away_team, size: 'lg' }) %>
           <span class="match-team-name"><%= teamPt(game.away_team) %></span>
           <% if (game.away_score !== null) { %><span class="match-score"><%= game.away_score %></span><% } %>
         </div>

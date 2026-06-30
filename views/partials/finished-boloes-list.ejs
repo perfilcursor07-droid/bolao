@@ -28,9 +28,15 @@
             <% } %>
 
             <div class="finished-bolao-twin-match">
-              <span class="finished-bolao-twin-team"><%= teamPt(game.home_team) %></span>
+              <span class="finished-bolao-twin-team">
+                <%- include('team-flag', { name: game.home_team, size: 'md' }) %>
+                <%= teamPt(game.home_team) %>
+              </span>
               <span class="finished-bolao-twin-score"><%= game.home_score %> × <%= game.away_score %></span>
-              <span class="finished-bolao-twin-team"><%= teamPt(game.away_team) %></span>
+              <span class="finished-bolao-twin-team">
+                <%- include('team-flag', { name: game.away_team, size: 'md' }) %>
+                <%= teamPt(game.away_team) %>
+              </span>
             </div>
 
             <div class="finished-bolao-winners-row">
@@ -69,9 +75,15 @@
         <details class="finished-bolao" data-game-id="<%= game.id %>">
           <summary class="finished-bolao-summary">
             <div class="finished-bolao-teams">
-              <span class="finished-team"><%= teamPt(game.home_team) %></span>
+              <span class="finished-team">
+                <%- include('team-flag', { name: game.home_team, size: 'sm' }) %>
+                <%= teamPt(game.home_team) %>
+              </span>
               <span class="finished-score"><%= game.home_score %> × <%= game.away_score %></span>
-              <span class="finished-team"><%= teamPt(game.away_team) %></span>
+              <span class="finished-team">
+                <%- include('team-flag', { name: game.away_team, size: 'sm' }) %>
+                <%= teamPt(game.away_team) %>
+              </span>
             </div>
             <div class="finished-bolao-meta">
               <span class="finished-pool"><%= formatCents(breakdown.totalPool) %></span>

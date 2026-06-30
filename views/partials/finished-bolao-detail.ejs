@@ -1,7 +1,13 @@
 <div class="finished-modal-scoreboard">
-  <span class="finished-modal-team"><%= teamPt(game.home_team) %></span>
+  <span class="finished-modal-team">
+    <%- include('team-flag', { name: game.home_team, size: 'md' }) %>
+    <%= teamPt(game.home_team) %>
+  </span>
   <span class="finished-modal-result"><%= game.home_score %> × <%= game.away_score %></span>
-  <span class="finished-modal-team"><%= teamPt(game.away_team) %></span>
+  <span class="finished-modal-team">
+    <%- include('team-flag', { name: game.away_team, size: 'md' }) %>
+    <%= teamPt(game.away_team) %>
+  </span>
 </div>
 
 <div class="prize-breakdown">
