@@ -1,7 +1,6 @@
 (function () {
-  const root = document.querySelector('.home-container');
   const modal = document.getElementById('featured-bets-modal');
-  if (!root || !modal) return;
+  if (!modal) return;
 
   const backdrop = modal.querySelector('.bets-modal-backdrop');
   const closeBtn = modal.querySelector('.bets-modal-close');
@@ -35,9 +34,9 @@
     lastFocus = null;
   }
 
-  root.addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
     const btn = e.target.closest('.featured-bets-btn');
-    if (!btn) return;
+    if (!btn || !document.getElementById('home-dynamic')?.contains(btn)) return;
     e.preventDefault();
     e.stopPropagation();
     openModal(btn);
