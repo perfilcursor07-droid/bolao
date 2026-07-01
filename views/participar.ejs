@@ -279,26 +279,28 @@
 
   <script src="/js/phone-input.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <%- include('partials/bolao-share-text', { game }) %>
   <script>
     const gameUrl = window.location.origin + '/games/<%= game.id %>/participar';
-    const shareText = '⚽ Bolão: <%= teamPt(game.home_team) %> × <%= teamPt(game.away_team) %>\n💰 <%= formatCents(game.entry_fee_cents) %> por placar\n👉 Entre e aposte:';
+    const shareText = <%- JSON.stringify(bolaoShareText) %>;
+    const shareFull = shareText + '\n' + gameUrl;
 
-    document.getElementById('share-link').value = gameUrl;
+    document.getElementById('share-link').value = shareFull;
 
     function openWhatsApp() {
-      window.open('https://wa.me/?text=' + encodeURIComponent(shareText + '\n' + gameUrl), '_blank');
+      window.open('https://wa.me/?text=' + encodeURIComponent(shareFull), '_blank');
     }
 
     document.getElementById('btn-share-whatsapp').onclick = function () {
       if (navigator.share) {
-        navigator.share({ title: 'Bolão Online', text: shareText, url: gameUrl }).catch(openWhatsApp);
+        navigator.share({ title: 'Bolão Pix', text: shareFull }).catch(openWhatsApp);
       } else {
         openWhatsApp();
       }
     };
 
     document.getElementById('btn-copy-link').onclick = function () {
-      navigator.clipboard.writeText(gameUrl).then(() => {
+      navigator.clipboard.writeText(shareFull).then(() => {
         const label = document.getElementById('btn-copy-label');
         label.textContent = '✓ Copiado!';
         setTimeout(() => { label.textContent = 'Copiar link'; }, 2500);

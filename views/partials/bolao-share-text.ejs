@@ -1,0 +1,22 @@
+<%
+  const sharePrizeCents = game.display_prize_pool_cents != null ? game.display_prize_pool_cents : game.prize_pool_cents;
+  const shareBetCount = Number(game.total_bets) || 0;
+  const shareMessageLines = [
+    '⚽ Venha participar do bolão!',
+    '',
+    teamPt(game.home_team) + ' × ' + teamPt(game.away_team),
+    '📅 ' + gameDateBR(game.game_date, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    '',
+    '💰 ' + formatCents(game.entry_fee_cents) + ' por placar',
+    '🏆 Prêmio acumulado: ' + formatCents(sharePrizeCents),
+  ];
+  if (shareBetCount > 0) {
+    shareMessageLines.push(
+      '👥 ' + shareBetCount + ' aposta' + (shareBetCount !== 1 ? 's' : '') + ' neste bolão — quanto mais gente, maior o prêmio!'
+    );
+  } else {
+    shareMessageLines.push('👥 Seja um dos primeiros a apostar neste bolão!');
+  }
+  shareMessageLines.push('', '👉 Entre e aposte agora:');
+  bolaoShareText = shareMessageLines.join('\n');
+%>

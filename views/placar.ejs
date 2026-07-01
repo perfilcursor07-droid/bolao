@@ -376,18 +376,20 @@
     upd();
     render();
 
+    <%- include('partials/bolao-share-text', { game }) %>
     const shareUrl = window.location.origin + '/games/<%= game.id %>/participar';
-    const shareTxt = 'Bolão: ' + HT + ' × ' + AT + ' — ' + fmt(FEE) + '/placar!';
-    $('share-link').value = shareUrl;
+    const shareText = <%- JSON.stringify(bolaoShareText) %>;
+    const shareFull = shareText + '\n' + shareUrl;
+    $('share-link').value = shareFull;
     $('btn-share').onclick = () => {
       const panel = $('share-panel');
       panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     };
     $('btn-copy').onclick = function() {
-      navigator.clipboard.writeText(shareUrl).then(() => { this.textContent='✓'; setTimeout(()=>{this.textContent='Copiar';},1500); });
+      navigator.clipboard.writeText(shareFull).then(() => { this.textContent='✓'; setTimeout(()=>{this.textContent='Copiar';},1500); });
     };
-    $('btn-wa').href = 'https://wa.me/?text=' + encodeURIComponent(shareTxt+'\n'+shareUrl);
-    $('btn-tg').href = 'https://t.me/share/url?url='+encodeURIComponent(shareUrl)+'&text='+encodeURIComponent(shareTxt);
+    $('btn-wa').href = 'https://wa.me/?text=' + encodeURIComponent(shareFull);
+    $('btn-tg').href = 'https://t.me/share/url?url='+encodeURIComponent(shareUrl)+'&text='+encodeURIComponent(shareText);
   </script>
 </body>
 </html>
